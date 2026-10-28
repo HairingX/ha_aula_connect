@@ -10,6 +10,6 @@ pyright==1.1.414
 aula_connect==0.0.2
 mitid_connect==0.0.1
 beautifulsoup4==4.13.3
-lxml==6.1.2
+lxml==6.1.3
 pycryptodomex==3.24.1
 qrcode==8.2
