@@ -11,11 +11,6 @@ from aula_connect.login.client import AulaLoginClient
 from homeassistant.const import CONF_ID
 from homeassistant.helpers.http import current_request
 from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.selector import (
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
-)
 from .const import (
     AUTH_METHOD_TOKEN,
     CONF_ACCESS_TOKEN,
@@ -35,19 +30,13 @@ from .views import AulaAuthView, AulaAuthStatusView, AulaAuthSelectIdentityView
 
 _LOGGER = logging.getLogger(__name__)
 
-APPROVAL_SELECTOR = SelectSelector(
-    SelectSelectorConfig(
-        options=[APPROVAL_APP_HERE, APPROVAL_APP_ELSEWHERE, APPROVAL_CODE_DISPLAY],
-        mode=SelectSelectorMode.LIST,
-        translation_key=CONF_APPROVAL,
-    )
-)
+APPROVALS = [APPROVAL_APP_ELSEWHERE, APPROVAL_APP_HERE, APPROVAL_CODE_DISPLAY]
+"""The ways to approve with MitID, as the steps of the approval menu, the commonest first."""
 
 USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ID, default="Aula"): cv.string,
         vol.Required(CONF_MITID_USERNAME): cv.string,
-        vol.Required(CONF_APPROVAL, default=APPROVAL_APP_ELSEWHERE): APPROVAL_SELECTOR,
     }
 )
 
@@ -82,9 +71,6 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._entry_id = user_input.get(CONF_ID, "Aula").strip()
             self._mitid_username = user_input[CONF_MITID_USERNAME]
-            self._approval = user_input[CONF_APPROVAL]
-            self._auth_method = auth_method(self._approval)
-            use_token = self._auth_method == AUTH_METHOD_TOKEN
 
             if not self._entry_id:
                 return self.async_show_form(
@@ -97,13 +83,43 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
                     step_id="user", data_schema=USER_SCHEMA, errors={"base": "id_already_in_use"}
                 )
 
-            if use_token:
-                return await self.async_step_token_credentials()
-            return await self.async_step_authenticate()
+            return await self.async_step_approval()
 
         return self.async_show_form(
             step_id="user", data_schema=USER_SCHEMA, errors=errors
         )
+
+    async def async_step_approval(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> ConfigFlowResult:
+        """Ask how the user approves with MitID; each answer is a step of its own."""
+        return self.async_show_menu(step_id="approval", menu_options=APPROVALS)
+
+    async def async_step_app_elsewhere(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> ConfigFlowResult:
+        """Approve with the MitID app on another device, which scans a QR code."""
+        return await self._approve_with(APPROVAL_APP_ELSEWHERE)
+
+    async def async_step_app_here(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> ConfigFlowResult:
+        """Approve with the MitID app on the device the setup runs on."""
+        return await self._approve_with(APPROVAL_APP_HERE)
+
+    async def async_step_code_display(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> ConfigFlowResult:
+        """Approve with a MitID code display and the MitID password."""
+        return await self._approve_with(APPROVAL_CODE_DISPLAY)
+
+    async def _approve_with(self, approval: str) -> ConfigFlowResult:
+        """Go on to the MitID login the user approves in the way chosen."""
+        self._approval = approval
+        self._auth_method = auth_method(approval)
+        if self._auth_method == AUTH_METHOD_TOKEN:
+            return await self.async_step_token_credentials()
+        return await self.async_step_authenticate()
 
     async def async_step_token_credentials(
         self, user_input: Optional[Dict[str, Any]] = None
@@ -404,23 +420,17 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: Dict[str, str] = {}
         if user_input is not None:
             self._mitid_username = user_input[CONF_MITID_USERNAME].strip()
-            self._approval = user_input[CONF_APPROVAL]
-            self._auth_method = auth_method(self._approval)
-            use_token = self._auth_method == AUTH_METHOD_TOKEN
 
             if not self._mitid_username:
                 errors["base"] = "invalid_auth"
             else:
-                if use_token:
-                    return await self.async_step_token_credentials()
-                return await self.async_step_authenticate()
+                return await self.async_step_approval()
 
         # Pre-fill with existing username if available
         existing_username = entry.data.get(CONF_MITID_USERNAME, "")
         schema = vol.Schema(
             {
                 vol.Required(CONF_MITID_USERNAME, default=existing_username): cv.string,
-                vol.Required(CONF_APPROVAL, default=approval_of(dict(entry.data))): APPROVAL_SELECTOR,
             }
         )
         return self.async_show_form(

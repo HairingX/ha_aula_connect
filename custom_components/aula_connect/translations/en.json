@@ -21,13 +21,11 @@
         "description": "Aula Connect logs in to Aula with your MitID, as you do on aula.dk.",
         "data": {
           "id": "Name",
-          "mitid_username": "MitID user ID",
-          "mitid_approval": "How do you want to approve with MitID?"
+          "mitid_username": "MitID user ID"
         },
         "data_description": {
           "id": "What this Aula login is called in Home Assistant, such as the family's name.",
-          "mitid_username": "The user ID you log in to MitID with.",
-          "mitid_approval": "Most people use the MitID app. Pick the code display only if you do not have the app but log in with a small device that shows numbers when you press its button."
+          "mitid_username": "The user ID you log in to MitID with."
         }
       },
       "token_credentials": {
@@ -65,12 +63,10 @@
         "title": "Change the MitID login",
         "description": "Change the MitID user ID or how you approve the login.",
         "data": {
-          "mitid_username": "MitID user ID",
-          "mitid_approval": "How do you want to approve with MitID?"
+          "mitid_username": "MitID user ID"
         },
         "data_description": {
-          "mitid_username": "The user ID you log in to MitID with.",
-          "mitid_approval": "Most people use the MitID app. Pick the code display only if you do not have the app but log in with a small device that shows numbers when you press its button."
+          "mitid_username": "The user ID you log in to MitID with."
         }
       },
       "reauth_confirm": {
@@ -83,6 +79,20 @@
         },
         "description": "",
         "title": "Options"
+      },
+      "approval": {
+        "title": "How do you want to approve?",
+        "description": "You approve the login to Aula with MitID.",
+        "menu_options": {
+          "app_elsewhere": "The MitID app on another device",
+          "app_here": "The MitID app on this device",
+          "code_display": "Code display"
+        },
+        "menu_option_descriptions": {
+          "app_elsewhere": "Scan a QR code with your phone or tablet",
+          "app_here": "The app opens from here",
+          "code_display": "The small device that shows numbers when you press its button"
+        }
       }
     }
   },
@@ -352,15 +362,6 @@
         }
       },
       "name": "API Call"
-    }
-  },
-  "selector": {
-    "mitid_approval": {
-      "options": {
-        "app_here": "With the MitID app on this phone or tablet",
-        "app_elsewhere": "With the MitID app on another phone or tablet (you scan a QR code)",
-        "code_display": "With a code display: a small device with a button and a screen that shows numbers"
-      }
     }
   }
 }
