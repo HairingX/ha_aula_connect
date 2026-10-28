@@ -9,8 +9,8 @@ rules:
       The data coordinator polls every 5 minutes; the calendar coordinator every 10 minutes,
       fetching birthdays daily and events, weekly plans and newsletters every 2 hours.
   brands:
-    status: todo
-    comment: No icon or logo is shipped in brand/, nor is there one in home-assistant/brands.
+    status: done
+    comment: Its own icon and logo, shipped in brand/, which Home Assistant serves for custom integrations.
   common-modules: done
   config-flow-test-coverage:
     status: todo
