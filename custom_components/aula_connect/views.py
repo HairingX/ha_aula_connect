@@ -43,12 +43,15 @@ class AulaAuthView(HomeAssistantView):
         button {{ background-color: #03a9f4; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 4px; cursor: pointer; font-size: 16px; }}
         button:hover {{ background-color: #0288d1; }}
         .error {{ color: #d32f2f; }}
+        #open-app {{ display: inline-block; background-color: #0060e6; color: white; text-decoration: none; padding: 14px 24px; margin: 10px 0; border-radius: 8px; font-size: 18px; font-weight: 600; }}
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Aula MitID Login</h1>
         <div id="status">Open your MitID app now...</div>
+        <!-- MitID's app opens on this scheme, and finds the login waiting for approval there. -->
+        <a id="open-app" href="mitid://">Open the MitID app</a>
         <div id="qr-container"></div>
         <div id="identity-selection" class="hidden">
             <h3>Select Identity</h3>
@@ -95,6 +98,7 @@ class AulaAuthView(HomeAssistantView):
                     }}
 
                     if (data.completed) {{
+                        document.getElementById("open-app").classList.add("hidden");
                         document.getElementById("status").innerText = "Authentication successful! You can close this window.";
                         document.getElementById("qr-container").classList.add("hidden");
                         document.getElementById("identity-selection").classList.add("hidden");
