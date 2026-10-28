@@ -47,9 +47,7 @@ rules:
       async_will_remove_from_hass.
   entity-unique-id: done
   has-entity-name: done
-  runtime-data:
-    status: todo
-    comment: The client and coordinators are kept in hass.data, not in entry.runtime_data.
+  runtime-data: done
   test-before-configure:
     status: done
     comment: The flow completes the MitID login and only creates the entry with its tokens.

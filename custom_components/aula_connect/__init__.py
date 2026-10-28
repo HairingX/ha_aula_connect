@@ -1,18 +1,16 @@
 """Aula integration for Home Assistant."""
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 import logging
 
-from .aula_data import AulaHassData, remove_hass_data, set_hass_data
+from .aula_data import AulaConfigEntry, AulaRuntimeData
 from .aula_data_coordinator import AulaDataCoordinator
 from .aula_calendar_coordinator import AulaCalendarCoordinator
 from aula_connect.client import AulaClient
 from aula_connect.login import AulaLoginClient
 from .const import (
-    DOMAIN,
     CONF_ACCESS_TOKEN,
     CONF_REFRESH_TOKEN,
     CONF_TOKEN_EXPIRES_AT,
@@ -27,9 +25,8 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""
-    hass.data.setdefault(DOMAIN, {})
 
     # Guard: unique_id must be set for entity unique_id prefix
     if not entry.unique_id:
@@ -87,16 +84,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     data_coordinator = AulaDataCoordinator(entry.title, hass, client, entry)
     calendar_coordinator = AulaCalendarCoordinator(entry.title, hass, client, entry)
-    hass_data: AulaHassData = {
-        "client": client,
-        "data_coordinator": data_coordinator,
-        "calendar_coordinator": calendar_coordinator,
-    }
 
     # Fetch initial data so we have data when entities subscribe
     await data_coordinator.async_config_entry_first_refresh()
 
-    set_hass_data(hass, entry, hass_data)
+    entry.runtime_data = AulaRuntimeData(client, data_coordinator, calendar_coordinator)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -106,16 +98,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
     """Unload a config entry."""
     success = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if not success:
         return False
-    from .aula_data import get_aula_client
     try:
-        client = get_aula_client(hass, entry)
-        await hass.async_add_executor_job(client.close)
+        await hass.async_add_executor_job(entry.runtime_data.client.close)
     except Exception:
         _LOGGER.debug("Failed to close client sessions during unload", exc_info=True)
-    remove_hass_data(hass, entry)
     return True

@@ -15,6 +15,8 @@ include = ["custom_components", "tests"]
 exclude = ["**/__pycache__", "**/.venv"]
 typeCheckingMode = "strict"
 reportMissingTypeStubs = "none"
+# A "# type: ignore" hides an error, which the conventions do not allow.
+enableTypeIgnoreComments = false
 # Not yet checked, during the transition below; each pull request takes files off this list.
 ignore = [
     "custom_components/aula_connect/calendar.py",
@@ -26,5 +28,5 @@ ignore = [
 transition = """The integration starts from the Aula integration, written before the shared \
 standard: its config flow, views and entities are typed and tested module by module."""
 # The coverage the tests reach now; each pull request raises it, until it is 100.
-coverage = 40
+coverage = 41
 libraries = ["aula_connect"]
