@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import cast
 
 from .aula_data import AulaHassData, remove_hass_data, set_hass_data
-from .migration import async_take_over, offer_take_over
+from .migration import async_offer_take_over, async_take_over
 from .aula_data_coordinator import AulaDataCoordinator
 from .aula_calendar_coordinator import AulaCalendarCoordinator
 from aula_connect.client import AulaClient
@@ -44,7 +44,7 @@ CONFIG_SCHEMA = _config_entry_only_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Offer to take over each installation of the Aula integration under its previous domain."""
-    offer_take_over(hass)
+    await async_offer_take_over(hass)
     return True
 
 

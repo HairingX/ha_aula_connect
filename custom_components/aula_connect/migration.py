@@ -8,6 +8,7 @@ from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEnt
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.loader import IntegrationNotFound, async_get_integration
 
 from .const import CONF_MIGRATED_FROM, DOMAIN
 
@@ -16,9 +17,23 @@ _LOGGER = logging.getLogger(__name__)
 PREVIOUS_DOMAIN = "aula"
 """The domain the Aula integration was installed under before this one."""
 
+PREVIOUS_ISSUE_TRACKER = "https://github.com/hairingx/aula/issues"
+"""The issue tracker the integration this one replaces names, as others use its domain too."""
 
-def entries_to_take_over(hass: HomeAssistant) -> list[ConfigEntry]:
-    """The installations under the previous domain that no entry of this one has taken over."""
+
+async def async_is_previous_integration(hass: HomeAssistant) -> bool:
+    """Whether the integration installed under the previous domain is the one this replaces."""
+    try:
+        integration = await async_get_integration(hass, PREVIOUS_DOMAIN)
+    except IntegrationNotFound:
+        return False
+    return (integration.issue_tracker or "").rstrip("/").lower() == PREVIOUS_ISSUE_TRACKER
+
+
+async def async_entries_to_take_over(hass: HomeAssistant) -> list[ConfigEntry]:
+    """The installations of the integration this replaces that no entry of this one has taken over."""
+    if not await async_is_previous_integration(hass):
+        return []
     taken = {entry.unique_id for entry in hass.config_entries.async_entries(DOMAIN)}
     return [
         entry
@@ -27,9 +42,9 @@ def entries_to_take_over(hass: HomeAssistant) -> list[ConfigEntry]:
     ]
 
 
-def offer_take_over(hass: HomeAssistant) -> None:
-    """Offer each installation under the previous domain as a discovered one, to confirm."""
-    for entry in entries_to_take_over(hass):
+async def async_offer_take_over(hass: HomeAssistant) -> None:
+    """Offer each installation of the integration this replaces as a discovered one, to confirm."""
+    for entry in await async_entries_to_take_over(hass):
         hass.async_create_task(
             hass.config_entries.flow.async_init(
                 DOMAIN,

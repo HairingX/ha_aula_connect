@@ -16,13 +16,14 @@ from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, MockModule, mock_integration
 
 from custom_components.aula_connect.const import CONF_ACCESS_TOKEN, CONF_MIGRATED_FROM, DOMAIN
 from custom_components.aula_connect.migration import (
     PREVIOUS_DOMAIN,
+    PREVIOUS_ISSUE_TRACKER,
+    async_entries_to_take_over,
     async_take_over,
-    entries_to_take_over,
 )
 
 DATA: dict[str, Any] = {
@@ -41,8 +42,15 @@ async def _configure(hass: HomeAssistant, flow_id: str) -> dict[str, Any]:
     return dict(result)
 
 
+def install_previous_integration(hass: HomeAssistant, issue_tracker: str | None = PREVIOUS_ISSUE_TRACKER) -> None:
+    """Install an integration under the previous domain that names `issue_tracker`."""
+    manifest = {"issue_tracker": issue_tracker} if issue_tracker else {}
+    mock_integration(hass, MockModule(PREVIOUS_DOMAIN, partial_manifest=manifest), built_in=False)
+
+
 def previous_installation(hass: HomeAssistant, unique_id: str = "Aula") -> MockConfigEntry:
-    """An installation under the previous domain, with a device and two entities."""
+    """An installation of the integration this replaces, with a device and two entities."""
+    install_previous_integration(hass)
     entry = MockConfigEntry(domain=PREVIOUS_DOMAIN, unique_id=unique_id, title=unique_id, data=DATA, version=2)
     entry.add_to_hass(hass)
     device = dr.async_get(hass).async_get_or_create(
@@ -73,7 +81,37 @@ async def test_an_installation_under_the_previous_domain_is_offered(hass: HomeAs
 async def test_an_installation_already_taken_over_is_not_offered(hass: HomeAssistant) -> None:
     previous_installation(hass)
     MockConfigEntry(domain=DOMAIN, unique_id="Aula", data=DATA).add_to_hass(hass)
-    assert entries_to_take_over(hass) == []
+    assert await async_entries_to_take_over(hass) == []
+
+
+async def test_the_issue_tracker_is_matched_without_case_or_trailing_slash(hass: HomeAssistant) -> None:
+    previous = previous_installation(hass)
+    install_previous_integration(hass, "https://github.com/HairingX/aula/issues/")
+    assert await async_entries_to_take_over(hass) == [previous]
+
+
+async def test_another_integration_under_the_previous_domain_is_not_offered(hass: HomeAssistant) -> None:
+    previous_installation(hass)
+    install_previous_integration(hass, "https://github.com/someone-else/aula/issues")
+    assert await async_entries_to_take_over(hass) == []
+    assert await async_setup_component(hass, DOMAIN, {})
+    await hass.async_block_till_done()
+    assert hass.config_entries.flow.async_progress_by_handler(DOMAIN) == []
+
+
+async def test_an_integration_under_the_previous_domain_without_an_issue_tracker_is_not_offered(
+    hass: HomeAssistant,
+) -> None:
+    previous_installation(hass)
+    install_previous_integration(hass, None)
+    assert await async_entries_to_take_over(hass) == []
+
+
+async def test_installations_whose_integration_is_no_longer_installed_are_not_offered(
+    hass: HomeAssistant,
+) -> None:
+    MockConfigEntry(domain=PREVIOUS_DOMAIN, unique_id="Aula", data=DATA).add_to_hass(hass)
+    assert await async_entries_to_take_over(hass) == []
 
 
 async def test_confirming_creates_an_entry_with_the_previous_data(hass: HomeAssistant) -> None:
