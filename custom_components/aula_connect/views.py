@@ -50,8 +50,9 @@ class AulaAuthView(HomeAssistantView):
     <div class="container">
         <h1>Aula MitID Login</h1>
         <div id="status">Open your MitID app now...</div>
-        <!-- MitID's app opens on this scheme, and finds the login waiting for approval there. -->
-        <a id="open-app" href="mitid://">Open the MitID app</a>
+        <!-- MitID's own app switch link: a universal link on iOS and an app link on Android
+             open the app at the login waiting for approval, where mitid:// opens its start. -->
+        <a id="open-app" href="https://appswitch.mitid.dk/">Open the MitID app</a>
         <div id="qr-container"></div>
         <div id="identity-selection" class="hidden">
             <h3>Select Identity</h3>
