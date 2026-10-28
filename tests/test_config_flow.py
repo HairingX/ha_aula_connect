@@ -24,7 +24,7 @@ async def _start_login(hass: HomeAssistant) -> dict[str, Any]:
         ),
     ):
         step = await flow.async_configure(
-            result.get("flow_id"), {"id": "Aula", "mitid_username": "parent", "mitid_use_token": False}
+            result.get("flow_id"), {"id": "Aula", "mitid_username": "parent", "auth_method": "APP"}
         )
     return dict(step)
 
@@ -45,3 +45,21 @@ async def test_the_login_page_is_at_the_address_the_browser_used(hass: HomeAssis
         current.get.return_value = request
         step = await _start_login(hass)
     assert str(step.get("url")).startswith("http://localhost:1337/api/aula_connect/auth/")
+
+
+async def test_the_mitid_app_is_the_approval_offered_first(hass: HomeAssistant) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    schema = result.get("data_schema")
+    assert schema is not None
+    fields = {str(key): key for key in schema.schema}
+    assert fields["auth_method"].default() == "APP"
+
+
+async def test_a_code_display_asks_for_its_code_and_the_password(hass: HomeAssistant) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    flow: Any = hass.config_entries.flow
+    step = await flow.async_configure(
+        result.get("flow_id"), {"id": "Aula", "mitid_username": "parent", "auth_method": "TOKEN"}
+    )
+    assert step.get("type") is FlowResultType.FORM
+    assert step.get("step_id") == "token_credentials"

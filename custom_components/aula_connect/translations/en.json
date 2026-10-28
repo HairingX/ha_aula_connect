@@ -22,12 +22,12 @@
         "data": {
           "id": "Name",
           "mitid_username": "MitID user ID",
-          "mitid_use_token": "Log in with a MitID code display"
+          "auth_method": "How do you approve with MitID?"
         },
         "data_description": {
           "id": "What this Aula login is called in Home Assistant, such as the family's name.",
           "mitid_username": "The user ID you log in to MitID with.",
-          "mitid_use_token": "Leave this off to approve the login in the MitID app on your phone. Turn it on if you use a MitID code display, the small device that shows a 6-digit code."
+          "auth_method": "Pick the MitID app if you approve your logins in the MitID app. Pick code display only if you use MitID's small device that shows a code."
         }
       },
       "token_credentials": {
@@ -66,11 +66,11 @@
         "description": "Change the MitID user ID or how you approve the login.",
         "data": {
           "mitid_username": "MitID user ID",
-          "mitid_use_token": "Log in with a MitID code display"
+          "auth_method": "How do you approve with MitID?"
         },
         "data_description": {
           "mitid_username": "The user ID you log in to MitID with.",
-          "mitid_use_token": "Leave this off to approve the login in the MitID app on your phone. Turn it on if you use a MitID code display, the small device that shows a 6-digit code."
+          "auth_method": "Pick the MitID app if you approve your logins in the MitID app. Pick code display only if you use MitID's small device that shows a code."
         }
       },
       "reauth_confirm": {
@@ -352,6 +352,14 @@
         }
       },
       "name": "API Call"
+    }
+  },
+  "selector": {
+    "auth_method": {
+      "options": {
+        "APP": "MitID app: scan a QR code with the phone that has the app",
+        "TOKEN": "MitID code display and password"
+      }
     }
   }
 }
