@@ -7,7 +7,7 @@ pytest-homeassistant-custom-component==0.13.375
 pyright==1.1.414
 # The integration's requirement, as the manifest pins it, and its library's requirements at the
 # versions Home Assistant's own integrations pin.
-aula_connect==0.1.0
+aula_connect==0.0.1
 beautifulsoup4==4.13.3
 lxml==6.1.2
 pycryptodomex==3.24.1
