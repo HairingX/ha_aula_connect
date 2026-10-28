@@ -1,0 +1,17 @@
+__pycache__
+.venv
+.pytest_cache
+.coverage
+.idea
+.DS_Store
+.claude/worktrees/
+mysecrets.py
+
+# The development instance of Home Assistant: only its configuration.yaml is tracked.
+config/*
+!config/configuration.yaml
+docs/temp/
+# Responses captured from a real Aula account hold children's personal data: they stay on the
+# machine they were captured on. Only fixtures made up for the tests are tracked.
+skoleskema.json
+test_messages/
