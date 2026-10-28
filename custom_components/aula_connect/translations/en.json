@@ -43,8 +43,8 @@
         }
       },
       "authenticate": {
-        "title": "Authenticating with MitID",
-        "description": "Please wait while we authenticate with MitID..."
+        "title": "Log in with MitID",
+        "description": "Approve the login with MitID on the page that opens. If no page opens, open the [MitID login]({login_path}) yourself."
       },
       "complete": {
         "title": "Authentication Complete",
