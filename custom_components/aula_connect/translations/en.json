@@ -22,12 +22,12 @@
         "data": {
           "id": "Name",
           "mitid_username": "MitID user ID",
-          "auth_method": "How do you approve with MitID?"
+          "mitid_approval": "How do you want to approve with MitID?"
         },
         "data_description": {
           "id": "What this Aula login is called in Home Assistant, such as the family's name.",
           "mitid_username": "The user ID you log in to MitID with.",
-          "auth_method": "Pick the MitID app if you approve your logins in the MitID app. Pick code display only if you use MitID's small device that shows a code."
+          "mitid_approval": "Most people use the MitID app. Pick the code display only if you do not have the app but log in with a small device that shows numbers when you press its button."
         }
       },
       "token_credentials": {
@@ -66,11 +66,11 @@
         "description": "Change the MitID user ID or how you approve the login.",
         "data": {
           "mitid_username": "MitID user ID",
-          "auth_method": "How do you approve with MitID?"
+          "mitid_approval": "How do you want to approve with MitID?"
         },
         "data_description": {
           "mitid_username": "The user ID you log in to MitID with.",
-          "auth_method": "Pick the MitID app if you approve your logins in the MitID app. Pick code display only if you use MitID's small device that shows a code."
+          "mitid_approval": "Most people use the MitID app. Pick the code display only if you do not have the app but log in with a small device that shows numbers when you press its button."
         }
       },
       "reauth_confirm": {
@@ -355,10 +355,11 @@
     }
   },
   "selector": {
-    "auth_method": {
+    "mitid_approval": {
       "options": {
-        "app": "MitID app: scan a QR code with the phone that has the app",
-        "token": "MitID code display and password"
+        "app_here": "With the MitID app on this phone or tablet",
+        "app_elsewhere": "With the MitID app on another phone or tablet (you scan a QR code)",
+        "code_display": "With a code display: a small device with a button and a screen that shows numbers"
       }
     }
   }

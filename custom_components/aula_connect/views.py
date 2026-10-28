@@ -24,23 +24,25 @@ class AulaAuthView(HomeAssistantView):
         ):
             return web.Response(status=404, text="Session not found or expired.")
 
-        return web.Response(body=self._get_html(flow_id), content_type="text/html")
+        return web.Response(text=self._get_html(flow_id), content_type="text/html", charset="utf-8")
 
     def _get_html(self, flow_id):
         return f"""
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Aula Authentication</title>
+    <meta charset="utf-8">
+    <title>Aula - MitID</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 20px; background-color: #f5f5f5; }}
         .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        #qr-container {{ margin: 20px auto; min-height: 200px; display: flex; align-items: center; justify-content: center; }}
+        #qr-container {{ margin: 20px auto; display: flex; align-items: center; justify-content: center; }}
         #qr-container svg {{ max-width: 100%; height: auto; }}
         .hidden {{ display: none !important; }}
-        #status {{ font-weight: 500; margin: 20px 0; font-size: 1.2em; color: #333; }}
-        button {{ background-color: #03a9f4; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 4px; cursor: pointer; font-size: 16px; }}
+        #status {{ font-weight: 500; margin: 20px 0; font-size: 1.3em; color: #333; line-height: 1.4; }}
+        #code {{ font-size: 3em; font-weight: 700; letter-spacing: 0.2em; margin: 10px 0; }}
+        button {{ background-color: #03a9f4; color: white; border: none; padding: 12px 20px; margin: 5px; border-radius: 4px; cursor: pointer; font-size: 18px; }}
         button:hover {{ background-color: #0288d1; }}
         .error {{ color: #d32f2f; }}
         #open-app {{ display: inline-block; background-color: #0060e6; color: white; text-decoration: none; padding: 14px 24px; margin: 10px 0; border-radius: 8px; font-size: 18px; font-weight: 600; }}
@@ -48,41 +50,94 @@ class AulaAuthView(HomeAssistantView):
 </head>
 <body>
     <div class="container">
-        <h1>Aula MitID Login</h1>
-        <div id="status">Open your MitID app now...</div>
+        <h1>MitID</h1>
+        <div id="status"></div>
+        <div id="code" class="hidden"></div>
         <!-- MitID's own app switch link: a universal link on iOS and an app link on Android
              open the app at the login waiting for approval, where mitid:// opens its start. -->
-        <a id="open-app" href="https://appswitch.mitid.dk/">Open the MitID app</a>
-        <div id="qr-container"></div>
+        <a id="open-app" class="hidden" href="https://appswitch.mitid.dk/"></a>
+        <div id="qr-container" class="hidden"></div>
         <div id="identity-selection" class="hidden">
-            <h3>Select Identity</h3>
+            <h3 id="identity-title"></h3>
             <div id="identity-buttons"></div>
         </div>
     </div>
 
     <script>
         const flowId = "{flow_id}";
+        const TEXTS = {{
+            da: {{
+                open_app_here: "Tryk på knappen for at åbne MitID-appen, og godkend dér.",
+                open_app_elsewhere: "Åbn MitID-appen på din telefon. Skal du scanne en QR-kode, kommer den frem her.",
+                scan_here: "MitID vil have en QR-kode scannet, og det kan ikke gøres på den samme telefon. Luk siden, start forfra, og vælg MitID-appen på en anden enhed.",
+                open_app_button: "Åbn MitID-appen",
+                scan: "Scan QR-koden med MitID-appen på din telefon.",
+                code: "Skriv denne kode i MitID-appen:",
+                approve: "Godkend nu i MitID-appen.",
+                code_display: "Logger ind med din kodeviser …",
+                finishing: "Godkendt. Logger ind på Aula …",
+                identity: "Vælg, hvem du vil logge ind som",
+                identity_chosen: "Valgt. Logger ind …",
+                completed: "Du er logget ind. Du kan lukke denne side.",
+                close: "Luk siden",
+            }},
+            en: {{
+                open_app_here: "Press the button to open the MitID app, and approve there.",
+                open_app_elsewhere: "Open the MitID app on your phone. If you need to scan a QR code, it appears here.",
+                scan_here: "MitID wants a QR code scanned, which cannot be done on the same phone. Close this page, start over, and choose the MitID app on another device.",
+                open_app_button: "Open the MitID app",
+                scan: "Scan the QR code with the MitID app on your phone.",
+                code: "Type this code in the MitID app:",
+                approve: "Approve in the MitID app now.",
+                code_display: "Logging in with your code display …",
+                finishing: "Approved. Logging in to Aula …",
+                identity: "Choose who to log in as",
+                identity_chosen: "Chosen. Logging in …",
+                completed: "You are logged in. You can close this page.",
+                close: "Close the page",
+            }},
+        }};
+        const t = TEXTS[(navigator.language || "").toLowerCase().startsWith("da") ? "da" : "en"];
+        const show = (id, visible) => document.getElementById(id).classList.toggle("hidden", !visible);
+
+        document.getElementById("open-app").innerText = t.open_app_button;
+        document.getElementById("identity-title").innerText = t.identity;
+
+        function render(data) {{
+            const status = document.getElementById("status");
+            const here = data.approval === "app_here";
+            show("code", data.stage === "code");
+            show("open-app", data.stage === "open_app" && here);
+            show("qr-container", data.stage === "scan" && !here);
+            if (data.stage === "open_app" && data.approval === "code_display") {{
+                status.innerText = t.code_display;
+            }} else if (data.stage === "open_app") {{
+                status.innerText = here ? t.open_app_here : t.open_app_elsewhere;
+            }} else if (data.stage === "scan") {{
+                status.innerText = here ? t.scan_here : t.scan;
+                document.getElementById("qr-container").innerHTML = here ? "" : data.qr_svg;
+            }} else if (data.stage === "code") {{
+                status.innerText = t.code;
+                document.getElementById("code").innerText = data.code;
+            }} else if (data.stage === "approve") {{
+                status.innerText = t.approve;
+            }} else if (data.stage === "finishing") {{
+                status.innerText = t.finishing;
+            }} else if (data.message) {{
+                status.innerText = data.message;
+            }}
+        }}
 
         function updateStatus() {{
             fetch(`/api/aula_connect/auth/${{flowId}}/status`)
                 .then(response => response.json())
                 .then(data => {{
                     if (data.error) {{
-                        document.getElementById("status").innerText = data.error;
-                        document.getElementById("status").className = "error";
+                        const status = document.getElementById("status");
+                        status.innerText = data.error;
+                        status.className = "error";
+                        ["code", "open-app", "qr-container", "identity-selection"].forEach(id => show(id, false));
                         return;
-                    }}
-
-                    if (data.message) {{
-                        document.getElementById("status").innerText = data.message;
-                    }}
-
-                    if (data.qr_svg) {{
-                        document.getElementById("qr-container").innerHTML = data.qr_svg;
-                        document.getElementById("qr-container").classList.remove("hidden");
-                        document.getElementById("identity-selection").classList.add("hidden");
-                    }} else {{
-                        document.getElementById("qr-container").innerHTML = "";
                     }}
 
                     if (data.identities && data.identities.length > 0) {{
@@ -94,23 +149,23 @@ class AulaAuthView(HomeAssistantView):
                             btn.onclick = () => selectIdentity(index + 1);
                             container.appendChild(btn);
                         }});
-                        document.getElementById("identity-selection").classList.remove("hidden");
-                        document.getElementById("qr-container").classList.add("hidden");
-                    }}
-
-                    if (data.completed) {{
-                        document.getElementById("open-app").classList.add("hidden");
-                        document.getElementById("status").innerText = "Authentication successful! You can close this window.";
-                        document.getElementById("qr-container").classList.add("hidden");
-                        document.getElementById("identity-selection").classList.add("hidden");
+                        ["code", "open-app", "qr-container"].forEach(id => show(id, false));
+                        document.getElementById("status").innerText = "";
+                        show("identity-selection", true);
+                    }} else if (data.completed) {{
+                        ["code", "open-app", "qr-container", "identity-selection"].forEach(id => show(id, false));
+                        document.getElementById("status").innerText = t.completed;
                         if (!document.getElementById("close-btn")) {{
                             const btn = document.createElement("button");
                             btn.id = "close-btn";
-                            btn.innerText = "Close Window";
+                            btn.innerText = t.close;
                             btn.onclick = () => window.close();
                             document.querySelector(".container").appendChild(btn);
                         }}
                         return;
+                    }} else {{
+                        show("identity-selection", false);
+                        render(data);
                     }}
 
                     setTimeout(updateStatus, 1000);
@@ -127,8 +182,8 @@ class AulaAuthView(HomeAssistantView):
                 headers: {{ "Content-Type": "application/json" }},
                 body: JSON.stringify({{ identity: index }})
             }});
-            document.getElementById("identity-selection").classList.add("hidden");
-            document.getElementById("status").innerText = "Identity selected, continuing...";
+            show("identity-selection", false);
+            document.getElementById("status").innerText = t.identity_chosen;
         }}
 
         updateStatus();
@@ -136,6 +191,27 @@ class AulaAuthView(HomeAssistantView):
 </body>
 </html>
         """
+
+
+OTP_PREFIX = "Please use the following OTP code in the app: "
+"""How the MitID client says which code to type in the app."""
+
+
+def login_stage(message: str, qr_shown: bool) -> tuple[str, str | None]:
+    """The step of the MitID login the page shows, from the MitID client's status message.
+
+    Returns the step - open_app, scan, code, approve or finishing - and the code to type in
+    the app at the code step.
+    """
+    if message.startswith(OTP_PREFIX):
+        return "code", message.removeprefix(OTP_PREFIX).strip()
+    if qr_shown:
+        return "scan", None
+    if message.startswith("The OTP/QR code has been verified"):
+        return "approve", None
+    if message.startswith(("App login was accepted", "Password accepted", "Authentication successful")):
+        return "finishing", None
+    return "open_app", None
 
 
 class AulaAuthStatusView(HomeAssistantView):
@@ -170,8 +246,13 @@ class AulaAuthStatusView(HomeAssistantView):
                     idx = int(time.time()) % 2
                     qr_svg = svgs[idx]
 
+        message = session.get("status_message", "Processing...")
+        stage, code = login_stage(message, qr_svg is not None)
         response = {
-            "message": session.get("status_message", "Processing..."),
+            "message": message,
+            "stage": stage,
+            "approval": session.get("approval"),
+            "code": code,
             "qr_svg": qr_svg,
             "identities": session.get("available_identities", []),
             "completed": session.get("completed", False),
