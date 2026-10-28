@@ -47,6 +47,10 @@ def _is_event_in_range(event: CalendarEvent, start: datetime, end: datetime) -> 
     event_end = to_datetime(event.end, start.tzinfo)
     return event_start < end and event_end >= start
 
+# The entities read what the coordinators fetched, so updating them never waits on Aula.
+PARALLEL_UPDATES = 0
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     """Set up the calendar platform."""
     data_coordinator = entry.runtime_data.data_coordinator

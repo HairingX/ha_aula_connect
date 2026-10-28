@@ -78,9 +78,7 @@ rules:
       without a daily overview for their child.
   integration-owner: done
   log-when-unavailable: done
-  parallel-updates:
-    status: todo
-    comment: No platform sets PARALLEL_UPDATES.
+  parallel-updates: done
   reauthentication-flow: done
   test-coverage:
     status: todo
@@ -88,9 +86,7 @@ rules:
 
   # Gold
   devices: done
-  diagnostics:
-    status: todo
-    comment: The integration has no diagnostics.
+  diagnostics: done
   discovery-update-info:
     status: exempt
     comment: A cloud service has nothing on the network to discover.

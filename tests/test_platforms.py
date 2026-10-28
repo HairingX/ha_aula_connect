@@ -78,3 +78,10 @@ async def test_the_entities_are_unavailable_while_aula_cannot_be_read(hass: Home
     await hass.async_block_till_done()
     state = hass.states.get(entity_id)
     assert state is not None and state.state == "off"
+
+
+def test_the_platforms_update_their_entities_in_parallel() -> None:
+    """The entities read what the coordinators fetched, so updating them never waits on Aula."""
+    from custom_components.aula_connect import binary_sensor, calendar, sensor
+
+    assert [module.PARALLEL_UPDATES for module in (sensor, binary_sensor, calendar)] == [0, 0, 0]
