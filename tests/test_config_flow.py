@@ -82,3 +82,11 @@ async def test_the_login_page_learns_how_the_user_approves(hass: HomeAssistant) 
     step = await _start_login(hass, approval="app_here")
     session = hass.data[DOMAIN]["auth_sessions"][step.get("flow_id")]
     assert session["approval"] == "app_here"
+
+
+async def test_the_forms_before_the_login_say_next_not_submit(hass: HomeAssistant) -> None:
+    """Every form leads on to the MitID login, so none is the last step."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    assert result.get("last_step") is False
+    step = await _start_login(hass, approval="code_display")
+    assert step.get("last_step") is False

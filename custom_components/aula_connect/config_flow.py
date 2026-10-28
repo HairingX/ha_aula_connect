@@ -74,18 +74,21 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
 
             if not self._entry_id:
                 return self.async_show_form(
+                    last_step=False,
                     step_id="user", data_schema=USER_SCHEMA, errors={"base": "invalid_id"}
                 )
 
             existing = await self.async_set_unique_id(self._entry_id)
             if existing:
                 return self.async_show_form(
+                    last_step=False,
                     step_id="user", data_schema=USER_SCHEMA, errors={"base": "id_already_in_use"}
                 )
 
             return await self.async_step_approval()
 
         return self.async_show_form(
+            last_step=False,
             step_id="user", data_schema=USER_SCHEMA, errors=errors
         )
 
@@ -131,6 +134,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_authenticate()
 
         return self.async_show_form(
+            last_step=False,
             step_id="token_credentials",
             data_schema=TOKEN_CREDENTIALS_SCHEMA,
             errors=errors,
@@ -275,6 +279,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_authenticate(user_input)
 
         return self.async_show_form(
+            last_step=False,
             step_id="auth_error",
             errors={"base": "auth_failed"},
         )
@@ -376,6 +381,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             self._mitid_username = user_input[CONF_MITID_USERNAME].strip()
             if not self._mitid_username:
                 return self.async_show_form(
+                    last_step=False,
                     step_id="reauth_username",
                     data_schema=vol.Schema(
                         {vol.Required(CONF_MITID_USERNAME): cv.string}
@@ -385,6 +391,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_reauth_confirm()
 
         return self.async_show_form(
+            last_step=False,
             step_id="reauth_username",
             data_schema=vol.Schema(
                 {vol.Required(CONF_MITID_USERNAME): cv.string}
@@ -404,6 +411,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_authenticate()
 
         return self.async_show_form(
+            last_step=False,
             step_id="reauth_confirm",
             description_placeholders={"username": self._mitid_username},
         )
@@ -434,6 +442,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             }
         )
         return self.async_show_form(
+            last_step=False,
             step_id="reconfigure",
             data_schema=schema,
             errors=errors,
