@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 from aula_connect.api.aula_errors import AulaCredentialError
+from aula_connect.login import AulaLoginClient
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -80,3 +82,18 @@ async def test_a_partial_failure_is_logged_once_and_the_recovery_once(
     recoveries = [r for r in caplog.records if r.getMessage() == "Aula can be read in full again"]
     assert len(warnings) == 1 and "message threads: down" in warnings[0].getMessage()
     assert len(recoveries) == 1
+
+
+async def test_a_refresh_token_aula_calls_invalid_asks_to_log_in_again(hass: HomeAssistant) -> None:
+    """Through the library: Aula's token endpoint answers 400 invalid_grant for the expired token."""
+    body = {"error": "invalid_grant"}
+    response = MagicMock(status_code=400, text=json.dumps(body), json=MagicMock(return_value=body))
+    login_client = AulaLoginClient(mitid_username="parent")
+    setattr(login_client.session, "post", MagicMock(return_value=response))
+    entry = _entry(hass)
+    with patch("custom_components.aula_connect.AulaLoginClient", return_value=login_client):
+        assert not await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.SETUP_ERROR
+    flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    assert [flow.get("context", {}).get("source") for flow in flows] == ["reauth"]
