@@ -21,13 +21,11 @@
         "description": "Aula Connect logger ind på Aula med dit MitID, som du gør på aula.dk.",
         "data": {
           "id": "Navn",
-          "mitid_username": "MitID bruger-ID",
-          "mitid_approval": "Hvordan vil du godkende med MitID?"
+          "mitid_username": "MitID bruger-ID"
         },
         "data_description": {
           "id": "Hvad dette Aula-login hedder i Home Assistant, fx familiens navn.",
-          "mitid_username": "Det bruger-ID, du logger ind på MitID med.",
-          "mitid_approval": "De fleste bruger MitID-appen. Vælg kun kodeviser, hvis du ikke har appen, men logger ind med en lille dims, der viser tal, når du trykker på knappen."
+          "mitid_username": "Det bruger-ID, du logger ind på MitID med."
         }
       },
       "token_credentials": {
@@ -65,12 +63,10 @@
         "title": "Ændr MitID-login",
         "description": "Ændr MitID bruger-ID, eller hvordan du godkender login.",
         "data": {
-          "mitid_username": "MitID bruger-ID",
-          "mitid_approval": "Hvordan vil du godkende med MitID?"
+          "mitid_username": "MitID bruger-ID"
         },
         "data_description": {
-          "mitid_username": "Det bruger-ID, du logger ind på MitID med.",
-          "mitid_approval": "De fleste bruger MitID-appen. Vælg kun kodeviser, hvis du ikke har appen, men logger ind med en lille dims, der viser tal, når du trykker på knappen."
+          "mitid_username": "Det bruger-ID, du logger ind på MitID med."
         }
       },
       "reauth_confirm": {
@@ -83,6 +79,20 @@
         },
         "description": "",
         "title": "Indstillinger"
+      },
+      "approval": {
+        "title": "Hvordan vil du godkende?",
+        "description": "Du godkender login til Aula med MitID.",
+        "menu_options": {
+          "app_elsewhere": "MitID-appen på en anden enhed",
+          "app_here": "MitID-appen på denne enhed",
+          "code_display": "Kodeviser"
+        },
+        "menu_option_descriptions": {
+          "app_elsewhere": "Scan en QR-kode med din telefon eller tablet",
+          "app_here": "Appen åbner herfra",
+          "code_display": "Den lille dims, der viser tal, når du trykker på knappen"
+        }
       }
     }
   },
@@ -352,15 +362,6 @@
         }
       },
       "name": "API Kald"
-    }
-  },
-  "selector": {
-    "mitid_approval": {
-      "options": {
-        "app_here": "Med MitID-appen på denne telefon eller tablet",
-        "app_elsewhere": "Med MitID-appen på en anden telefon eller tablet (du scanner en QR-kode)",
-        "code_display": "Med kodeviser: en lille dims med en knap og en skærm, der viser tal"
-      }
     }
   }
 }

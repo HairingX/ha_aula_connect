@@ -25,6 +25,8 @@ def test_the_login_names_no_hardware_token(language: str) -> None:
 
 
 @pytest.mark.parametrize("language", ["en", "da"])
-def test_every_way_to_approve_with_mitid_is_named(language: str) -> None:
-    texts = json.loads((TRANSLATIONS / f"{language}.json").read_text("utf-8"))
-    assert set(texts["selector"]["mitid_approval"]["options"]) == {"app_here", "app_elsewhere", "code_display"}
+def test_every_way_to_approve_with_mitid_is_named_and_explained(language: str) -> None:
+    menu = json.loads((TRANSLATIONS / f"{language}.json").read_text("utf-8"))["config"]["step"]["approval"]
+    ways = {"app_elsewhere", "app_here", "code_display"}
+    assert set(menu["menu_options"]) == ways
+    assert set(menu["menu_option_descriptions"]) == ways
