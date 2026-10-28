@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.setup import async_setup_component
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aula_connect.const import DOMAIN
 
@@ -82,3 +83,23 @@ async def test_the_login_page_learns_how_the_user_approves(hass: HomeAssistant) 
     step = await _start_login(hass, approval="app_here")
     session = hass.data[DOMAIN]["auth_sessions"][step.get("flow_id")]
     assert session["approval"] == "app_here"
+
+
+async def test_reconfiguring_asks_for_the_user_id_and_then_how_to_approve(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="Aula",
+        data={"mitid_username": "parent", "auth_method": "APP", "mitid_approval": "app_here"},
+        version=2,
+    )
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    schema = result.get("data_schema")
+    assert schema is not None
+    fields = {str(key): key for key in schema.schema}
+    assert list(fields) == ["mitid_username"]
+    assert fields["mitid_username"].default() == "parent"
+    flow: Any = hass.config_entries.flow
+    menu = await flow.async_configure(result.get("flow_id"), {"mitid_username": "parent"})
+    assert menu.get("type") is FlowResultType.MENU
+    assert list(menu.get("menu_options")) == ["app_elsewhere", "app_here", "code_display"]
