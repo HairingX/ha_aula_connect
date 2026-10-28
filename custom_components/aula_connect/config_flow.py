@@ -9,6 +9,8 @@ import voluptuous as vol
 
 from aula_connect.login.client import AulaLoginClient
 from homeassistant.const import CONF_ID
+from homeassistant.helpers.http import current_request
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 from .const import (
     AUTH_METHOD_APP,
     AUTH_METHOD_TOKEN,
@@ -159,10 +161,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             # Start background auth task
             self.hass.async_create_task(self._authenticate_async(session_data))
 
-            return self.async_external_step(
-                step_id="authenticate",
-                url=f"/api/aula_connect/auth/{self.flow_id}",
-            )
+            return self._external_login()
 
         # Auth completed successfully
         if session_data.get("completed"):
@@ -180,10 +179,30 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_external_step_done(next_step_id="auth_error")
 
         # Still in progress — keep showing external step
+        return self._external_login()
+
+    def _external_login(self) -> ConfigFlowResult:
+        """The step that opens the MitID login page, and links to it should the browser not."""
+        path = f"/api/aula_connect/auth/{self.flow_id}"
         return self.async_external_step(
             step_id="authenticate",
-            url=f"/api/aula_connect/auth/{self.flow_id}",
+            url=f"{self._base_url()}{path}",
+            description_placeholders={"login_path": path},
         )
+
+    def _base_url(self) -> str:
+        """The address the browser reaches Home Assistant at.
+
+        The frontend opens only an absolute http(s) URL, and Home Assistant's own URLs may be
+        ones the browser cannot reach, such as a dev container's, so the request's comes first.
+        """
+        request = current_request.get()
+        if request is not None:
+            return f"{request.scheme}://{request.host}"
+        try:
+            return get_url(self.hass)
+        except NoURLAvailableError:
+            return ""
 
     async def async_step_complete(
         self, user_input: Optional[Dict[str, Any]] = None

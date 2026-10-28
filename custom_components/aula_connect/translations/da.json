@@ -43,8 +43,8 @@
         }
       },
       "authenticate": {
-        "title": "Godkender med MitID",
-        "description": "Vent venligst mens vi godkender med MitID..."
+        "title": "Log ind med MitID",
+        "description": "Godkend login med MitID på den side, der åbner. Åbner der ingen side, så åbn selv [MitID-login]({login_path})."
       },
       "complete": {
         "title": "Godkendelse fuldført",
