@@ -338,5 +338,13 @@
       },
       "name": "API Kald"
     }
+  },
+  "exceptions": {
+    "login_expired": {
+      "message": "Login til Aula er udløbet. Log ind med MitID igen."
+    },
+    "cannot_connect": {
+      "message": "Aula kunne ikke læses: {error}"
+    }
   }
 }

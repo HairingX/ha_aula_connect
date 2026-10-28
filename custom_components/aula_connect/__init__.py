@@ -33,9 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool
 
     # Guard: if tokens are missing, ask to log in again
     if CONF_ACCESS_TOKEN not in entry.data or not entry.data[CONF_ACCESS_TOKEN]:
-        raise ConfigEntryAuthFailed(
-            "No access token found. Please re-authenticate with MitID."
-        )
+        raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired")
 
     access_token = entry.data[CONF_ACCESS_TOKEN]
     refresh_token = entry.data.get(CONF_REFRESH_TOKEN, "")

@@ -7,6 +7,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+from .const import DOMAIN
 import asyncio
 import logging
 
@@ -96,6 +98,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         self._easyiq_weekplan_listeners = dict()
         self._newsletter_listeners = dict()
         self._consecutive_failures = 0
+        self._partly_unreadable = False
         self._client = client
         self.device_id = device_id
         self.aula_version = client.aula_version
@@ -120,7 +123,11 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         try:
             await self.hass.async_add_executor_job(self._connection_check)
         except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed from err
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
+        except Exception as err:
+            raise UpdateFailed(
+                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": str(err)}
+            ) from err
 
     async def _async_update_data(self) -> AulaCalendarCoordinatorData:
         """Fetch data from API endpoint.
@@ -144,14 +151,11 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
                     raise data
                 return data
         except AulaCredentialError as err:
-            # Raising ConfigEntryAuthFailed will cancel future updates
-            # and start a config flow with SOURCE_REAUTH (async_step_reauth)
-            raise ConfigEntryAuthFailed from err
-        except Exception as error:
-            if error.args and isinstance(error.args[0], str):
-                raise UpdateFailed(error.args[0]) from error
-            else:
-                raise UpdateFailed from error
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
+        except Exception as err:
+            raise UpdateFailed(
+                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": str(err)}
+            ) from err
 
     def _fetch_data(self, birthdaylisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], eventlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaInstitutionProfile]], weekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], easyiqweekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], newsletterlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]) -> AulaCalendarCoordinatorData|Exception:
         # Login is required for all fetches — if this fails, nothing works
@@ -161,11 +165,11 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         except AulaCredentialError:
             raise
         except Exception as ex:
-            _LOGGER.error(f"Login failed: {ex}")
             return ex
 
         # Fetch each data type independently — a failure in one does not affect the others
         had_failure = False
+        failures = list[str]()
 
         new_birtyday_keys = list[int]()
         try:
@@ -175,7 +179,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            _LOGGER.warning(f"Failed to fetch birthdays, using cached data: {ex}")
+            failures.append(f"birthdays: {ex}")
 
         new_event_keys = list[int]()
         try:
@@ -185,7 +189,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            _LOGGER.warning(f"Failed to fetch events, using cached data: {ex}")
+            failures.append(f"events: {ex}")
 
         new_weeklyplan_keys = list[int]()
         try:
@@ -195,7 +199,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            _LOGGER.warning(f"Failed to fetch weekly plans, using cached data: {ex}")
+            failures.append(f"weekly plans: {ex}")
 
         new_easyiq_keys = list[int]()
         try:
@@ -205,7 +209,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            _LOGGER.warning(f"Failed to fetch EasyIQ weekplans, using cached data: {ex}")
+            failures.append(f"EasyIQ weekplans: {ex}")
 
         new_newsletter_keys = list[int]()
         try:
@@ -215,16 +219,22 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            _LOGGER.warning(f"Failed to fetch newsletters, using cached data: {ex}")
+            failures.append(f"newsletters: {ex}")
 
         # Track consecutive failures — only raise after MAX_CONSECUTIVE_FAILURES
         if had_failure:
+            # Logged once when Aula's calendars can be read only in part, and once when in full.
+            if not self._partly_unreadable:
+                self._partly_unreadable = True
+                _LOGGER.warning("Aula's calendars could be read only in part, using cached data: %s", "; ".join(failures))
             self._consecutive_failures += 1
             if self._consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
                 self._consecutive_failures = 0
                 return Exception(f"Aula API failed {MAX_CONSECUTIVE_FAILURES} consecutive times")
-            _LOGGER.debug(f"Fetch had partial failures ({self._consecutive_failures}/{MAX_CONSECUTIVE_FAILURES} before unavailable)")
         else:
+            if self._partly_unreadable:
+                self._partly_unreadable = False
+                _LOGGER.info("Aula's calendars can be read in full again")
             self._consecutive_failures = 0
 
         # Update last_updated for successful fetches
@@ -263,7 +273,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         try:
             return await self.hass.async_add_executor_job(self._client.get_birthday_events, profiles, start_datetime, end_datetime)
         except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed from err
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
             _LOGGER.warning("Failed to fetch birthdays for interval: %s", ex)
             return []
@@ -317,7 +327,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         try:
             return await self.hass.async_add_executor_job(self._client.get_calendar_events, profiles, start_date, end_date)
         except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed from err
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
             _LOGGER.warning("Failed to fetch events for interval: %s", ex)
             return []
@@ -369,7 +379,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         try:
             return await self.hass.async_add_executor_job(self._client.get_weekly_plans, profiles, start_datetime, end_datetime)
         except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed from err
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
             _LOGGER.warning("Failed to fetch weekly plans for interval: %s", ex)
             return []
@@ -423,7 +433,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         try:
             return await self.hass.async_add_executor_job(self._client.get_easyiq_weekly_plans, profiles, start_datetime, end_datetime)
         except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed from err
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
             _LOGGER.warning("Failed to fetch EasyIQ weekly plans for interval: %s", ex)
             return []
@@ -476,7 +486,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         try:
             return await self.hass.async_add_executor_job(self._client.get_newsletters, profiles, start_datetime, end_datetime)
         except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed from err
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
             _LOGGER.warning("Failed to fetch newsletters for interval: %s", ex)
             return []

@@ -338,5 +338,13 @@
       },
       "name": "API Call"
     }
+  },
+  "exceptions": {
+    "login_expired": {
+      "message": "The login to Aula has expired. Log in with MitID again."
+    },
+    "cannot_connect": {
+      "message": "Aula could not be read: {error}"
+    }
   }
 }
