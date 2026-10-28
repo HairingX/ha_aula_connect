@@ -1,20 +1,19 @@
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from typing import Any, List
 import logging
 
 from .entity import AulaEntityBase
 from .aula_data_coordinator import AulaDataCoordinator, AulaDataCoordinatorData
-from .aula_data import get_aula_data_coordinator
+from .aula_data import AulaConfigEntry
 from aula_connect.api.module import AulaMessageThread, AulaAlbumNotification, AulaCalendarEventNotification, AulaGalleryNotification, AulaPostNotification, AulaPresenceNotification, NotificationType
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
+async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback):
     """Setup binary sensors from a config entry created in the integrations UI."""
-    coordinator = get_aula_data_coordinator(hass, entry)
+    coordinator = entry.runtime_data.data_coordinator
     entities: List[BinarySensorEntity] = []
     entities.append(AulaUnreadMessageBinarySensor(coordinator))
     entities.append(AulaUnreadGalleryBinarySensor(coordinator))
@@ -24,7 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     async_add_entities(entities)
 
 
-class AulaUnreadGalleryBinarySensor(AulaEntityBase[None], BinarySensorEntity): # type: ignore
+class AulaUnreadGalleryBinarySensor(AulaEntityBase[None], BinarySensorEntity):
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_gallery", context=None)
         self._init_data()
@@ -45,7 +44,7 @@ class AulaUnreadGalleryBinarySensor(AulaEntityBase[None], BinarySensorEntity): #
         attributes["total"] = total
         self._attr_extra_state_attributes = attributes
 
-class AulaUnreadCalendarEventBinarySensor(AulaEntityBase[None], BinarySensorEntity): # type: ignore
+class AulaUnreadCalendarEventBinarySensor(AulaEntityBase[None], BinarySensorEntity):
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_calendar", context=None)
         self._init_data()
@@ -81,7 +80,7 @@ class AulaUnreadCalendarEventBinarySensor(AulaEntityBase[None], BinarySensorEnti
             attributes["title"] = first.title
         self._attr_extra_state_attributes = attributes
 
-class AulaUnreadMessageBinarySensor(AulaEntityBase[None], BinarySensorEntity): # type: ignore
+class AulaUnreadMessageBinarySensor(AulaEntityBase[None], BinarySensorEntity):
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_message", context=None)
         self._init_data()
@@ -126,7 +125,7 @@ class AulaUnreadMessageBinarySensor(AulaEntityBase[None], BinarySensorEntity): #
                 attributes["text"] = "This message is sensitive. Please log into Aula to read it."
         self._attr_extra_state_attributes = attributes
 
-class AulaUnreadPostBinarySensor(AulaEntityBase[None], BinarySensorEntity): # type: ignore
+class AulaUnreadPostBinarySensor(AulaEntityBase[None], BinarySensorEntity):
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_post", context=None)
         self._init_data()
@@ -156,7 +155,7 @@ class AulaUnreadPostBinarySensor(AulaEntityBase[None], BinarySensorEntity): # ty
             attributes["title"] = first.title
         self._attr_extra_state_attributes = attributes
 
-class AulaUnreadPresenceBinarySensor(AulaEntityBase[None], BinarySensorEntity): # type: ignore
+class AulaUnreadPresenceBinarySensor(AulaEntityBase[None], BinarySensorEntity):
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_presence", context=None)
         self._init_data()

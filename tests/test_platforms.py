@@ -13,6 +13,7 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aula_connect.aula_calendar_coordinator import AulaCalendarCoordinatorData
+from custom_components.aula_connect.aula_data import AulaRuntimeData
 from custom_components.aula_connect.aula_data_coordinator import AulaDataCoordinatorData
 from custom_components.aula_connect.const import DOMAIN
 
@@ -57,3 +58,40 @@ async def test_an_account_without_children_has_only_its_unread_sensors(hass: Hom
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
+
+
+@pytest.mark.usefixtures("aula_without_children")
+async def test_the_entry_keeps_its_client_and_coordinators_as_runtime_data(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="Aula", title="Aula", data=DATA, version=2)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    runtime = entry.runtime_data
+    assert isinstance(runtime, AulaRuntimeData)
+    assert runtime.data_coordinator.config_entry is entry
+    assert runtime.calendar_coordinator.config_entry is entry
+    assert DOMAIN not in hass.data or entry.entry_id not in hass.data[DOMAIN]
+
+    with patch.object(runtime.client, "close") as close:
+        assert await hass.config_entries.async_unload(entry.entry_id)
+    close.assert_called_once_with()
+
+
+@pytest.mark.usefixtures("aula_without_children")
+async def test_the_entities_are_unavailable_while_aula_cannot_be_read(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="Aula", title="Aula", data=DATA, version=2)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = entry.runtime_data.data_coordinator
+    entity_id = "binary_sensor.aula_unread_message"
+
+    coordinator.async_set_update_error(Exception("Aula did not answer"))
+    await hass.async_block_till_done()
+    state = hass.states.get(entity_id)
+    assert state is not None and state.state == "unavailable"
+
+    coordinator.async_set_updated_data(coordinator.data)
+    await hass.async_block_till_done()
+    state = hass.states.get(entity_id)
+    assert state is not None and state.state == "off"

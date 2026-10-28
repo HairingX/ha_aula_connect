@@ -8,7 +8,7 @@ from typing import Any, List
 import logging
 
 from .aula_calendar_coordinator import AulaCalendarCoordinator, AulaCalendarCoordinatorData
-from .aula_data import get_aula_calendar_coordinator, get_aula_data_coordinator
+from .aula_data import AulaConfigEntry
 from .aula_data_coordinator import AulaDataCoordinator
 from aula_connect.api.models.constants import (
     AulaCalendarEventType, CALENDAR_EVENT_ICON, WEEKLY_PLAN_TASK_ICON,
@@ -35,22 +35,22 @@ from .entity import AulaCalendarEntityBase
 
 _LOGGER = logging.getLogger(__name__)
 
-def _to_datetime(value: datetime | date, tzinfo: Any) -> datetime:
+def to_datetime(value: datetime | date, tzinfo: Any) -> datetime:
     """Convert a date or datetime to a datetime with timezone."""
-    if type(value) is date:
-        return datetime.combine(value, datetime.min.time(), tzinfo)
-    return value  # type: ignore[return-value]
+    if isinstance(value, datetime):
+        return value
+    return datetime.combine(value, datetime.min.time(), tzinfo)
 
 def _is_event_in_range(event: CalendarEvent, start: datetime, end: datetime) -> bool:
     """Return True if the event overlaps with the given range."""
-    event_start = _to_datetime(event.start, start.tzinfo)
-    event_end = _to_datetime(event.end, start.tzinfo)
+    event_start = to_datetime(event.start, start.tzinfo)
+    event_end = to_datetime(event.end, start.tzinfo)
     return event_start < end and event_end >= start
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     """Set up the calendar platform."""
-    data_coordinator = get_aula_data_coordinator(hass, entry)
-    calendar_coordinator = get_aula_calendar_coordinator(hass, entry)
+    data_coordinator = entry.runtime_data.data_coordinator
+    calendar_coordinator = entry.runtime_data.calendar_coordinator
     await calendar_coordinator.async_config_entry_first_refresh()
     entities: List[CalendarEntity] = []
     for child in data_coordinator.data.children:
@@ -74,7 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     async_add_entities(entities)
 
-class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity): # type: ignore
+class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
     """A calendar event entity."""
     _event: CalendarEvent | None = None
     _profile: AulaChildProfile
@@ -154,7 +154,7 @@ class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity): # type: igno
         """Return the start date of the event."""
         return event.birthday_date.replace(year=now().year)
 
-class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity): # type: ignore
+class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
     """A calendar event entity."""
     _event: CalendarEvent | None = None
     _profile: AulaChildProfile|AulaProfile
@@ -302,7 +302,7 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity): # type: ignore
         return result
 
 
-class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity): # type: ignore
+class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
     """A calendar event entity."""
     _event: CalendarEvent | None = None
     _profile: AulaChildProfile
@@ -414,7 +414,7 @@ class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity): # type: ig
         )
 
 
-class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity): # type: ignore
+class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
     """A calendar entity for EasyIQ weekly plans (widget 0001)."""
     _profile: AulaChildProfile
     _institution: AulaInstitutionProfile
@@ -490,7 +490,7 @@ class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity): # type
         )
 
 
-class AulaNewsletterCalendar(AulaCalendarEntityBase, CalendarEntity): # type: ignore
+class AulaNewsletterCalendar(AulaCalendarEntityBase, CalendarEntity):
     """A calendar entity for MinUddannelse newsletters (widget 0029).
     Each newsletter is displayed as an all-day event on the Monday of its week.
     The HTML content is preserved in the description for custom card rendering."""

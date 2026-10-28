@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -10,16 +9,16 @@ from typing import Any, List
 import datetime
 import logging
 
-from .aula_data import get_aula_data_coordinator
+from .aula_data import AulaConfigEntry
 from .aula_data_coordinator import AulaDataCoordinator, AulaDataCoordinatorData
 from aula_connect.api.models.aula_profile_models import AulaChildProfile, AulaDailyOverview
 from .entity import AulaEntityBase
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
+async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback):
     """Setup sensors from a config entry created in the integrations UI."""
-    coordinator = get_aula_data_coordinator(hass, entry)
+    coordinator = entry.runtime_data.data_coordinator
     entities: List[SensorEntity] = []
     children = coordinator.data.children
     for child in children:
@@ -28,7 +27,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         entities.append(AulaPresenceDurationSensor(coordinator, child))
     async_add_entities(entities)
 
-class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity): # type: ignore
+class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
     _attr_device_class = SensorDeviceClass.ENUM
 
     def __init__(self, coordinator: AulaDataCoordinator, profile: AulaChildProfile) -> None:
@@ -50,7 +49,6 @@ class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity): # type: 
                 daily_overview = item
 
         self._attr_icon = "mdi:map-marker-off"
-        self._attr_available = daily_overview is not None
         attributes["check_in_time"] = None
         attributes["check_out_time"] = None
         attributes["check_in_time_expected"] = None
@@ -78,7 +76,7 @@ class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity): # type: 
                 attributes["location_icon"] = daily_overview.location.icon
         self._attr_extra_state_attributes = attributes
 
-class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity): # type: ignore
+class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
     _attr_device_class = SensorDeviceClass.ENUM
 
     def __init__(self, coordinator: AulaDataCoordinator, profile: AulaChildProfile) -> None:
@@ -100,7 +98,6 @@ class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity): # type
                 daily_overview = item
 
         self._attr_icon = "mdi:map-marker-off"
-        self._attr_available = daily_overview is not None
         attributes["check_in_time"] = None
         attributes["check_out_time"] = None
         attributes["check_in_time_expected"] = None
@@ -121,7 +118,7 @@ class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity): # type
             attributes["institution_name"] = daily_overview.institution_profile.institution_name
         self._attr_extra_state_attributes = attributes
 
-class AulaPresenceDurationSensor(AulaEntityBase[AulaChildProfile], SensorEntity): # type: ignore
+class AulaPresenceDurationSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
@@ -144,7 +141,6 @@ class AulaPresenceDurationSensor(AulaEntityBase[AulaChildProfile], SensorEntity)
                 daily_overview = item
 
         self._attr_icon = "mdi:timer"
-        self._attr_available = daily_overview is not None
         attributes["check_in_time"] = None
         attributes["check_out_time"] = None
         attributes["main_group"] = self._profile.main_group.name
