@@ -85,6 +85,14 @@ async def test_the_login_page_learns_how_the_user_approves(hass: HomeAssistant) 
     assert session["approval"] == "app_here"
 
 
+async def test_the_forms_before_the_login_say_next_not_submit(hass: HomeAssistant) -> None:
+    """Every form leads on to the MitID login, so none is the last step."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    assert result.get("last_step") is False
+    step = await _start_login(hass, approval="code_display")
+    assert step.get("last_step") is False
+
+
 async def test_reconfiguring_asks_for_the_user_id_and_then_how_to_approve(hass: HomeAssistant) -> None:
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -99,6 +107,7 @@ async def test_reconfiguring_asks_for_the_user_id_and_then_how_to_approve(hass: 
     fields = {str(key): key for key in schema.schema}
     assert list(fields) == ["mitid_username"]
     assert fields["mitid_username"].default() == "parent"
+    assert result.get("last_step") is False
     flow: Any = hass.config_entries.flow
     menu = await flow.async_configure(result.get("flow_id"), {"mitid_username": "parent"})
     assert menu.get("type") is FlowResultType.MENU
