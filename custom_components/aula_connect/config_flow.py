@@ -12,15 +12,9 @@ from homeassistant.const import CONF_ID
 from homeassistant.helpers.http import current_request
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from .const import (
-    AUTH_METHOD_TOKEN,
+    AUTH_METHOD_APP,
     CONF_ACCESS_TOKEN,
     CONF_AUTH_METHOD,
-    CONF_APPROVAL,
-    APPROVAL_APP_ELSEWHERE,
-    APPROVAL_APP_HERE,
-    APPROVAL_CODE_DISPLAY,
-    approval_of,
-    auth_method,
     CONF_MITID_USERNAME,
     CONF_REFRESH_TOKEN,
     CONF_TOKEN_EXPIRES_AT,
@@ -30,23 +24,12 @@ from .views import AulaAuthView, AulaAuthStatusView, AulaAuthSelectIdentityView
 
 _LOGGER = logging.getLogger(__name__)
 
-APPROVALS = [APPROVAL_APP_ELSEWHERE, APPROVAL_APP_HERE, APPROVAL_CODE_DISPLAY]
-"""The ways to approve with MitID, as the steps of the approval menu, the commonest first."""
-
 USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ID, default="Aula"): cv.string,
         vol.Required(CONF_MITID_USERNAME): cv.string,
     }
 )
-
-TOKEN_CREDENTIALS_SCHEMA = vol.Schema(
-    {
-        vol.Required("mitid_password"): cv.string,
-        vol.Required("mitid_token"): cv.string,
-    }
-)
-
 
 class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
     """Aula config flow with MitID authentication."""
@@ -56,10 +39,6 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self):
         self._entry_id: str = "Aula"
         self._mitid_username: str | None = None
-        self._auth_method: str | None = None
-        self._approval: str = APPROVAL_APP_ELSEWHERE
-        self._mitid_password: str | None = None
-        self._mitid_token: str | None = None
         self._auth_client: AulaLoginClient | None = None
         self._tokens: dict | None = None
         self._reauth_entry = None
@@ -85,59 +64,11 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
                     step_id="user", data_schema=USER_SCHEMA, errors={"base": "id_already_in_use"}
                 )
 
-            return await self.async_step_approval()
-
-        return self.async_show_form(
-            last_step=False,
-            step_id="user", data_schema=USER_SCHEMA, errors=errors
-        )
-
-    async def async_step_approval(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> ConfigFlowResult:
-        """Ask how the user approves with MitID; each answer is a step of its own."""
-        return self.async_show_menu(step_id="approval", menu_options=APPROVALS)
-
-    async def async_step_app_elsewhere(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> ConfigFlowResult:
-        """Approve with the MitID app on another device, which scans a QR code."""
-        return await self._approve_with(APPROVAL_APP_ELSEWHERE)
-
-    async def async_step_app_here(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> ConfigFlowResult:
-        """Approve with the MitID app on the device the setup runs on."""
-        return await self._approve_with(APPROVAL_APP_HERE)
-
-    async def async_step_code_display(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> ConfigFlowResult:
-        """Approve with a MitID code display and the MitID password."""
-        return await self._approve_with(APPROVAL_CODE_DISPLAY)
-
-    async def _approve_with(self, approval: str) -> ConfigFlowResult:
-        """Go on to the MitID login the user approves in the way chosen."""
-        self._approval = approval
-        self._auth_method = auth_method(approval)
-        if self._auth_method == AUTH_METHOD_TOKEN:
-            return await self.async_step_token_credentials()
-        return await self.async_step_authenticate()
-
-    async def async_step_token_credentials(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> ConfigFlowResult:
-        errors: Dict[str, str] = {}
-        if user_input is not None:
-            self._mitid_password = user_input["mitid_password"]
-            self._mitid_token = user_input["mitid_token"]
             return await self.async_step_authenticate()
 
         return self.async_show_form(
             last_step=False,
-            step_id="token_credentials",
-            data_schema=TOKEN_CREDENTIALS_SCHEMA,
-            errors=errors,
+            step_id="user", data_schema=USER_SCHEMA, errors=errors
         )
 
     async def async_step_authenticate(
@@ -169,15 +100,12 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
 
             self._auth_client = AulaLoginClient(
                 mitid_username=self._mitid_username,
-                mitid_password=self._mitid_password,
-                mitid_token=self._mitid_token,
-                auth_method=self._auth_method,
+                auth_method=AUTH_METHOD_APP,
             )
 
             session_data = {
                 "client": self._auth_client,
                 "status_message": "Open your MitID app now...",
-                "approval": self._approval,
                 "completed": False,
                 "error": None,
                 "identity_future": None,
@@ -251,8 +179,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         """Create or update config entry with tokens."""
         data = {
             CONF_MITID_USERNAME: self._mitid_username,
-            CONF_AUTH_METHOD: self._auth_method,
-            CONF_APPROVAL: self._approval,
+            CONF_AUTH_METHOD: AUTH_METHOD_APP,
             CONF_ACCESS_TOKEN: self._tokens.get("access_token", ""),
             CONF_REFRESH_TOKEN: self._tokens.get("refresh_token", ""),
             CONF_TOKEN_EXPIRES_AT: self._tokens.get("expires_at", 0),
@@ -273,9 +200,6 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Display error and allow retry."""
         if user_input is not None:
-            # TOKEN method: send back to credentials form for fresh one-time code
-            if self._auth_method == AUTH_METHOD_TOKEN:
-                return await self.async_step_token_credentials()
             return await self.async_step_authenticate(user_input)
 
         return self.async_show_form(
@@ -287,11 +211,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _authenticate_async(self, session_data: dict) -> None:
         """Background authentication task."""
         try:
-            _LOGGER.info(
-                "Starting MitID authentication for %s using %s",
-                self._mitid_username,
-                self._auth_client.auth_method,
-            )
+            _LOGGER.info("Starting MitID authentication")
 
             # Monitor BrowserClient status messages
             monitor_task = self.hass.async_create_task(
@@ -363,10 +283,6 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             self.context["entry_id"]
         )
         self._mitid_username = self._reauth_entry.data.get(CONF_MITID_USERNAME, "")
-        self._approval = approval_of(dict(self._reauth_entry.data))
-        self._auth_method = auth_method(self._approval)
-        self._mitid_password = None
-        self._mitid_token = None
 
         # If no MitID username stored (v1→v2 migration), ask for it
         if not self._mitid_username:
@@ -432,7 +348,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             if not self._mitid_username:
                 errors["base"] = "invalid_auth"
             else:
-                return await self.async_step_approval()
+                return await self.async_step_authenticate()
 
         # Pre-fill with existing username if available
         existing_username = entry.data.get(CONF_MITID_USERNAME, "")

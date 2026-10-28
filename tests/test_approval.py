@@ -1,25 +1,10 @@
-"""Tests of how the user approves with MitID, and what the login page shows for it."""
+"""Tests of what the login page shows at each step of the MitID login."""
 
 from __future__ import annotations
 
 import pytest
 
-from custom_components.aula_connect.const import approval_of, auth_method
 from custom_components.aula_connect.views import login_stage
-
-
-@pytest.mark.parametrize(
-    ("approval", "method"),
-    [("app_here", "APP"), ("app_elsewhere", "APP"), ("code_display", "TOKEN")],
-)
-def test_each_approval_logs_in_with_its_mitid_method(approval: str, method: str) -> None:
-    assert auth_method(approval) == method
-
-
-def test_an_entry_from_before_the_choice_approves_as_it_did() -> None:
-    assert approval_of({"auth_method": "APP"}) == "app_elsewhere"
-    assert approval_of({"auth_method": "TOKEN"}) == "code_display"
-    assert approval_of({"auth_method": "APP", "mitid_approval": "app_here"}) == "app_here"
 
 
 @pytest.mark.parametrize(

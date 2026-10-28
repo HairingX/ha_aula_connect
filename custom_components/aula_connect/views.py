@@ -45,7 +45,6 @@ class AulaAuthView(HomeAssistantView):
         button {{ background-color: #03a9f4; color: white; border: none; padding: 12px 20px; margin: 5px; border-radius: 4px; cursor: pointer; font-size: 18px; }}
         button:hover {{ background-color: #0288d1; }}
         .error {{ color: #d32f2f; }}
-        #open-app {{ display: inline-block; background-color: #0060e6; color: white; text-decoration: none; padding: 14px 24px; margin: 10px 0; border-radius: 8px; font-size: 18px; font-weight: 600; }}
     </style>
 </head>
 <body>
@@ -53,9 +52,6 @@ class AulaAuthView(HomeAssistantView):
         <h1>MitID</h1>
         <div id="status"></div>
         <div id="code" class="hidden"></div>
-        <!-- MitID's own app switch link: a universal link on iOS and an app link on Android
-             open the app at the login waiting for approval, where mitid:// opens its start. -->
-        <a id="open-app" class="hidden" href="https://appswitch.mitid.dk/"></a>
         <div id="qr-container" class="hidden"></div>
         <div id="identity-selection" class="hidden">
             <h3 id="identity-title"></h3>
@@ -67,14 +63,10 @@ class AulaAuthView(HomeAssistantView):
         const flowId = "{flow_id}";
         const TEXTS = {{
             da: {{
-                open_app_here: "Tryk på knappen for at åbne MitID-appen, og godkend dér.",
-                open_app_elsewhere: "Åbn MitID-appen på din telefon. Skal du scanne en QR-kode, kommer den frem her.",
-                scan_here: "MitID vil have en QR-kode scannet, og det kan ikke gøres på den samme telefon. Luk siden, start forfra, og vælg MitID-appen på en anden enhed.",
-                open_app_button: "Åbn MitID-appen",
+                open_app: "Åbn MitID-appen på din telefon. QR-koden, du skal scanne, kommer frem her.",
                 scan: "Scan QR-koden med MitID-appen på din telefon.",
                 code: "Skriv denne kode i MitID-appen:",
                 approve: "Godkend nu i MitID-appen.",
-                code_display: "Logger ind med din kodeviser …",
                 finishing: "Godkendt. Logger ind på Aula …",
                 identity: "Vælg, hvem du vil logge ind som",
                 identity_chosen: "Valgt. Logger ind …",
@@ -82,14 +74,10 @@ class AulaAuthView(HomeAssistantView):
                 close: "Luk siden",
             }},
             en: {{
-                open_app_here: "Press the button to open the MitID app, and approve there.",
-                open_app_elsewhere: "Open the MitID app on your phone. If you need to scan a QR code, it appears here.",
-                scan_here: "MitID wants a QR code scanned, which cannot be done on the same phone. Close this page, start over, and choose the MitID app on another device.",
-                open_app_button: "Open the MitID app",
+                open_app: "Open the MitID app on your phone. The QR code to scan appears here.",
                 scan: "Scan the QR code with the MitID app on your phone.",
                 code: "Type this code in the MitID app:",
                 approve: "Approve in the MitID app now.",
-                code_display: "Logging in with your code display …",
                 finishing: "Approved. Logging in to Aula …",
                 identity: "Choose who to log in as",
                 identity_chosen: "Chosen. Logging in …",
@@ -100,22 +88,17 @@ class AulaAuthView(HomeAssistantView):
         const t = TEXTS[(navigator.language || "").toLowerCase().startsWith("da") ? "da" : "en"];
         const show = (id, visible) => document.getElementById(id).classList.toggle("hidden", !visible);
 
-        document.getElementById("open-app").innerText = t.open_app_button;
         document.getElementById("identity-title").innerText = t.identity;
 
         function render(data) {{
             const status = document.getElementById("status");
-            const here = data.approval === "app_here";
             show("code", data.stage === "code");
-            show("open-app", data.stage === "open_app" && here);
-            show("qr-container", data.stage === "scan" && !here);
-            if (data.stage === "open_app" && data.approval === "code_display") {{
-                status.innerText = t.code_display;
-            }} else if (data.stage === "open_app") {{
-                status.innerText = here ? t.open_app_here : t.open_app_elsewhere;
+            show("qr-container", data.stage === "scan");
+            if (data.stage === "open_app") {{
+                status.innerText = t.open_app;
             }} else if (data.stage === "scan") {{
-                status.innerText = here ? t.scan_here : t.scan;
-                document.getElementById("qr-container").innerHTML = here ? "" : data.qr_svg;
+                status.innerText = t.scan;
+                document.getElementById("qr-container").innerHTML = data.qr_svg;
             }} else if (data.stage === "code") {{
                 status.innerText = t.code;
                 document.getElementById("code").innerText = data.code;
@@ -136,7 +119,7 @@ class AulaAuthView(HomeAssistantView):
                         const status = document.getElementById("status");
                         status.innerText = data.error;
                         status.className = "error";
-                        ["code", "open-app", "qr-container", "identity-selection"].forEach(id => show(id, false));
+                        ["code", "qr-container", "identity-selection"].forEach(id => show(id, false));
                         return;
                     }}
 
@@ -149,11 +132,11 @@ class AulaAuthView(HomeAssistantView):
                             btn.onclick = () => selectIdentity(index + 1);
                             container.appendChild(btn);
                         }});
-                        ["code", "open-app", "qr-container"].forEach(id => show(id, false));
+                        ["code", "qr-container"].forEach(id => show(id, false));
                         document.getElementById("status").innerText = "";
                         show("identity-selection", true);
                     }} else if (data.completed) {{
-                        ["code", "open-app", "qr-container", "identity-selection"].forEach(id => show(id, false));
+                        ["code", "qr-container", "identity-selection"].forEach(id => show(id, false));
                         document.getElementById("status").innerText = t.completed;
                         if (!document.getElementById("close-btn")) {{
                             const btn = document.createElement("button");
@@ -251,7 +234,6 @@ class AulaAuthStatusView(HomeAssistantView):
         response = {
             "message": message,
             "stage": stage,
-            "approval": session.get("approval"),
             "code": code,
             "qr_svg": qr_svg,
             "identities": session.get("available_identities", []),
