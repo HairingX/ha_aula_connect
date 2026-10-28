@@ -5,9 +5,10 @@
 # hacs.json requires that release.
 pytest-homeassistant-custom-component==0.13.375
 pyright==1.1.414
-# The integration's requirement, as the manifest pins it, and its library's requirements at the
+# The integration's requirement, as the manifest pins it, and its libraries' requirements at the
 # versions Home Assistant's own integrations pin.
-aula_connect==0.0.1
+aula_connect==0.0.2
+mitid_connect==0.0.1
 beautifulsoup4==4.13.3
 lxml==6.1.2
 pycryptodomex==3.24.1
