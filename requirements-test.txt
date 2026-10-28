@@ -9,7 +9,7 @@ pyright==1.1.414
 # versions Home Assistant's own integrations pin.
 aula_connect==0.0.2
 mitid_connect==0.0.1
-beautifulsoup4==4.13.3
+beautifulsoup4==4.15.0
 lxml==6.1.2
 pycryptodomex==3.24.1
 qrcode==8.2
