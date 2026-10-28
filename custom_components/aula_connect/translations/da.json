@@ -18,7 +18,7 @@
     "step": {
       "user": {
         "title": "Log ind på Aula med MitID",
-        "description": "Aula Connect logger ind på Aula med dit MitID, som du gør på aula.dk.",
+        "description": "Aula Connect logger ind på Aula med dit MitID, som du gør på aula.dk. Du godkender ved at scanne en QR-kode med MitID-appen på din telefon.",
         "data": {
           "id": "Navn",
           "mitid_username": "MitID bruger-ID"
@@ -28,21 +28,9 @@
           "mitid_username": "Det bruger-ID, du logger ind på MitID med."
         }
       },
-      "token_credentials": {
-        "title": "Log ind med din MitID kodeviser",
-        "description": "Skriv din MitID-adgangskode og den kode, din kodeviser viser nu.",
-        "data": {
-          "mitid_password": "MitID-adgangskode",
-          "mitid_token": "Kode fra kodeviseren"
-        },
-        "data_description": {
-          "mitid_password": "Den adgangskode, du logger ind på MitID med.",
-          "mitid_token": "De 6 cifre, kodeviseren viser, når du trykker på knappen."
-        }
-      },
       "authenticate": {
         "title": "Log ind med MitID",
-        "description": "Godkend login med MitID på den side, der åbner. Åbner der ingen side, så åbn selv [MitID-login]({login_path})."
+        "description": "Godkend login ved at scanne QR-koden med MitID-appen på din telefon. Åbner der ingen side, så åbn selv [MitID-login]({login_path})."
       },
       "complete": {
         "title": "Godkendelse fuldført",
@@ -61,7 +49,7 @@
       },
       "reconfigure": {
         "title": "Ændr MitID-login",
-        "description": "Ændr MitID bruger-ID, eller hvordan du godkender login.",
+        "description": "Ændr MitID bruger-ID. Bagefter godkender du med MitID.",
         "data": {
           "mitid_username": "MitID bruger-ID"
         },
@@ -79,20 +67,6 @@
         },
         "description": "",
         "title": "Indstillinger"
-      },
-      "approval": {
-        "title": "Hvordan vil du godkende?",
-        "description": "Du godkender login til Aula med MitID.",
-        "menu_options": {
-          "app_elsewhere": "MitID-appen på en anden enhed",
-          "app_here": "MitID-appen på denne enhed",
-          "code_display": "Kodeviser"
-        },
-        "menu_option_descriptions": {
-          "app_elsewhere": "Scan en QR-kode med din telefon eller tablet",
-          "app_here": "Appen åbner herfra",
-          "code_display": "Den lille dims, der viser tal, når du trykker på knappen"
-        }
       }
     }
   },

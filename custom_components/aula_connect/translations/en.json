@@ -18,7 +18,7 @@
     "step": {
       "user": {
         "title": "Log in to Aula with MitID",
-        "description": "Aula Connect logs in to Aula with your MitID, as you do on aula.dk.",
+        "description": "Aula Connect logs in to Aula with your MitID, as you do on aula.dk. You approve by scanning a QR code with the MitID app on your phone.",
         "data": {
           "id": "Name",
           "mitid_username": "MitID user ID"
@@ -28,21 +28,9 @@
           "mitid_username": "The user ID you log in to MitID with."
         }
       },
-      "token_credentials": {
-        "title": "Log in with your MitID code display",
-        "description": "Enter your MitID password and the code your code display shows now.",
-        "data": {
-          "mitid_password": "MitID password",
-          "mitid_token": "Code from the code display"
-        },
-        "data_description": {
-          "mitid_password": "The password you log in to MitID with.",
-          "mitid_token": "The 6 digits the code display shows when you press its button."
-        }
-      },
       "authenticate": {
         "title": "Log in with MitID",
-        "description": "Approve the login with MitID on the page that opens. If no page opens, open the [MitID login]({login_path}) yourself."
+        "description": "Approve the login by scanning the QR code with the MitID app on your phone. If no page opens, open the [MitID login]({login_path}) yourself."
       },
       "complete": {
         "title": "Authentication Complete",
@@ -61,7 +49,7 @@
       },
       "reconfigure": {
         "title": "Change the MitID login",
-        "description": "Change the MitID user ID or how you approve the login.",
+        "description": "Change the MitID user ID. Afterwards you approve with MitID.",
         "data": {
           "mitid_username": "MitID user ID"
         },
@@ -79,20 +67,6 @@
         },
         "description": "",
         "title": "Options"
-      },
-      "approval": {
-        "title": "How do you want to approve?",
-        "description": "You approve the login to Aula with MitID.",
-        "menu_options": {
-          "app_elsewhere": "The MitID app on another device",
-          "app_here": "The MitID app on this device",
-          "code_display": "Code display"
-        },
-        "menu_option_descriptions": {
-          "app_elsewhere": "Scan a QR code with your phone or tablet",
-          "app_here": "The app opens from here",
-          "code_display": "The small device that shows numbers when you press its button"
-        }
       }
     }
   },

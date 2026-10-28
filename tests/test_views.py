@@ -12,17 +12,18 @@ from custom_components.aula_connect.const import DOMAIN
 from custom_components.aula_connect.views import AulaAuthView
 
 
-async def test_the_login_page_opens_the_mitid_app(
+async def test_the_login_page_shows_the_qr_code_and_no_app_button(
     hass: HomeAssistant, hass_client_no_auth: Callable[[], Awaitable[Any]]
 ) -> None:
-    """On the phone that holds the MitID app, a QR code on its own screen cannot be scanned."""
     assert await async_setup_component(hass, "http", {})
     hass.http.register_view(AulaAuthView(hass))
     hass.data[DOMAIN] = {"auth_sessions": {"flow": {}}}
     client = await hass_client_no_auth()
     response = await client.get("/api/aula_connect/auth/flow")
     assert response.status == 200
-    assert 'href="https://appswitch.mitid.dk/"' in await response.text()
+    page = await response.text()
+    assert 'id="qr-container"' in page
+    assert "appswitch.mitid.dk" not in page
 
 
 async def test_the_login_page_says_it_is_utf_8(
