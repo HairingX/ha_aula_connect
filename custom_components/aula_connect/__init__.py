@@ -4,22 +4,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.typing import ConfigType
 import logging
-from collections.abc import Callable
-from typing import cast
 
 from .aula_data import AulaHassData, remove_hass_data, set_hass_data
-from .migration import async_take_over, offer_take_over
 from .aula_data_coordinator import AulaDataCoordinator
 from .aula_calendar_coordinator import AulaCalendarCoordinator
 from aula_connect.client import AulaClient
 from aula_connect.login import AulaLoginClient
 from .const import (
     DOMAIN,
-    CONF_MIGRATED_FROM,
     CONF_ACCESS_TOKEN,
     CONF_REFRESH_TOKEN,
     CONF_TOKEN_EXPIRES_AT,
@@ -34,42 +27,16 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-# Home Assistant annotates this with a bare `dict`, which a strict check reads as unknown.
-_config_entry_only_config_schema = cast(
-    Callable[[str], Callable[[ConfigType], ConfigType]],
-    getattr(cv, "config_entry_only_config_schema"),
-)
-CONFIG_SCHEMA = _config_entry_only_config_schema(DOMAIN)
-
-
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Offer to take over each installation of the Aula integration under its previous domain."""
-    offer_take_over(hass)
-    return True
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""
     hass.data.setdefault(DOMAIN, {})
-
-    if CONF_MIGRATED_FROM in entry.data:
-        await async_take_over(hass, entry)
 
     # Guard: unique_id must be set for entity unique_id prefix
     if not entry.unique_id:
         _LOGGER.error("Config entry has no unique_id — cannot create entities safely")
         raise ConfigEntryAuthFailed("Config entry has no unique_id. Please remove and re-add the integration.")
 
-    # Migrate entity unique_ids: add entry.unique_id prefix for multi-account support
-    ent_reg = er.async_get(hass)
-    prefix = f"{entry.unique_id}_"
-    for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
-        if not ent.unique_id.startswith(prefix):
-            new_uid = f"{prefix}{ent.unique_id}"
-            _LOGGER.info("Migrating entity unique_id: %s → %s", ent.unique_id, new_uid)
-            ent_reg.async_update_entity(ent.entity_id, new_unique_id=new_uid)
-
-    # Guard: if tokens are missing (e.g. v1→v2 migration before reauth), abort
+    # Guard: if tokens are missing, ask to log in again
     if CONF_ACCESS_TOKEN not in entry.data or not entry.data[CONF_ACCESS_TOKEN]:
         raise ConfigEntryAuthFailed(
             "No access token found. Please re-authenticate with MitID."
@@ -136,21 +103,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Note: No add_update_listener here — token persistence via async_update_entry
     # would trigger reload loops. Reauth/reconfigure handle config changes already.
 
-    return True
-
-
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Migrate old config entries to new version."""
-    if config_entry.version < 2:
-        _LOGGER.info(
-            "Migrating config entry from version %s to 2", config_entry.version
-        )
-        # V1 had UniLogin username/password — can't auto-migrate to MitID tokens.
-        # V1 always set unique_id via async_set_unique_id(CONF_ID).
-        # Bump version only — async_setup_entry will raise ConfigEntryAuthFailed
-        # (no access_token in data) which triggers reauth automatically.
-        hass.config_entries.async_update_entry(config_entry, version=2)
-        return True
     return True
 
 

@@ -6,7 +6,6 @@
       "reauth_successful": "Re-authentication successful.",
       "reconfigure_successful": "Reconfiguration successful.",
       "success": "Success.",
-      "previous_installation_gone": "The installation to take over no longer exists.",
       "already_configured": "Already set up"
     },
     "error": {
@@ -71,13 +70,8 @@
         },
         "description": "",
         "title": "Options"
-      },
-      "take_over": {
-        "title": "Take over {name}",
-        "description": "Move the Aula installation {name} over to Aula Connect. Its devices and entities keep their names and entity ids, and with them their history, dashboards and automations. The old installation is removed; uninstall the old Aula integration in HACS afterwards."
       }
-    },
-    "flow_title": "Take over Aula: {name}"
+    }
   },
   "entity": {
     "binary_sensor": {

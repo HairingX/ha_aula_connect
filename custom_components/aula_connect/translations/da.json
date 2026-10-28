@@ -6,7 +6,6 @@
       "reauth_successful": "Genautentificering lykkedes.",
       "reconfigure_successful": "Genkonfiguration lykkedes.",
       "success": "Succes.",
-      "previous_installation_gone": "Installationen, der skulle overtages, findes ikke længere.",
       "already_configured": "Allerede sat op"
     },
     "error": {
@@ -71,13 +70,8 @@
         },
         "description": "",
         "title": "Indstillinger"
-      },
-      "take_over": {
-        "title": "Overtag {name}",
-        "description": "Flyt Aula-installationen {name} over til Aula Connect. Enheder og entiteter beholder deres navne og entitets-id'er, og dermed historik, dashboards og automatiseringer. Den gamle installation fjernes; afinstallér derefter den gamle Aula-integration i HACS."
       }
-    },
-    "flow_title": "Overtag Aula: {name}"
+    }
   },
   "entity": {
     "binary_sensor": {
