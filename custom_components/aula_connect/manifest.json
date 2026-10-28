@@ -1,0 +1,18 @@
+{
+    "domain": "aula_connect",
+    "name": "Aula Connect",
+    "after_dependencies": [
+        "http"
+    ],
+    "codeowners": [
+        "@HairingX"
+    ],
+    "config_flow": true,
+    "documentation": "https://github.com/HairingX/ha_aula_connect/blob/main/README.md",
+    "iot_class": "cloud_polling",
+    "issue_tracker": "https://github.com/HairingX/ha_aula_connect/issues",
+    "requirements": [
+        "aula_connect==0.0.2"
+    ],
+    "version": "0.0.0"
+}

@@ -1,0 +1,350 @@
+{
+  "config": {
+    "abort": {
+      "auth_failed": "MitID-godkendelse mislykkedes. Prøv venligst igen.",
+      "missing_entry_data": "Enhedsdata kunne ikke findes.",
+      "reauth_successful": "Genautentificering lykkedes.",
+      "reconfigure_successful": "Genkonfiguration lykkedes.",
+      "success": "Succes.",
+      "previous_installation_gone": "Installationen, der skulle overtages, findes ikke længere.",
+      "already_configured": "Allerede sat op"
+    },
+    "error": {
+      "auth_failed": "MitID-godkendelse mislykkedes. Prøv venligst igen.",
+      "id_already_in_use": "ID er allerede i brug. Brug venligst et andet ID.",
+      "invalid_auth": "Login mislykkedes. Tjek venligst dine oplysninger og prøv igen.",
+      "invalid_id": "Ugyldigt ID.",
+      "invalid_response": "Ugyldigt svar fra API, prøv venligst igen senere."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "id": "Enheds ID",
+          "mitid_username": "MitID Brugernavn",
+          "mitid_use_token": "Brug MitID hardware-token i stedet for app"
+        },
+        "description": "Konfigurer din Aula-integration med MitID. Du skal godkende login i din MitID-app.",
+        "title": "Aula MitID Login"
+      },
+      "token_credentials": {
+        "title": "MitID Token-enhed",
+        "description": "Indtast dine MitID token-enhed oplysninger.",
+        "data": {
+          "mitid_password": "MitID Adgangskode",
+          "mitid_token": "Token-kode (6 cifre)"
+        }
+      },
+      "authenticate": {
+        "title": "Godkender med MitID",
+        "description": "Vent venligst mens vi godkender med MitID..."
+      },
+      "complete": {
+        "title": "Godkendelse fuldført",
+        "description": "MitID-godkendelse lykkedes! Opsætter din Aula-integration..."
+      },
+      "auth_error": {
+        "title": "Godkendelse mislykkedes",
+        "description": "MitID-godkendelse mislykkedes. Klik Indsend for at prøve igen."
+      },
+      "reauth_username": {
+        "title": "MitID Brugernavn Påkrævet",
+        "description": "Din Aula-integration opgraderes til MitID-godkendelse. Indtast venligst dit MitID-brugernavn for at fortsætte.",
+        "data": {
+          "mitid_username": "MitID Brugernavn"
+        }
+      },
+      "reconfigure": {
+        "title": "Genkonfigurer Aula",
+        "description": "Opdater dine MitID-oplysninger. Du skal godkende login i din MitID-app.",
+        "data": {
+          "mitid_username": "MitID Brugernavn",
+          "mitid_use_token": "Brug MitID hardware-token i stedet for app"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Genautentificer Aula",
+        "description": "Din Aula-session skal genautentificeres. Brugernavn: {username}\n\nKlik Indsend for at fortsætte med MitID-godkendelse."
+      },
+      "options": {
+        "data": {
+          "schoolschedule": "Tilføj skoleskemaer som kalender entiteter?"
+        },
+        "description": "",
+        "title": "Indstillinger"
+      },
+      "take_over": {
+        "title": "Overtag {name}",
+        "description": "Flyt Aula-installationen {name} over til Aula Connect. Enheder og entiteter beholder deres navne og entitets-id'er, og dermed historik, dashboards og automatiseringer. Den gamle installation fjernes; afinstallér derefter den gamle Aula-integration i HACS."
+      }
+    },
+    "flow_title": "Overtag Aula: {name}"
+  },
+  "entity": {
+    "binary_sensor": {
+      "unread_calendar": {
+        "name": "Ulæst Kalender",
+        "state_attributes": {
+          "all_day": {
+            "name": "Heldag"
+          },
+          "end_datetime": {
+            "name": "Slut"
+          },
+          "start_datetime": {
+            "name": "Start"
+          },
+          "title": {
+            "name": "Titel"
+          },
+          "total": {
+            "name": "Total"
+          }
+        }
+      },
+      "unread_gallery": {
+        "name": "Ulæst Galleri",
+        "state_attributes": {
+          "total": {
+            "name": "Total"
+          }
+        }
+      },
+      "unread_message": {
+        "name": "Ulæst Besked",
+        "state_attributes": {
+          "recipients": {
+            "name": "Modtagere"
+          },
+          "subject": {
+            "name": "Emne"
+          },
+          "text": {
+            "name": "Indhold"
+          },
+          "timestamp": {
+            "name": "Tidsstempel"
+          },
+          "total": {
+            "name": "Total"
+          }
+        }
+      },
+      "unread_post": {
+        "name": "Ulæst Opslag",
+        "state_attributes": {
+          "title": {
+            "name": "Titel"
+          },
+          "total": {
+            "name": "Total"
+          }
+        }
+      },
+      "unread_presence": {
+        "name": "Ulæst Tilstedeværelse",
+        "state_attributes": {
+          "title": {
+            "name": "Titel"
+          },
+          "total": {
+            "name": "Total"
+          },
+          "text": {
+            "name": "Besked"
+          },
+          "start_datetime": {
+            "name": "Start"
+          },
+          "end_datetime": {
+            "name": "Slut"
+          }
+        }
+      }
+    },
+    "calendar": {
+      "birthdays": {
+        "name": "Fødselsdage {name} {institution}"
+      },
+      "events": {
+        "name": "Begivenheder {name} {institution}"
+      },
+      "easyiq_weekplan": {
+        "name": "EasyIQ Ugeplaner {name} {institution}"
+      },
+      "newsletter": {
+        "name": "Ugebrev {name} {institution}"
+      },
+      "weekly_plan": {
+        "name": "Ugeplaner {name} {institution}",
+        "state_attributes": {
+          "friday": {
+            "name": "Fredag"
+          },
+          "monday": {
+            "name": "Mandag"
+          },
+          "next_friday": {
+            "name": "Næste fredag"
+          },
+          "next_monday": {
+            "name": "Næste mandag"
+          },
+          "next_saturday": {
+            "name": "Næste lørdag"
+          },
+          "next_sunday": {
+            "name": "Næste søndag"
+          },
+          "next_thursday": {
+            "name": "Næste torsdag"
+          },
+          "next_tuesday": {
+            "name": "Næste tirsdag"
+          },
+          "next_wednesday": {
+            "name": "Næste onsdag"
+          },
+          "saturday": {
+            "name": "Lørdag"
+          },
+          "sunday": {
+            "name": "Søndag"
+          },
+          "thursday": {
+            "name": "Torsdag"
+          },
+          "tuesday": {
+            "name": "Tirsdag"
+          },
+          "wednesday": {
+            "name": "Onsdag"
+          }
+        }
+      }
+    },
+    "sensor": {
+      "presence": {
+        "name": "Tilstede {name} {institution}",
+        "state": {
+          "not_present": "Ikke tilstede",
+          "present": "Tilstede",
+          "unknown": "Ukendt"
+        },
+        "state_attributes": {
+          "check_in_time": {
+            "name": "Check-in Tid"
+          },
+          "check_in_time_expected": {
+            "name": "Check-in Tid Forventet"
+          },
+          "check_out_time": {
+            "name": "Check-out Tid"
+          },
+          "check_out_time_expected": {
+            "name": "Check-out Tid Forventet"
+          },
+          "exit_with": {
+            "name": "Hentes af"
+          },
+          "institution_name": {
+            "name": "Institutionsnavn"
+          }
+        }
+      },
+      "presence_duration": {
+        "name": "Tilstede Varighed {name} {institution}",
+        "state_attributes": {
+          "check_in_time": {
+            "name": "Check-in Tid"
+          },
+          "check_out_time": {
+            "name": "Check-out Tid"
+          }
+        }
+      },
+      "status": {
+        "name": "Status {name} {institution}",
+        "state": {
+          "0": "Ikke til stede",
+          "1": "Syg",
+          "10": "10",
+          "2": "Meldt fraværende",
+          "3": "Tilstede",
+          "4": "Udflugt",
+          "5": "Sover",
+          "6": "Fritidsaktivitet",
+          "7": "Tilstede på lokation",
+          "8": "Tjekket ud",
+          "9": "9"
+        },
+        "state_attributes": {
+          "check_in_time": {
+            "name": "Check-in Tid"
+          },
+          "check_in_time_expected": {
+            "name": "Check-in Tid Forventet"
+          },
+          "check_out_time": {
+            "name": "Check-out Tid"
+          },
+          "check_out_time_expected": {
+            "name": "Check-out Tid Forventet"
+          },
+          "exit_with": {
+            "name": "Hentes af"
+          },
+          "institution_name": {
+            "name": "Institutionsnavn"
+          },
+          "location_description": {
+            "name": "Lokationsbeskrivelse"
+          },
+          "location_icon": {
+            "name": "Lokationsikon"
+          },
+          "location_name": {
+            "name": "Lokationsnavn"
+          }
+        }
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "1": "Unknown error"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "mitid_username": "MitID Brugernavn",
+          "auth_method": "Godkendelsesmetode"
+        },
+        "description": "Indtast dine MitID-oplysninger.",
+        "title": "Login"
+      },
+      "options": {
+        "data": {
+          "schoolschedule": "Tilføj skoleskemaer som kalender entiteter?"
+        },
+        "description": "",
+        "title": "Login"
+      }
+    }
+  },
+  "services": {
+    "api_call": {
+      "description": "Lav et brugerdefineret API-kald til Aula",
+      "fields": {
+        "post_data": {
+          "description": "Post data i JSON format. Hvis ikke angivet, laver vi et GET request",
+          "name": "post_data"
+        },
+        "uri": {
+          "description": "URI for kaldet",
+          "name": "uri"
+        }
+      },
+      "name": "API Kald"
+    }
+  }
+}
