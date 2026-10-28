@@ -17,10 +17,15 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 from .const import (
-    AUTH_METHOD_APP,
     AUTH_METHOD_TOKEN,
     CONF_ACCESS_TOKEN,
     CONF_AUTH_METHOD,
+    CONF_APPROVAL,
+    APPROVAL_APP_ELSEWHERE,
+    APPROVAL_APP_HERE,
+    APPROVAL_CODE_DISPLAY,
+    approval_of,
+    auth_method,
     CONF_MITID_USERNAME,
     CONF_REFRESH_TOKEN,
     CONF_TOKEN_EXPIRES_AT,
@@ -30,12 +35,11 @@ from .views import AulaAuthView, AulaAuthStatusView, AulaAuthSelectIdentityView
 
 _LOGGER = logging.getLogger(__name__)
 
-# Translation keys are lower case, so the choices are the stored methods in lower case.
-AUTH_METHOD_SELECTOR = SelectSelector(
+APPROVAL_SELECTOR = SelectSelector(
     SelectSelectorConfig(
-        options=[AUTH_METHOD_APP.lower(), AUTH_METHOD_TOKEN.lower()],
+        options=[APPROVAL_APP_HERE, APPROVAL_APP_ELSEWHERE, APPROVAL_CODE_DISPLAY],
         mode=SelectSelectorMode.LIST,
-        translation_key=CONF_AUTH_METHOD,
+        translation_key=CONF_APPROVAL,
     )
 )
 
@@ -43,7 +47,7 @@ USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ID, default="Aula"): cv.string,
         vol.Required(CONF_MITID_USERNAME): cv.string,
-        vol.Required(CONF_AUTH_METHOD, default=AUTH_METHOD_APP.lower()): AUTH_METHOD_SELECTOR,
+        vol.Required(CONF_APPROVAL, default=APPROVAL_APP_ELSEWHERE): APPROVAL_SELECTOR,
     }
 )
 
@@ -64,6 +68,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         self._entry_id: str = "Aula"
         self._mitid_username: str | None = None
         self._auth_method: str | None = None
+        self._approval: str = APPROVAL_APP_ELSEWHERE
         self._mitid_password: str | None = None
         self._mitid_token: str | None = None
         self._auth_client: AulaLoginClient | None = None
@@ -77,7 +82,8 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._entry_id = user_input.get(CONF_ID, "Aula").strip()
             self._mitid_username = user_input[CONF_MITID_USERNAME]
-            self._auth_method = user_input[CONF_AUTH_METHOD].upper()
+            self._approval = user_input[CONF_APPROVAL]
+            self._auth_method = auth_method(self._approval)
             use_token = self._auth_method == AUTH_METHOD_TOKEN
 
             if not self._entry_id:
@@ -151,6 +157,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             session_data = {
                 "client": self._auth_client,
                 "status_message": "Open your MitID app now...",
+                "approval": self._approval,
                 "completed": False,
                 "error": None,
                 "identity_future": None,
@@ -225,6 +232,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         data = {
             CONF_MITID_USERNAME: self._mitid_username,
             CONF_AUTH_METHOD: self._auth_method,
+            CONF_APPROVAL: self._approval,
             CONF_ACCESS_TOKEN: self._tokens.get("access_token", ""),
             CONF_REFRESH_TOKEN: self._tokens.get("refresh_token", ""),
             CONF_TOKEN_EXPIRES_AT: self._tokens.get("expires_at", 0),
@@ -334,9 +342,8 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             self.context["entry_id"]
         )
         self._mitid_username = self._reauth_entry.data.get(CONF_MITID_USERNAME, "")
-        self._auth_method = self._reauth_entry.data.get(
-            CONF_AUTH_METHOD, AUTH_METHOD_APP
-        )
+        self._approval = approval_of(dict(self._reauth_entry.data))
+        self._auth_method = auth_method(self._approval)
         self._mitid_password = None
         self._mitid_token = None
 
@@ -397,7 +404,8 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: Dict[str, str] = {}
         if user_input is not None:
             self._mitid_username = user_input[CONF_MITID_USERNAME].strip()
-            self._auth_method = user_input[CONF_AUTH_METHOD].upper()
+            self._approval = user_input[CONF_APPROVAL]
+            self._auth_method = auth_method(self._approval)
             use_token = self._auth_method == AUTH_METHOD_TOKEN
 
             if not self._mitid_username:
@@ -412,10 +420,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Required(CONF_MITID_USERNAME, default=existing_username): cv.string,
-                vol.Required(
-                    CONF_AUTH_METHOD,
-                    default=entry.data.get(CONF_AUTH_METHOD, AUTH_METHOD_APP).lower(),
-                ): AUTH_METHOD_SELECTOR,
+                vol.Required(CONF_APPROVAL, default=approval_of(dict(entry.data))): APPROVAL_SELECTOR,
             }
         )
         return self.async_show_form(

@@ -22,12 +22,12 @@
         "data": {
           "id": "Navn",
           "mitid_username": "MitID bruger-ID",
-          "auth_method": "Hvordan godkender du med MitID?"
+          "mitid_approval": "Hvordan vil du godkende med MitID?"
         },
         "data_description": {
           "id": "Hvad dette Aula-login hedder i Home Assistant, fx familiens navn.",
           "mitid_username": "Det bruger-ID, du logger ind på MitID med.",
-          "auth_method": "Vælg MitID-appen, hvis du godkender dine login i MitID-appen. Vælg kodeviser kun, hvis du bruger MitID's lille dims, der viser en kode."
+          "mitid_approval": "De fleste bruger MitID-appen. Vælg kun kodeviser, hvis du ikke har appen, men logger ind med en lille dims, der viser tal, når du trykker på knappen."
         }
       },
       "token_credentials": {
@@ -66,11 +66,11 @@
         "description": "Ændr MitID bruger-ID, eller hvordan du godkender login.",
         "data": {
           "mitid_username": "MitID bruger-ID",
-          "auth_method": "Hvordan godkender du med MitID?"
+          "mitid_approval": "Hvordan vil du godkende med MitID?"
         },
         "data_description": {
           "mitid_username": "Det bruger-ID, du logger ind på MitID med.",
-          "auth_method": "Vælg MitID-appen, hvis du godkender dine login i MitID-appen. Vælg kodeviser kun, hvis du bruger MitID's lille dims, der viser en kode."
+          "mitid_approval": "De fleste bruger MitID-appen. Vælg kun kodeviser, hvis du ikke har appen, men logger ind med en lille dims, der viser tal, når du trykker på knappen."
         }
       },
       "reauth_confirm": {
@@ -355,10 +355,11 @@
     }
   },
   "selector": {
-    "auth_method": {
+    "mitid_approval": {
       "options": {
-        "app": "MitID-appen: scan en QR-kode med telefonen, der har appen",
-        "token": "MitID kodeviser og adgangskode"
+        "app_here": "Med MitID-appen på denne telefon eller tablet",
+        "app_elsewhere": "Med MitID-appen på en anden telefon eller tablet (du scanner en QR-kode)",
+        "code_display": "Med kodeviser: en lille dims med en knap og en skærm, der viser tal"
       }
     }
   }

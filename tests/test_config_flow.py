@@ -12,7 +12,9 @@ from homeassistant.setup import async_setup_component
 from custom_components.aula_connect.const import DOMAIN
 
 
-async def _start_login(hass: HomeAssistant, login_client: MagicMock | None = None) -> dict[str, Any]:
+async def _start_login(
+    hass: HomeAssistant, login_client: MagicMock | None = None, approval: str = "app_elsewhere"
+) -> dict[str, Any]:
     assert await async_setup_component(hass, "http", {})
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     flow: Any = hass.config_entries.flow
@@ -24,7 +26,7 @@ async def _start_login(hass: HomeAssistant, login_client: MagicMock | None = Non
         ),
     ):
         step = await flow.async_configure(
-            result.get("flow_id"), {"id": "Aula", "mitid_username": "parent", "auth_method": "app"}
+            result.get("flow_id"), {"id": "Aula", "mitid_username": "parent", "mitid_approval": approval}
         )
     return dict(step)
 
@@ -47,19 +49,19 @@ async def test_the_login_page_is_at_the_address_the_browser_used(hass: HomeAssis
     assert str(step.get("url")).startswith("http://localhost:1337/api/aula_connect/auth/")
 
 
-async def test_the_mitid_app_is_the_approval_offered_first(hass: HomeAssistant) -> None:
+async def test_the_mitid_app_on_another_device_is_the_approval_offered_first(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     schema = result.get("data_schema")
     assert schema is not None
     fields = {str(key): key for key in schema.schema}
-    assert fields["auth_method"].default() == "app"
+    assert fields["mitid_approval"].default() == "app_elsewhere"
 
 
 async def test_a_code_display_asks_for_its_code_and_the_password(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     flow: Any = hass.config_entries.flow
     step = await flow.async_configure(
-        result.get("flow_id"), {"id": "Aula", "mitid_username": "parent", "auth_method": "token"}
+        result.get("flow_id"), {"id": "Aula", "mitid_username": "parent", "mitid_approval": "code_display"}
     )
     assert step.get("type") is FlowResultType.FORM
     assert step.get("step_id") == "token_credentials"
@@ -70,3 +72,9 @@ async def test_the_mitid_app_logs_in_with_the_app_method(hass: HomeAssistant) ->
     login_client = MagicMock()
     await _start_login(hass, login_client)
     assert login_client.call_args.kwargs["auth_method"] == "APP"
+
+
+async def test_the_login_page_learns_how_the_user_approves(hass: HomeAssistant) -> None:
+    step = await _start_login(hass, approval="app_here")
+    session = hass.data[DOMAIN]["auth_sessions"][step.get("flow_id")]
+    assert session["approval"] == "app_here"
