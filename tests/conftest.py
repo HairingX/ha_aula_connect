@@ -1,10 +1,15 @@
-"""Home Assistant with this integration loadable, and a check that it uses nothing deprecated."""
+"""Home Assistant with this integration loadable, a check that it uses nothing deprecated, and a
+made-up Aula account."""
 
 from __future__ import annotations
 
 from collections.abc import Iterator
 
 import pytest
+from unittest.mock import patch
+
+from custom_components.aula_connect.aula_calendar_coordinator import AulaCalendarCoordinatorData
+from custom_components.aula_connect.aula_data_coordinator import AulaDataCoordinatorData
 
 
 @pytest.fixture(autouse=True)
@@ -25,3 +30,17 @@ def no_deprecated_usage(caplog: pytest.LogCaptureFixture) -> Iterator[None]:
         or " was used from aula_connect" in record.getMessage()
     ]
     assert reports == []
+
+
+@pytest.fixture
+def aula_without_children() -> Iterator[None]:
+    """An Aula account with no children, no messages and no notifications."""
+    data = AulaDataCoordinatorData("Aula", 23, [], [], [], [], [])
+    calendar = AulaCalendarCoordinatorData([], [], [], [], [])
+    with (
+        patch("custom_components.aula_connect.AulaDataCoordinator._connection_check"),
+        patch("custom_components.aula_connect.AulaDataCoordinator._fetch_data", return_value=data),
+        patch("custom_components.aula_connect.AulaCalendarCoordinator._connection_check"),
+        patch("custom_components.aula_connect.AulaCalendarCoordinator._fetch_data", return_value=calendar),
+    ):
+        yield

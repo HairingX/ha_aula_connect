@@ -28,5 +28,5 @@ ignore = [
 transition = """The integration starts from the Aula integration, written before the shared \
 standard: its config flow, views and entities are typed and tested module by module."""
 # The coverage the tests reach now; each pull request raises it, until it is 100.
-coverage = 41
+coverage = 42
 libraries = ["aula_connect"]

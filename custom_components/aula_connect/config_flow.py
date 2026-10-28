@@ -16,6 +16,8 @@ from .const import (
     CONF_ACCESS_TOKEN,
     CONF_AUTH_METHOD,
     CONF_MITID_USERNAME,
+    CONF_ENTITY_PREFIX,
+    account_id,
     CONF_REFRESH_TOKEN,
     CONF_TOKEN_EXPIRES_AT,
     DOMAIN,
@@ -35,6 +37,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
     """Aula config flow with MitID authentication."""
 
     VERSION = 2
+    MINOR_VERSION = 2
 
     def __init__(self):
         self._entry_id: str = "Aula"
@@ -57,12 +60,17 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
                     step_id="user", data_schema=USER_SCHEMA, errors={"base": "invalid_id"}
                 )
 
-            existing = await self.async_set_unique_id(self._entry_id)
-            if existing:
+            if any(
+                entry.data.get(CONF_ENTITY_PREFIX) == self._entry_id
+                for entry in self._async_current_entries(include_ignore=False)
+            ):
                 return self.async_show_form(
                     last_step=False,
                     step_id="user", data_schema=USER_SCHEMA, errors={"base": "id_already_in_use"}
                 )
+
+            await self.async_set_unique_id(account_id(self._mitid_username))
+            self._abort_if_unique_id_configured()
 
             return await self.async_step_authenticate()
 
@@ -188,11 +196,12 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         if self._reauth_entry:
             return self.async_update_reload_and_abort(
                 self._reauth_entry,
-                data=data,
+                unique_id=account_id(self._mitid_username),
+                data={**self._reauth_entry.data, **data},
             )
 
         return self.async_create_entry(
-            title=self._entry_id, data=data
+            title=self._entry_id, data={**data, CONF_ENTITY_PREFIX: self._entry_id}
         )
 
     async def async_step_auth_error(
@@ -347,6 +356,12 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
 
             if not self._mitid_username:
                 errors["base"] = "invalid_auth"
+            elif any(
+                other.unique_id == account_id(self._mitid_username)
+                for other in self._async_current_entries(include_ignore=False)
+                if other.entry_id != entry.entry_id
+            ):
+                errors["base"] = "account_in_use"
             else:
                 return await self.async_step_authenticate()
 

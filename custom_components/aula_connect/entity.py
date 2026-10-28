@@ -10,7 +10,7 @@ from homeassistant.helpers.entity import Entity
 
 from .aula_calendar_coordinator import AulaCalendarCoordinator, AulaCalendarCoordinatorData
 from .aula_data_coordinator import AulaDataCoordinator, AulaDataCoordinatorData
-from .const import DOMAIN, MANUFACTURER
+from .const import CONF_ENTITY_PREFIX, DOMAIN, MANUFACTURER
 
 CONTEXT_TYPE = TypeVar("CONTEXT_TYPE")
 
@@ -26,10 +26,10 @@ def device_info(coordinator: AulaDataCoordinator | AulaCalendarCoordinator) -> D
 
 
 def unique_id(coordinator: AulaDataCoordinator | AulaCalendarCoordinator, key: str) -> str:
-    """The unique id of an entity of the login: the entry's unique id and the entity's key."""
+    """The unique id of an entity of the login: the name the entry was set up under and the key."""
     entry = coordinator.config_entry
     assert entry is not None
-    return f"{entry.unique_id}_{key}"
+    return f"{entry.data[CONF_ENTITY_PREFIX]}_{key}"
 
 
 class AulaEntityBase(Entity, Generic[CONTEXT_TYPE]):
