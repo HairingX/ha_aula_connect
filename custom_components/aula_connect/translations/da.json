@@ -22,12 +22,12 @@
         "data": {
           "id": "Navn",
           "mitid_username": "MitID bruger-ID",
-          "mitid_use_token": "Log ind med MitID kodeviser"
+          "auth_method": "Hvordan godkender du med MitID?"
         },
         "data_description": {
           "id": "Hvad dette Aula-login hedder i Home Assistant, fx familiens navn.",
           "mitid_username": "Det bruger-ID, du logger ind på MitID med.",
-          "mitid_use_token": "Lad den være slået fra for at godkende i MitID-appen på din telefon. Slå den til, hvis du bruger en MitID kodeviser, den lille dims med en 6-cifret kode."
+          "auth_method": "Vælg MitID-appen, hvis du godkender dine login i MitID-appen. Vælg kodeviser kun, hvis du bruger MitID's lille dims, der viser en kode."
         }
       },
       "token_credentials": {
@@ -66,11 +66,11 @@
         "description": "Ændr MitID bruger-ID, eller hvordan du godkender login.",
         "data": {
           "mitid_username": "MitID bruger-ID",
-          "mitid_use_token": "Log ind med MitID kodeviser"
+          "auth_method": "Hvordan godkender du med MitID?"
         },
         "data_description": {
           "mitid_username": "Det bruger-ID, du logger ind på MitID med.",
-          "mitid_use_token": "Lad den være slået fra for at godkende i MitID-appen på din telefon. Slå den til, hvis du bruger en MitID kodeviser, den lille dims med en 6-cifret kode."
+          "auth_method": "Vælg MitID-appen, hvis du godkender dine login i MitID-appen. Vælg kodeviser kun, hvis du bruger MitID's lille dims, der viser en kode."
         }
       },
       "reauth_confirm": {
@@ -352,6 +352,14 @@
         }
       },
       "name": "API Kald"
+    }
+  },
+  "selector": {
+    "auth_method": {
+      "options": {
+        "app": "MitID-appen: scan en QR-kode med telefonen, der har appen",
+        "token": "MitID kodeviser og adgangskode"
+      }
     }
   }
 }

@@ -11,6 +11,11 @@ from aula_connect.login.client import AulaLoginClient
 from homeassistant.const import CONF_ID
 from homeassistant.helpers.http import current_request
 from homeassistant.helpers.network import NoURLAvailableError, get_url
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 from .const import (
     AUTH_METHOD_APP,
     AUTH_METHOD_TOKEN,
@@ -25,11 +30,20 @@ from .views import AulaAuthView, AulaAuthStatusView, AulaAuthSelectIdentityView
 
 _LOGGER = logging.getLogger(__name__)
 
+# Translation keys are lower case, so the choices are the stored methods in lower case.
+AUTH_METHOD_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        options=[AUTH_METHOD_APP.lower(), AUTH_METHOD_TOKEN.lower()],
+        mode=SelectSelectorMode.LIST,
+        translation_key=CONF_AUTH_METHOD,
+    )
+)
+
 USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ID, default="Aula"): cv.string,
         vol.Required(CONF_MITID_USERNAME): cv.string,
-        vol.Optional("mitid_use_token", default=False): cv.boolean,
+        vol.Required(CONF_AUTH_METHOD, default=AUTH_METHOD_APP.lower()): AUTH_METHOD_SELECTOR,
     }
 )
 
@@ -62,9 +76,9 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: Dict[str, str] = {}
         if user_input is not None:
             self._entry_id = user_input.get(CONF_ID, "Aula").strip()
-            use_token = user_input.get("mitid_use_token", False)
             self._mitid_username = user_input[CONF_MITID_USERNAME]
-            self._auth_method = AUTH_METHOD_TOKEN if use_token else AUTH_METHOD_APP
+            self._auth_method = user_input[CONF_AUTH_METHOD].upper()
+            use_token = self._auth_method == AUTH_METHOD_TOKEN
 
             if not self._entry_id:
                 return self.async_show_form(
@@ -382,9 +396,9 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors: Dict[str, str] = {}
         if user_input is not None:
-            use_token = user_input.get("mitid_use_token", False)
             self._mitid_username = user_input[CONF_MITID_USERNAME].strip()
-            self._auth_method = AUTH_METHOD_TOKEN if use_token else AUTH_METHOD_APP
+            self._auth_method = user_input[CONF_AUTH_METHOD].upper()
+            use_token = self._auth_method == AUTH_METHOD_TOKEN
 
             if not self._mitid_username:
                 errors["base"] = "invalid_auth"
@@ -398,7 +412,10 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Required(CONF_MITID_USERNAME, default=existing_username): cv.string,
-                vol.Optional("mitid_use_token", default=False): cv.boolean,
+                vol.Required(
+                    CONF_AUTH_METHOD,
+                    default=entry.data.get(CONF_AUTH_METHOD, AUTH_METHOD_APP).lower(),
+                ): AUTH_METHOD_SELECTOR,
             }
         )
         return self.async_show_form(
