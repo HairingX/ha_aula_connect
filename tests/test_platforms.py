@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from unittest.mock import patch
 
 import pytest
@@ -12,26 +11,10 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.aula_connect.aula_calendar_coordinator import AulaCalendarCoordinatorData
 from custom_components.aula_connect.aula_data import AulaRuntimeData
-from custom_components.aula_connect.aula_data_coordinator import AulaDataCoordinatorData
 from custom_components.aula_connect.const import DOMAIN
 
 from .test_init import DATA
-
-
-@pytest.fixture
-def aula_without_children() -> Iterator[None]:
-    """An Aula account with no children, no messages and no notifications."""
-    data = AulaDataCoordinatorData("Aula", 23, [], [], [], [], [])
-    calendar = AulaCalendarCoordinatorData([], [], [], [], [])
-    with (
-        patch("custom_components.aula_connect.AulaDataCoordinator._connection_check"),
-        patch("custom_components.aula_connect.AulaDataCoordinator._fetch_data", return_value=data),
-        patch("custom_components.aula_connect.AulaCalendarCoordinator._connection_check"),
-        patch("custom_components.aula_connect.AulaCalendarCoordinator._fetch_data", return_value=calendar),
-    ):
-        yield
 
 
 @pytest.mark.usefixtures("aula_without_children")

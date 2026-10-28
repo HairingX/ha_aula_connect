@@ -6,14 +6,15 @@
       "reauth_successful": "Re-authentication successful.",
       "reconfigure_successful": "Reconfiguration successful.",
       "success": "Success.",
-      "already_configured": "Already set up"
+      "already_configured": "This MitID account is already set up."
     },
     "error": {
       "auth_failed": "MitID authentication failed. Please try again.",
-      "id_already_in_use": "ID is already in use. Please use a different ID.",
+      "id_already_in_use": "This name is already used by another Aula login. Choose another name.",
       "invalid_auth": "Login failed. Please check your credentials and try again.",
       "invalid_id": "Invalid ID.",
-      "invalid_response": "Invalid response from API, please try again later."
+      "invalid_response": "Invalid response from API, please try again later.",
+      "account_in_use": "This MitID account is already set up in another Aula login."
     },
     "step": {
       "user": {

@@ -15,6 +15,9 @@ from .const import (
     CONF_REFRESH_TOKEN,
     CONF_TOKEN_EXPIRES_AT,
     CONF_MITID_USERNAME,
+    CONF_ENTITY_PREFIX,
+    DOMAIN,
+    account_id,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,11 +30,6 @@ PLATFORMS: list[Platform] = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""
-
-    # Guard: unique_id must be set for entity unique_id prefix
-    if not entry.unique_id:
-        _LOGGER.error("Config entry has no unique_id — cannot create entities safely")
-        raise ConfigEntryAuthFailed("Config entry has no unique_id. Please remove and re-add the integration.")
 
     # Guard: if tokens are missing, ask to log in again
     if CONF_ACCESS_TOKEN not in entry.data or not entry.data[CONF_ACCESS_TOKEN]:
@@ -107,4 +105,25 @@ async def async_unload_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> boo
         await hass.async_add_executor_job(entry.runtime_data.client.close)
     except Exception:
         _LOGGER.debug("Failed to close client sessions during unload", exc_info=True)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
+    """Make the entry unique per MitID account, keeping its entities' unique ids."""
+    if entry.version != 2:
+        return False
+    if entry.minor_version < 2:
+        data = {**entry.data, CONF_ENTITY_PREFIX: entry.unique_id}
+        unique_id = entry.unique_id
+        username = entry.data.get(CONF_MITID_USERNAME, "")
+        if username:
+            candidate = account_id(username)
+            taken = any(
+                other.unique_id == candidate
+                for other in hass.config_entries.async_entries(DOMAIN)
+                if other.entry_id != entry.entry_id
+            )
+            if not taken:
+                unique_id = candidate
+        hass.config_entries.async_update_entry(entry, data=data, unique_id=unique_id, minor_version=2)
     return True

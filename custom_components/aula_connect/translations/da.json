@@ -6,14 +6,15 @@
       "reauth_successful": "Genautentificering lykkedes.",
       "reconfigure_successful": "Genkonfiguration lykkedes.",
       "success": "Succes.",
-      "already_configured": "Allerede sat op"
+      "already_configured": "Denne MitID-konto er allerede sat op."
     },
     "error": {
       "auth_failed": "MitID-godkendelse mislykkedes. Prøv venligst igen.",
-      "id_already_in_use": "ID er allerede i brug. Brug venligst et andet ID.",
+      "id_already_in_use": "Navnet bruges allerede af et andet Aula-login. Vælg et andet navn.",
       "invalid_auth": "Login mislykkedes. Tjek venligst dine oplysninger og prøv igen.",
       "invalid_id": "Ugyldigt ID.",
-      "invalid_response": "Ugyldigt svar fra API, prøv venligst igen senere."
+      "invalid_response": "Ugyldigt svar fra API, prøv venligst igen senere.",
+      "account_in_use": "Denne MitID-konto er allerede sat op i et andet Aula-login."
     },
     "step": {
       "user": {

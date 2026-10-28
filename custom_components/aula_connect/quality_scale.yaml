@@ -56,11 +56,7 @@ rules:
     comment: >-
       The first refresh checks the connection and raises ConfigEntryAuthFailed on refused
       credentials; other failures make setup retry.
-  unique-config-entry:
-    status: todo
-    comment: >-
-      The unique id is the ID the user types, not the account, so the same MitID account can be
-      added twice under two IDs.
+  unique-config-entry: done
 
   # Silver
   action-exceptions:
