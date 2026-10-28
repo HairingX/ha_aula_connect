@@ -41,7 +41,7 @@ async def _configure(hass: HomeAssistant, flow_id: str) -> dict[str, Any]:
     return dict(result)
 
 
-def _previous(hass: HomeAssistant, unique_id: str = "Aula") -> MockConfigEntry:
+def previous_installation(hass: HomeAssistant, unique_id: str = "Aula") -> MockConfigEntry:
     """An installation under the previous domain, with a device and two entities."""
     entry = MockConfigEntry(domain=PREVIOUS_DOMAIN, unique_id=unique_id, title=unique_id, data=DATA, version=2)
     entry.add_to_hass(hass)
@@ -62,7 +62,7 @@ def _previous(hass: HomeAssistant, unique_id: str = "Aula") -> MockConfigEntry:
 
 
 async def test_an_installation_under_the_previous_domain_is_offered(hass: HomeAssistant) -> None:
-    _previous(hass)
+    previous_installation(hass)
     assert await async_setup_component(hass, DOMAIN, {})
     await hass.async_block_till_done()
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
@@ -71,13 +71,13 @@ async def test_an_installation_under_the_previous_domain_is_offered(hass: HomeAs
 
 
 async def test_an_installation_already_taken_over_is_not_offered(hass: HomeAssistant) -> None:
-    _previous(hass)
+    previous_installation(hass)
     MockConfigEntry(domain=DOMAIN, unique_id="Aula", data=DATA).add_to_hass(hass)
     assert entries_to_take_over(hass) == []
 
 
 async def test_confirming_creates_an_entry_with_the_previous_data(hass: HomeAssistant) -> None:
-    previous = _previous(hass)
+    previous = previous_installation(hass)
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_INTEGRATION_DISCOVERY}, data={CONF_MIGRATED_FROM: previous.entry_id}
     )
@@ -93,7 +93,7 @@ async def test_confirming_creates_an_entry_with_the_previous_data(hass: HomeAssi
 
 
 async def test_an_installation_removed_before_confirming_is_not_taken_over(hass: HomeAssistant) -> None:
-    previous = _previous(hass)
+    previous = previous_installation(hass)
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_INTEGRATION_DISCOVERY}, data={CONF_MIGRATED_FROM: previous.entry_id}
     )
@@ -114,7 +114,7 @@ async def test_a_vanished_installation_is_not_taken_over(hass: HomeAssistant) ->
 async def test_taking_over_keeps_every_entity_id_and_removes_the_previous_installation(
     hass: HomeAssistant,
 ) -> None:
-    previous = _previous(hass)
+    previous = previous_installation(hass)
     entry = MockConfigEntry(
         domain=DOMAIN, unique_id="Aula", title="Aula", data={**DATA, CONF_MIGRATED_FROM: previous.entry_id}
     )
@@ -136,7 +136,7 @@ async def test_taking_over_keeps_every_entity_id_and_removes_the_previous_instal
 
 
 async def test_a_loaded_previous_installation_is_unloaded_first(hass: HomeAssistant) -> None:
-    previous = _previous(hass)
+    previous = previous_installation(hass)
     previous.mock_state(hass, ConfigEntryState.LOADED)
     entry = MockConfigEntry(domain=DOMAIN, unique_id="Aula", data={**DATA, CONF_MIGRATED_FROM: previous.entry_id})
     entry.add_to_hass(hass)

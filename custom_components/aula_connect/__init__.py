@@ -55,7 +55,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if CONF_MIGRATED_FROM in entry.data:
         await async_take_over(hass, entry)
 
-
     # Guard: unique_id must be set for entity unique_id prefix
     if not entry.unique_id:
         _LOGGER.error("Config entry has no unique_id — cannot create entities safely")
