@@ -357,8 +357,8 @@
   "selector": {
     "auth_method": {
       "options": {
-        "APP": "MitID-appen: scan en QR-kode med telefonen, der har appen",
-        "TOKEN": "MitID kodeviser og adgangskode"
+        "app": "MitID-appen: scan en QR-kode med telefonen, der har appen",
+        "token": "MitID kodeviser og adgangskode"
       }
     }
   }

@@ -357,8 +357,8 @@
   "selector": {
     "auth_method": {
       "options": {
-        "APP": "MitID app: scan a QR code with the phone that has the app",
-        "TOKEN": "MitID code display and password"
+        "app": "MitID app: scan a QR code with the phone that has the app",
+        "token": "MitID code display and password"
       }
     }
   }

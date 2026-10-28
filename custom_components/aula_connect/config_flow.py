@@ -30,9 +30,10 @@ from .views import AulaAuthView, AulaAuthStatusView, AulaAuthSelectIdentityView
 
 _LOGGER = logging.getLogger(__name__)
 
+# Translation keys are lower case, so the choices are the stored methods in lower case.
 AUTH_METHOD_SELECTOR = SelectSelector(
     SelectSelectorConfig(
-        options=[AUTH_METHOD_APP, AUTH_METHOD_TOKEN],
+        options=[AUTH_METHOD_APP.lower(), AUTH_METHOD_TOKEN.lower()],
         mode=SelectSelectorMode.LIST,
         translation_key=CONF_AUTH_METHOD,
     )
@@ -42,7 +43,7 @@ USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ID, default="Aula"): cv.string,
         vol.Required(CONF_MITID_USERNAME): cv.string,
-        vol.Required(CONF_AUTH_METHOD, default=AUTH_METHOD_APP): AUTH_METHOD_SELECTOR,
+        vol.Required(CONF_AUTH_METHOD, default=AUTH_METHOD_APP.lower()): AUTH_METHOD_SELECTOR,
     }
 )
 
@@ -76,7 +77,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._entry_id = user_input.get(CONF_ID, "Aula").strip()
             self._mitid_username = user_input[CONF_MITID_USERNAME]
-            self._auth_method = user_input[CONF_AUTH_METHOD]
+            self._auth_method = user_input[CONF_AUTH_METHOD].upper()
             use_token = self._auth_method == AUTH_METHOD_TOKEN
 
             if not self._entry_id:
@@ -396,7 +397,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: Dict[str, str] = {}
         if user_input is not None:
             self._mitid_username = user_input[CONF_MITID_USERNAME].strip()
-            self._auth_method = user_input[CONF_AUTH_METHOD]
+            self._auth_method = user_input[CONF_AUTH_METHOD].upper()
             use_token = self._auth_method == AUTH_METHOD_TOKEN
 
             if not self._mitid_username:
@@ -412,7 +413,8 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_MITID_USERNAME, default=existing_username): cv.string,
                 vol.Required(
-                    CONF_AUTH_METHOD, default=entry.data.get(CONF_AUTH_METHOD, AUTH_METHOD_APP)
+                    CONF_AUTH_METHOD,
+                    default=entry.data.get(CONF_AUTH_METHOD, AUTH_METHOD_APP).lower(),
                 ): AUTH_METHOD_SELECTOR,
             }
         )

@@ -27,4 +27,4 @@ def test_the_login_names_no_hardware_token(language: str) -> None:
 @pytest.mark.parametrize("language", ["en", "da"])
 def test_every_way_to_approve_with_mitid_is_named(language: str) -> None:
     texts = json.loads((TRANSLATIONS / f"{language}.json").read_text("utf-8"))
-    assert set(texts["selector"]["auth_method"]["options"]) == {"APP", "TOKEN"}
+    assert set(texts["selector"]["auth_method"]["options"]) == {"app", "token"}
