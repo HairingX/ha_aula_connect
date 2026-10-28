@@ -8,12 +8,17 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.aula_connect.const import CONF_ACCESS_TOKEN, CONF_MIGRATED_FROM, DOMAIN
+from custom_components.aula_connect.const import CONF_ACCESS_TOKEN, DOMAIN
 
-from .test_migration import DATA, previous_installation
+DATA = {
+    "mitid_username": "parent",
+    "auth_method": "APP",
+    CONF_ACCESS_TOKEN: "access",
+    "refresh_token": "refresh",
+    "token_expires_at": 1.0,
+}
 
 
 @pytest.fixture
@@ -48,20 +53,3 @@ async def test_an_entry_without_a_token_asks_to_log_in_again(hass: HomeAssistant
     assert entry.state is ConfigEntryState.SETUP_ERROR
     assert [flow.get("context", {}).get("source") for flow in hass.config_entries.flow.async_progress_by_handler(DOMAIN)] == ["reauth"]
 
-
-@pytest.mark.usefixtures("offline")
-async def test_setting_up_an_entry_that_takes_over_moves_the_previous_installation(hass: HomeAssistant) -> None:
-    previous = previous_installation(hass)
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        unique_id="Aula",
-        title="Aula",
-        data={**DATA, CONF_MIGRATED_FROM: previous.entry_id},
-        version=2,
-    )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    moved = er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
-    assert sorted(entity.entity_id for entity in moved) == ["binary_sensor.unread_messages", "sensor.emma_status"]
-    assert hass.config_entries.async_get_entry(previous.entry_id) is None
-    assert CONF_MIGRATED_FROM not in entry.data

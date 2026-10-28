@@ -14,7 +14,6 @@ from .const import (
     AUTH_METHOD_TOKEN,
     CONF_ACCESS_TOKEN,
     CONF_AUTH_METHOD,
-    CONF_MIGRATED_FROM,
     CONF_MITID_USERNAME,
     CONF_REFRESH_TOKEN,
     CONF_TOKEN_EXPIRES_AT,
@@ -54,7 +53,6 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         self._auth_client: AulaLoginClient | None = None
         self._tokens: dict | None = None
         self._reauth_entry = None
-        self._previous_entry_id: str = ""
 
     async def async_step_user(
         self, user_input: Optional[Dict[str, Any]] = None
@@ -207,35 +205,6 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_create_entry(
             title=self._entry_id, data=data
-        )
-
-    async def async_step_integration_discovery(
-        self, discovery_info: Dict[str, Any]
-    ) -> ConfigFlowResult:
-        """Offer to take over an installation of the Aula integration under its previous domain."""
-        previous = self.hass.config_entries.async_get_entry(discovery_info[CONF_MIGRATED_FROM])
-        if previous is None or previous.unique_id is None:
-            return self.async_abort(reason="previous_installation_gone")
-        await self.async_set_unique_id(previous.unique_id)
-        self._abort_if_unique_id_configured()
-        self._previous_entry_id = previous.entry_id
-        self.context["title_placeholders"] = {"name": previous.title}
-        return await self.async_step_take_over()
-
-    async def async_step_take_over(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> ConfigFlowResult:
-        """Take over the installation once the user confirms it."""
-        previous = self.hass.config_entries.async_get_entry(self._previous_entry_id)
-        if previous is None:
-            return self.async_abort(reason="previous_installation_gone")
-        if user_input is None:
-            return self.async_show_form(
-                step_id="take_over", description_placeholders={"name": previous.title}
-            )
-        return self.async_create_entry(
-            title=previous.title,
-            data={**previous.data, CONF_MIGRATED_FROM: previous.entry_id},
         )
 
     async def async_step_auth_error(

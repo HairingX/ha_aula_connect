@@ -11,11 +11,10 @@ into Home Assistant devices and entities. How it is built: `docs/overview/`.
 - Responses captured from a real Aula account hold children's personal data, and are never
   committed.
 - MitID and Aula credentials and tokens are never logged, and never in diagnostics.
-- An existing installation keeps its entities. The domain is `aula_connect`; an installation of
-  the Aula integration under the domain `aula` is offered as discovered, and once confirmed its
-  devices and entities move over with their entity ids - and with them their history,
-  dashboards and automations - and the old installation is removed. A unique id is the entry's
-  unique id and the entity's key, as before; changing one is agreed with the user first.
+- It is a new integration under the domain `aula_connect`, replacing `HairingX/aula` (the domain
+  `aula`, which other integrations use too): nothing is taken over from an installation of it,
+  which is set up anew. An existing installation of this one keeps its entities: a unique id is
+  the entry's unique id and the entity's key, and changing one is agreed with the user first.
 - The integration is on its way to the shared standard (`[tool.hairingx-workflows] transition`
   in `pyproject.toml`): the files in `[tool.pyright] ignore` are not yet checked, and the tests
   reach the coverage stated there. Each pull request takes files off the list and raises the
