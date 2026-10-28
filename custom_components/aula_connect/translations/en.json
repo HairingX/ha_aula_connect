@@ -17,20 +17,29 @@
     },
     "step": {
       "user": {
+        "title": "Log in to Aula with MitID",
+        "description": "Aula Connect logs in to Aula with your MitID, as you do on aula.dk.",
         "data": {
-          "id": "Entity ID",
-          "mitid_username": "MitID Username",
-          "mitid_use_token": "Use MitID hardware token instead of app"
+          "id": "Name",
+          "mitid_username": "MitID user ID",
+          "mitid_use_token": "Log in with a MitID code display"
         },
-        "description": "Configure your Aula integration with MitID. You will need to approve the login in your MitID app.",
-        "title": "Aula MitID Login"
+        "data_description": {
+          "id": "What this Aula login is called in Home Assistant, such as the family's name.",
+          "mitid_username": "The user ID you log in to MitID with.",
+          "mitid_use_token": "Leave this off to approve the login in the MitID app on your phone. Turn it on if you use a MitID code display, the small device that shows a 6-digit code."
+        }
       },
       "token_credentials": {
-        "title": "MitID Token Device",
-        "description": "Enter your MitID token device credentials.",
+        "title": "Log in with your MitID code display",
+        "description": "Enter your MitID password and the code your code display shows now.",
         "data": {
-          "mitid_password": "MitID Password",
-          "mitid_token": "Token code (6 digits)"
+          "mitid_password": "MitID password",
+          "mitid_token": "Code from the code display"
+        },
+        "data_description": {
+          "mitid_password": "The password you log in to MitID with.",
+          "mitid_token": "The 6 digits the code display shows when you press its button."
         }
       },
       "authenticate": {
@@ -46,18 +55,22 @@
         "description": "MitID authentication failed. Click Submit to retry."
       },
       "reauth_username": {
-        "title": "MitID Username Required",
-        "description": "Your Aula integration is being upgraded to MitID authentication. Please enter your MitID username to continue.",
+        "title": "MitID user ID needed",
+        "description": "Enter the user ID you log in to MitID with, to log in to Aula again.",
         "data": {
-          "mitid_username": "MitID Username"
+          "mitid_username": "MitID user ID"
         }
       },
       "reconfigure": {
-        "title": "Reconfigure Aula",
-        "description": "Update your MitID credentials. You will need to approve the login in your MitID app.",
+        "title": "Change the MitID login",
+        "description": "Change the MitID user ID or how you approve the login.",
         "data": {
-          "mitid_username": "MitID Username",
-          "mitid_use_token": "Use MitID hardware token instead of app"
+          "mitid_username": "MitID user ID",
+          "mitid_use_token": "Log in with a MitID code display"
+        },
+        "data_description": {
+          "mitid_username": "The user ID you log in to MitID with.",
+          "mitid_use_token": "Leave this off to approve the login in the MitID app on your phone. Turn it on if you use a MitID code display, the small device that shows a 6-digit code."
         }
       },
       "reauth_confirm": {

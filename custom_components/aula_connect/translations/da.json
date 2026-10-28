@@ -17,20 +17,29 @@
     },
     "step": {
       "user": {
+        "title": "Log ind på Aula med MitID",
+        "description": "Aula Connect logger ind på Aula med dit MitID, som du gør på aula.dk.",
         "data": {
-          "id": "Enheds ID",
-          "mitid_username": "MitID Brugernavn",
-          "mitid_use_token": "Brug MitID hardware-token i stedet for app"
+          "id": "Navn",
+          "mitid_username": "MitID bruger-ID",
+          "mitid_use_token": "Log ind med MitID kodeviser"
         },
-        "description": "Konfigurer din Aula-integration med MitID. Du skal godkende login i din MitID-app.",
-        "title": "Aula MitID Login"
+        "data_description": {
+          "id": "Hvad dette Aula-login hedder i Home Assistant, fx familiens navn.",
+          "mitid_username": "Det bruger-ID, du logger ind på MitID med.",
+          "mitid_use_token": "Lad den være slået fra for at godkende i MitID-appen på din telefon. Slå den til, hvis du bruger en MitID kodeviser, den lille dims med en 6-cifret kode."
+        }
       },
       "token_credentials": {
-        "title": "MitID Token-enhed",
-        "description": "Indtast dine MitID token-enhed oplysninger.",
+        "title": "Log ind med din MitID kodeviser",
+        "description": "Skriv din MitID-adgangskode og den kode, din kodeviser viser nu.",
         "data": {
-          "mitid_password": "MitID Adgangskode",
-          "mitid_token": "Token-kode (6 cifre)"
+          "mitid_password": "MitID-adgangskode",
+          "mitid_token": "Kode fra kodeviseren"
+        },
+        "data_description": {
+          "mitid_password": "Den adgangskode, du logger ind på MitID med.",
+          "mitid_token": "De 6 cifre, kodeviseren viser, når du trykker på knappen."
         }
       },
       "authenticate": {
@@ -46,18 +55,22 @@
         "description": "MitID-godkendelse mislykkedes. Klik Indsend for at prøve igen."
       },
       "reauth_username": {
-        "title": "MitID Brugernavn Påkrævet",
-        "description": "Din Aula-integration opgraderes til MitID-godkendelse. Indtast venligst dit MitID-brugernavn for at fortsætte.",
+        "title": "MitID bruger-ID mangler",
+        "description": "Skriv det bruger-ID, du logger ind på MitID med, for at logge ind på Aula igen.",
         "data": {
-          "mitid_username": "MitID Brugernavn"
+          "mitid_username": "MitID bruger-ID"
         }
       },
       "reconfigure": {
-        "title": "Genkonfigurer Aula",
-        "description": "Opdater dine MitID-oplysninger. Du skal godkende login i din MitID-app.",
+        "title": "Ændr MitID-login",
+        "description": "Ændr MitID bruger-ID, eller hvordan du godkender login.",
         "data": {
-          "mitid_username": "MitID Brugernavn",
-          "mitid_use_token": "Brug MitID hardware-token i stedet for app"
+          "mitid_username": "MitID bruger-ID",
+          "mitid_use_token": "Log ind med MitID kodeviser"
+        },
+        "data_description": {
+          "mitid_username": "Det bruger-ID, du logger ind på MitID med.",
+          "mitid_use_token": "Lad den være slået fra for at godkende i MitID-appen på din telefon. Slå den til, hvis du bruger en MitID kodeviser, den lille dims med en 6-cifret kode."
         }
       },
       "reauth_confirm": {
