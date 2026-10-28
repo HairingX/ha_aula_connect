@@ -22,4 +22,4 @@ async def test_the_login_page_opens_the_mitid_app(
     client = await hass_client_no_auth()
     response = await client.get("/api/aula_connect/auth/flow")
     assert response.status == 200
-    assert 'href="mitid://"' in await response.text()
+    assert 'href="https://appswitch.mitid.dk/"' in await response.text()
