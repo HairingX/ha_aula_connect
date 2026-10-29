@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-import concurrent.futures
+import asyncio
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -105,18 +105,18 @@ async def test_the_status_offers_the_identities_and_no_qr_code(hass: HomeAssista
 async def test_the_chosen_identity_is_handed_to_the_login(hass: HomeAssistant, page: Any) -> None:
     session = _login(hass)
     session.available_identities = ["Parent", "Teacher"]
-    future: concurrent.futures.Future[str] = concurrent.futures.Future()
+    future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
     session.identity_future = future
     response = await page.post("/api/aula_connect/auth/flow/select_identity", json={"identity": "Teacher"})
     assert response.status == 200
-    assert future.result(timeout=0) == "Teacher"
+    assert future.result() == "Teacher"
     assert session.available_identities is None
 
 
 @pytest.mark.parametrize("body", [{"other": "Teacher"}, ["Teacher"]])
 async def test_a_request_without_an_identity_chooses_none(hass: HomeAssistant, page: Any, body: object) -> None:
     session = _login(hass)
-    future: concurrent.futures.Future[str] = concurrent.futures.Future()
+    future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
     session.identity_future = future
     response = await page.post("/api/aula_connect/auth/flow/select_identity", json=body)
     assert response.status == 200
@@ -125,9 +125,9 @@ async def test_a_request_without_an_identity_chooses_none(hass: HomeAssistant, p
 
 async def test_an_identity_chosen_twice_keeps_the_first(hass: HomeAssistant, page: Any) -> None:
     session = _login(hass)
-    future: concurrent.futures.Future[str] = concurrent.futures.Future()
+    future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
     future.set_result("Parent")
     session.identity_future = future
     response = await page.post("/api/aula_connect/auth/flow/select_identity", json={"identity": "Teacher"})
     assert response.status == 200
-    assert future.result(timeout=0) == "Parent"
+    assert future.result() == "Parent"

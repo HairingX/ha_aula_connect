@@ -6,8 +6,8 @@
 pytest-homeassistant-custom-component==0.13.375
 pyright==1.1.414
 # The integration's requirement, as the manifest pins it, and its libraries' requirements.
-aula_connect==0.0.3
-mitid_connect==0.0.1
+aula_connect==0.1.0
+mitid_connect==0.1.0
 pycryptodomex==3.24.1
 qrcode==8.2
 # Home Assistant's own integrations pin some packages that the requirements install; the tests

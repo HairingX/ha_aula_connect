@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from aula_connect.api.models.module import (
+    AULA_NOTIFICATION_TYPES,
     AulaBirthdayEvent,
     AulaCalendarEvent,
     AulaChildProfile,
@@ -14,6 +15,7 @@ from aula_connect.api.models.module import (
     AulaInstitutionGroup,
     AulaInstitutionProfile,
     AulaLoginData,
+    AulaMessageThread,
     AulaProfile,
     AulaWeeklyNewsletter,
     AulaWeeklyPlan,
@@ -56,41 +58,41 @@ class FakeAula:
         self.easyiq_plans: list[AulaEasyiqWeeklyPlan] = []
         self.newsletters: list[AulaWeeklyNewsletter] = []
         self.daily_overviews: list[AulaDailyOverview] = []
+        self.message_threads: list[AulaMessageThread] = []
+        self.notifications: list[AULA_NOTIFICATION_TYPES] = []
 
-    def connection_check(self) -> None:
+    async def connection_check(self) -> None:
         return None
 
-    def login(self) -> AulaLoginData:
+    async def login(self) -> AulaLoginData:
         return AulaLoginData(api_version=23, profiles=[self.parent], widgets=[])
 
     def has_widget(self, widget_id: str) -> bool:
         return widget_id in self.widgets
 
-    def get_daily_overviews(self, profiles: Any) -> list[AulaDailyOverview]:
+    async def get_daily_overviews(self, profiles: Any) -> list[AulaDailyOverview]:
         return list(self.daily_overviews)
 
-    def get_message_threads(self) -> list[Any]:
-        return []
+    async def get_message_threads(self) -> list[AulaMessageThread]:
+        return list(self.message_threads)
 
-    def get_notifications(self, children: Any) -> list[Any]:
-        return []
+    async def get_notifications(self, children: Any) -> list[AULA_NOTIFICATION_TYPES]:
+        return list(self.notifications)
 
-    def get_birthday_events(self, profiles: Any, start: datetime, end: datetime) -> list[AulaBirthdayEvent]:
+    async def get_birthday_events(self, profiles: Any, start: datetime, end: datetime) -> list[AulaBirthdayEvent]:
         return list(self.birthdays)
 
-    def get_calendar_events(
+    async def get_calendar_events(
         self, institutions: list[AulaInstitutionProfile], start: datetime, end: datetime
     ) -> list[AulaCalendarEvent]:
         return [item for institution in institutions for item in self.events.get(institution.id, [])]
 
-    def get_weekly_plans(self, profiles: Any, start: datetime, end: datetime) -> list[AulaWeeklyPlan]:
+    async def get_weekly_plans(self, profiles: Any, start: datetime, end: datetime) -> list[AulaWeeklyPlan]:
         return list(self.weekly_plans)
 
-    def get_easyiq_weekly_plans(self, profiles: Any, start: datetime, end: datetime) -> list[AulaEasyiqWeeklyPlan]:
+    async def get_easyiq_weekly_plans(self, profiles: Any, start: datetime, end: datetime) -> list[AulaEasyiqWeeklyPlan]:
         return list(self.easyiq_plans)
 
-    def get_newsletters(self, profiles: Any, start: datetime, end: datetime) -> list[AulaWeeklyNewsletter]:
+    async def get_newsletters(self, profiles: Any, start: datetime, end: datetime) -> list[AulaWeeklyNewsletter]:
         return list(self.newsletters)
 
-    def close(self) -> None:
-        return None

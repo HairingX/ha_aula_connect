@@ -75,7 +75,7 @@ async def set_up(hass: HomeAssistant, freezer: FrozenDateTimeFactory, loads: boo
     await hass.async_block_till_done()
 
 
-async def _events(hass: HomeAssistant, entity_id: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
+async def events(hass: HomeAssistant, entity_id: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
     response: Any = await hass.services.async_call(
         "calendar",
         "get_events",
@@ -135,7 +135,7 @@ async def test_a_lesson_shows_its_teachers_its_room_and_a_substitute(
     assert state.attributes["location"] == "Room 4"
     assert state.state == "off"
     freezer.move_to(at(28, 11, 30))
-    [found] = await _events(hass, "calendar.aula_events_alma_school", at(28, 0), at(29, 0))
+    [found] = await events(hass, "calendar.aula_events_alma_school", at(28, 0), at(29, 0))
     assert found["summary"] == "Math (JD) - Vikar"
 
 
@@ -144,7 +144,7 @@ async def test_an_invitation_not_yet_answered_says_so(
 ) -> None:
     aula.events[SCHOOL.id] = [event(2, "Trip", at(29, 9), at(29, 15), response_status="waiting")]
     await set_up(hass, freezer)
-    [found] = await _events(hass, "calendar.aula_events_alma_school", at(29, 0), at(30, 0))
+    [found] = await events(hass, "calendar.aula_events_alma_school", at(29, 0), at(30, 0))
     assert found["description"] == "Status: Afventer svar"
 
 
@@ -171,7 +171,7 @@ async def test_a_booked_meeting_shows_only_the_time_booked(
 ) -> None:
     aula.events[SCHOOL.id] = [_meeting(SCHOOL.id)]
     await set_up(hass, freezer)
-    [found] = await _events(hass, "calendar.aula_events_alma_school", at(28, 0), at(31, 0))
+    [found] = await events(hass, "calendar.aula_events_alma_school", at(28, 0), at(31, 0))
     assert found["summary"] == "👥 Meeting School"
     assert found["start"] == at(29, 14, 15).isoformat()
     assert found["end"] == at(29, 14, 30).isoformat()
@@ -185,10 +185,10 @@ async def test_a_meeting_not_yet_booked_is_marked(
     aula.events[SCHOOL.id] = [_meeting(None)]
     aula.events[PARENT_AT_SCHOOL.id] = [_meeting(None)]
     await set_up(hass, freezer)
-    [found] = await _events(hass, "calendar.aula_events_alma_school", at(28, 0), at(31, 0))
+    [found] = await events(hass, "calendar.aula_events_alma_school", at(28, 0), at(31, 0))
     assert found["summary"] == "👥 Meeting <!>"
     assert found["start"] == at(29, 8).isoformat()
-    [parents] = await _events(hass, "calendar.aula_events_pat_school", at(28, 0), at(31, 0))
+    [parents] = await events(hass, "calendar.aula_events_pat_school", at(28, 0), at(31, 0))
     assert parents["summary"] == "👥 Meeting <!>"
 
 
@@ -199,8 +199,8 @@ async def test_a_parents_meeting_without_the_child_is_not_in_the_childs_calendar
     aula.events[SCHOOL.id] = [meeting]
     aula.events[PARENT_AT_SCHOOL.id] = [meeting]
     await set_up(hass, freezer)
-    assert await _events(hass, "calendar.aula_events_alma_school", at(28, 0), at(31, 0)) == []
-    [found] = await _events(hass, "calendar.aula_events_pat_school", at(28, 0), at(31, 0))
+    assert await events(hass, "calendar.aula_events_alma_school", at(28, 0), at(31, 0)) == []
+    [found] = await events(hass, "calendar.aula_events_pat_school", at(28, 0), at(31, 0))
     assert found["summary"] == "👥 Parents' evening"
 
 
@@ -228,7 +228,7 @@ async def test_a_birthday_after_new_year_is_in_the_new_year(
 ) -> None:
     aula.birthdays = [_birthday(date(2017, 1, 3))]
     await set_up(hass, freezer)
-    [found] = await _events(hass, "calendar.aula_birthdays_alma_school", at(28, 0), at(5, 0, month=1, year=2027))
+    [found] = await events(hass, "calendar.aula_birthdays_alma_school", at(28, 0), at(5, 0, month=1, year=2027))
     assert (found["start"], found["end"]) == ("2027-01-03", "2027-01-04")
     assert found["summary"] == "🎁 Bo Friend (3A) fylder 10"
     state = hass.states.get("calendar.aula_birthdays_alma_school")
@@ -242,7 +242,7 @@ async def test_a_birthday_on_the_29th_of_february_is_kept_on_the_28th_outside_a_
 ) -> None:
     aula.birthdays = [_birthday(date(2016, 2, 29))]
     await set_up(hass, freezer)
-    found = await _events(
+    found = await events(
         hass, "calendar.aula_birthdays_alma_school", at(1, 0, month=2, year=2027), at(1, 0, month=3, year=2028)
     )
     assert [(item["start"], item["summary"][-2:]) for item in found] == [("2027-02-28", "11"), ("2028-02-29", "12")]
@@ -276,7 +276,7 @@ async def test_a_weekly_plans_task_is_an_all_day_event_with_a_short_summary(
         )
     ]
     await set_up(hass, freezer)
-    found = await _events(hass, "calendar.aula_weekly_plans_alma_school", at(29, 0), at(30, 0))
+    found = await events(hass, "calendar.aula_weekly_plans_alma_school", at(29, 0), at(30, 0))
     assert [(item["summary"], item["start"], item["end"]) for item in found] == [
         ("🔴 [Danish] Read page 4 ...", "2026-12-29", "2026-12-30"),
         ("ℹ️ " + "x" * 73 + "...", "2026-12-29", "2026-12-30"),
@@ -295,7 +295,7 @@ async def test_an_easyiq_event_shows_its_owner_and_description(
         AulaEasyiqDailyPlan(date(2026, 12, 29), [item])
     ])]
     await set_up(hass, freezer)
-    [found] = await _events(hass, "calendar.aula_easyiq_weekly_plans_alma_school", at(29, 0), at(30, 0))
+    [found] = await events(hass, "calendar.aula_easyiq_weekly_plans_alma_school", at(29, 0), at(30, 0))
     assert found["summary"] == "Swimming ..."
     assert found["description"] == "Coach\nSwimming\nBring a towel"
     state = hass.states.get("calendar.aula_easyiq_weekly_plans_alma_school")
@@ -309,7 +309,7 @@ async def test_a_newsletter_spans_its_week_with_its_html(
     letter = AulaNewsletter("n1", "<p>News</p>", "School")
     aula.newsletters = [AulaWeeklyNewsletter("Alma", date(2026, 12, 28), date(2027, 1, 3), [letter])]
     await set_up(hass, freezer)
-    [found] = await _events(hass, "calendar.aula_newsletter_alma_school", at(28, 0), at(29, 0))
+    [found] = await events(hass, "calendar.aula_newsletter_alma_school", at(28, 0), at(29, 0))
     assert (found["start"], found["end"]) == ("2026-12-28", "2027-01-04")
     assert found["summary"] == "Newsletter - Alma (School)"
     assert found["description"] == "<p>News</p>"
@@ -345,7 +345,7 @@ async def test_a_lesson_awaiting_an_answer_lists_its_teachers_then_the_status(
         )
     ]
     await set_up(hass, freezer)
-    [found] = await _events(hass, "calendar.aula_events_alma_school", at(29, 0), at(30, 0))
+    [found] = await events(hass, "calendar.aula_events_alma_school", at(29, 0), at(30, 0))
     assert found["summary"] == "Math"
     assert found["description"] == "Jane Doe\nStatus: Afventer svar"
 
@@ -358,7 +358,7 @@ async def test_a_task_with_a_title_shows_the_title_and_then_the_content(
         AulaWeeklyPlan(date(2026, 12, 28), "Week 53", date(2027, 1, 3), "alma", [AulaDailyPlan(date(2026, 12, 29), [task])])
     ]
     await set_up(hass, freezer)
-    [found] = await _events(hass, "calendar.aula_weekly_plans_alma_school", at(29, 0), at(30, 0))
+    [found] = await events(hass, "calendar.aula_weekly_plans_alma_school", at(29, 0), at(30, 0))
     assert found["summary"] == "🔴 Homework"
     assert found["description"] == "Homework\nPages 4-5"
 
@@ -401,7 +401,7 @@ async def test_the_calendars_show_what_aula_says_a_day_later(
 async def test_calendars_aula_cannot_be_read_at_start_are_tried_again(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
-    with patch.object(aula, "login", side_effect=[aula.login(), ConnectionError("down")]):
+    with patch.object(aula, "login", side_effect=[await aula.login(), ConnectionError("down")]):
         await set_up(hass, freezer, loads=False)
     [entry] = hass.config_entries.async_entries(DOMAIN)
     assert entry.state is ConfigEntryState.SETUP_RETRY
@@ -410,7 +410,7 @@ async def test_calendars_aula_cannot_be_read_at_start_are_tried_again(
 async def test_calendars_whose_login_aula_no_longer_accepts_ask_to_log_in_again(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
-    with patch.object(aula, "login", side_effect=[aula.login(), AulaCredentialError("expired")]):
+    with patch.object(aula, "login", side_effect=[await aula.login(), AulaCredentialError("expired")]):
         await set_up(hass, freezer, loads=False)
     [entry] = hass.config_entries.async_entries(DOMAIN)
     assert entry.state is ConfigEntryState.SETUP_ERROR

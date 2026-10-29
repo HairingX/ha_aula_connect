@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import requests
@@ -62,7 +62,8 @@ def _entry(hass: HomeAssistant) -> MockConfigEntry:
 async def test_aula_out_of_reach_at_start_logs_no_token(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> None:
     entry = _entry(hass)
     with patch(
-        "custom_components.aula_connect.AulaDataCoordinator._connection_check", side_effect=_unreachable()
+        "custom_components.aula_connect.AulaClient",
+        return_value=MagicMock(connection_check=AsyncMock(side_effect=_unreachable())),
     ):
         assert not await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -74,7 +75,7 @@ async def test_aula_out_of_reach_at_start_logs_no_token(hass: HomeAssistant, cap
 
 async def test_a_partial_failure_logs_no_token(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> None:
     entry = _entry(hass)
-    client = MagicMock()
+    client = AsyncMock()
     client.login.return_value = MagicMock(profiles=[], api_version=23)
     client.get_message_threads.side_effect = _unreachable()
     coordinator = AulaDataCoordinator("Aula", hass, client, entry)
@@ -87,9 +88,9 @@ async def test_a_calendar_that_cannot_be_read_logs_no_token(
     hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
     entry = _entry(hass)
-    client = MagicMock()
+    client = AsyncMock()
     client.get_birthday_events.side_effect = _unreachable()
     coordinator = AulaCalendarCoordinator("Aula", hass, client, entry)
     assert await coordinator.get_birthdays_for_interval([], MagicMock(), MagicMock()) == []
-    assert "Failed to fetch birthdays" in caplog.text
+    assert "Aula could not read the birthdays for the period" in caplog.text
     assert SECRET not in caplog.text

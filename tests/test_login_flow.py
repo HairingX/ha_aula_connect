@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+import inspect
+from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any, ClassVar
@@ -44,17 +45,21 @@ def crash(_: FakeLogin) -> dict[str, Any]:
     raise RuntimeError("MitID is down")
 
 
+Outcome = Callable[["FakeLogin"], dict[str, Any] | Awaitable[dict[str, Any]]]
+
+
 class FakeLogin:
     """A MitID login client whose login ends as the test says."""
 
-    outcome: ClassVar[Callable[[FakeLogin], dict[str, Any]]] = succeed
+    outcome: ClassVar[Outcome] = succeed
 
-    def __init__(self, **_: Any) -> None:
-        self.identity_selector: Callable[[list[str]], str] | None = None
+    def __init__(self, *_: Any, **__: Any) -> None:
+        self.identity_selector: Callable[[list[str]], Awaitable[str]] | None = None
         self.chosen: str | None = None
 
-    def authenticate(self) -> dict[str, Any]:
-        return type(self).outcome(self)
+    async def authenticate(self) -> dict[str, Any]:
+        result = type(self).outcome(self)
+        return await result if inspect.isawaitable(result) else result
 
     def get_mitid_client(self) -> Any:
         return SimpleNamespace(status_message="Login request has been made, open your MitID app now")
@@ -69,14 +74,15 @@ async def login(hass: HomeAssistant) -> Any:
     ):
         yield FakeLogin
     FakeLogin.outcome = succeed
-    _a_minute_later(hass)
+    a_minute_later(hass)
 
 
-def _a_minute_later(hass: HomeAssistant) -> None:
+def a_minute_later(hass: HomeAssistant) -> None:
+    """Move Home Assistant past the minute a completed login is kept for."""
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=LOGIN_KEPT_FOR + 1))
 
 
-async def _run(hass: HomeAssistant, flow_id: str, user_input: dict[str, Any] | None = None) -> dict[str, Any]:
+async def run_flow(hass: HomeAssistant, flow_id: str, user_input: dict[str, Any] | None = None) -> dict[str, Any]:
     """Go on with the flow, as the frontend does, until it shows a form or ends."""
     flow: Any = hass.config_entries.flow
     result = dict(await flow.async_configure(flow_id, user_input))
@@ -97,7 +103,7 @@ async def _start(hass: HomeAssistant) -> str:
 
 async def test_a_login_that_succeeds_creates_the_entry(hass: HomeAssistant, login: Any) -> None:
     flow_id = await _start(hass)
-    result = await _run(hass, flow_id, {"id": "Aula", "mitid_username": "parent"})
+    result = await run_flow(hass, flow_id, {"id": "Aula", "mitid_username": "parent"})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"]["access_token"] == "new-access"
     assert result["data"]["entity_prefix"] == "Aula"
@@ -105,11 +111,11 @@ async def test_a_login_that_succeeds_creates_the_entry(hass: HomeAssistant, logi
 
 async def test_a_completed_login_is_kept_a_minute_for_its_page_to_see(hass: HomeAssistant, login: Any) -> None:
     flow_id = await _start(hass)
-    await _run(hass, flow_id, {"id": "Aula", "mitid_username": "parent"})
+    await run_flow(hass, flow_id, {"id": "Aula", "mitid_username": "parent"})
     session = auth_session(hass, flow_id)
     assert session is not None
     assert session.completed
-    _a_minute_later(hass)
+    a_minute_later(hass)
     await hass.async_block_till_done()
     assert auth_session(hass, flow_id) is None
 
@@ -120,7 +126,7 @@ async def test_a_login_that_fails_says_so_and_can_be_tried_again(
 ) -> None:
     login.outcome = outcome
     flow_id = await _start(hass)
-    result = await _run(hass, flow_id, {"id": "Aula", "mitid_username": "parent"})
+    result = await run_flow(hass, flow_id, {"id": "Aula", "mitid_username": "parent"})
     assert result["step_id"] == "auth_error"
     assert result["errors"] == {"base": "auth_failed"}
     assert not [task for task in asyncio.all_tasks() if "MitID status" in task.get_name()]
@@ -129,17 +135,16 @@ async def test_a_login_that_fails_says_so_and_can_be_tried_again(
     flow: Any = hass.config_entries.flow
     retry = await flow.async_configure(flow_id, {})
     assert retry["type"] is FlowResultType.EXTERNAL_STEP
-    assert (await _run(hass, flow_id))["type"] is FlowResultType.CREATE_ENTRY
+    assert (await run_flow(hass, flow_id))["type"] is FlowResultType.CREATE_ENTRY
 
 
 async def test_the_login_page_learns_what_mitid_is_doing(hass: HomeAssistant, login: Any) -> None:
     started = asyncio.Event()
     release = asyncio.Event()
-    loop = asyncio.get_running_loop()
 
-    def wait(_: FakeLogin) -> dict[str, Any]:
-        loop.call_soon_threadsafe(started.set)
-        asyncio.run_coroutine_threadsafe(release.wait(), loop).result(timeout=10)
+    async def wait(_: FakeLogin) -> dict[str, Any]:
+        started.set()
+        await release.wait()
         return {"success": True, "tokens": TOKENS}
 
     login.outcome = wait
@@ -152,13 +157,13 @@ async def test_the_login_page_learns_what_mitid_is_doing(hass: HomeAssistant, lo
     assert session is not None
     assert session.status_message == "Login request has been made, open your MitID app now"
     release.set()
-    assert (await _run(hass, flow_id))["type"] is FlowResultType.CREATE_ENTRY
+    assert (await run_flow(hass, flow_id))["type"] is FlowResultType.CREATE_ENTRY
 
 
 async def test_the_user_chooses_between_several_identities(hass: HomeAssistant, login: Any) -> None:
-    def choose(client: FakeLogin) -> dict[str, Any]:
+    async def choose(client: FakeLogin) -> dict[str, Any]:
         assert client.identity_selector is not None
-        client.chosen = client.identity_selector(["Parent", "Teacher"])
+        client.chosen = await client.identity_selector(["Parent", "Teacher"])
         return {"success": True, "tokens": TOKENS}
 
     login.outcome = choose
@@ -175,7 +180,7 @@ async def test_the_user_chooses_between_several_identities(hass: HomeAssistant, 
     assert session.status_message == "Please select an identity"
     assert session.identity_future is not None
     session.identity_future.set_result("Teacher")
-    assert (await _run(hass, flow_id))["type"] is FlowResultType.CREATE_ENTRY
+    assert (await run_flow(hass, flow_id))["type"] is FlowResultType.CREATE_ENTRY
     client: Any = session.client
     assert client.chosen == "Teacher"
 
@@ -197,20 +202,22 @@ async def test_without_a_request_or_url_the_login_page_address_is_relative(hass:
 
 async def test_a_flow_closed_during_the_login_forgets_it_at_once(hass: HomeAssistant, login: Any) -> None:
     release = asyncio.Event()
-    loop = asyncio.get_running_loop()
 
-    def wait(_: FakeLogin) -> dict[str, Any]:
-        asyncio.run_coroutine_threadsafe(release.wait(), loop).result(timeout=10)
+    async def wait(_: FakeLogin) -> dict[str, Any]:
+        await release.wait()
         return {"success": True, "tokens": TOKENS}
 
     login.outcome = wait
     flow_id = await _start(hass)
     flow: Any = hass.config_entries.flow
     await flow.async_configure(flow_id, {"id": "Aula", "mitid_username": "parent"})
+    session = auth_session(hass, flow_id)
+    assert session is not None and session.task is not None
     hass.config_entries.flow.async_abort(flow_id)
     assert auth_session(hass, flow_id) is None
-    release.set()
     await hass.async_block_till_done()
+    assert session.task.cancelled()
+    assert session.http_session is None
     assert not hass.config_entries.async_entries(DOMAIN)
 
 
@@ -232,7 +239,7 @@ async def test_logging_in_again_asks_to_confirm_and_takes_the_new_tokens(hass: H
     result: dict[str, Any] = dict(await entry.start_reauth_flow(hass))
     assert result["step_id"] == "reauth_confirm"
     assert result["description_placeholders"]["username"] == "parent"
-    done = await _run(hass, result["flow_id"], {})
+    done = await run_flow(hass, result["flow_id"], {})
     assert done["reason"] == "reauth_successful"
     assert entry.data["access_token"] == "new-access"
     assert entry.data["entity_prefix"] == "Aula"
@@ -248,7 +255,7 @@ async def test_logging_in_again_without_a_user_id_asks_for_one(hass: HomeAssista
     assert blank["errors"] == {"base": "invalid_auth"}
     confirm = await flow.async_configure(result["flow_id"], {"mitid_username": "parent"})
     assert confirm["step_id"] == "reauth_confirm"
-    assert (await _run(hass, result["flow_id"], {}))["reason"] == "reauth_successful"
+    assert (await run_flow(hass, result["flow_id"], {}))["reason"] == "reauth_successful"
     assert entry.data["mitid_username"] == "parent"
 
 
@@ -266,3 +273,27 @@ def test_the_mitid_status_is_none_before_mitid_has_started() -> None:
     assert mitid_status(client) is None
     client.get_mitid_client.return_value = SimpleNamespace(status_message="Open your MitID app now...")
     assert mitid_status(client) == "Open your MitID app now..."
+
+
+async def test_a_flow_closed_while_the_user_chooses_an_identity_stops_waiting(hass: HomeAssistant, login: Any) -> None:
+    async def choose(client: FakeLogin) -> dict[str, Any]:
+        assert client.identity_selector is not None
+        await client.identity_selector(["Parent", "Teacher"])
+        return {"success": True, "tokens": TOKENS}
+
+    login.outcome = choose
+    flow_id = await _start(hass)
+    flow: Any = hass.config_entries.flow
+    await flow.async_configure(flow_id, {"id": "Aula", "mitid_username": "parent"})
+    session = auth_session(hass, flow_id)
+    assert session is not None
+    for _ in range(100):
+        if session.identity_future is not None:
+            break
+        await asyncio.sleep(0.01)
+    future = session.identity_future
+    assert future is not None
+    hass.config_entries.flow.async_abort(flow_id)
+    assert future.cancelled()
+    await hass.async_block_till_done()
+    assert not hass.config_entries.async_entries(DOMAIN)

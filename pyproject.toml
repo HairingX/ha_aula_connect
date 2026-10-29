@@ -19,8 +19,4 @@ reportMissingTypeStubs = "none"
 enableTypeIgnoreComments = false
 
 [tool.hairingx-workflows]
-transition = """The integration starts from the Aula integration, written before the shared \
-standard: its modules are tested one by one."""
-# The coverage the tests reach now; each pull request raises it, until it is 100.
-coverage = 92
-libraries = ["aula_connect"]
+libraries = ["mitid_connect", "aula_connect"]

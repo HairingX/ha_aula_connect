@@ -1,3 +1,5 @@
+"""The sensors of an Aula login: each child's status, presence and time present today."""
+
 from dataclasses import dataclass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
@@ -21,7 +23,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback):
-    """Setup sensors from a config entry created in the integrations UI."""
+    """Add the status, presence and presence duration sensors of each child."""
     coordinator = entry.runtime_data.data_coordinator
     entities: List[SensorEntity] = []
     children = coordinator.data.children
@@ -32,6 +34,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
     async_add_entities(entities)
 
 class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
+    """A child's presence status at the institution today, as Aula states it."""
+
     _attr_device_class = SensorDeviceClass.ENUM
 
     def __init__(self, coordinator: AulaDataCoordinator, profile: AulaChildProfile) -> None:
@@ -45,7 +49,6 @@ class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
         self._init_data()
 
     def _set_values(self, data: AulaDataCoordinatorData, context: AulaChildProfile) -> None:
-         # self._attr_translation_placeholders = self.coordinator.data[""]["state"]
         attributes = dict[str, Any]()
         daily_overview: AulaDailyOverview | None = None
         for item in data.daily_overviews:
@@ -63,9 +66,12 @@ class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
         attributes["location_icon"] = None
         attributes["location_name"] = None
         attributes["main_group"] = self._profile.main_group.name
+        self._attr_native_value = None
 
         if daily_overview is not None:
-            self._attr_native_value = str(daily_overview.status)
+            # A status outside the options would keep Home Assistant from adding the entity at all.
+            known = daily_overview.status in StateMetaParser.state_options
+            self._attr_native_value = str(daily_overview.status) if known else None
             statemeta = StateMetaParser.parse_presence(daily_overview.status)
             self._attr_icon = statemeta.icon
             attributes["check_in_time"] = daily_overview.check_in_time
@@ -81,6 +87,8 @@ class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
         self._attr_extra_state_attributes = attributes
 
 class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
+    """Whether a child is present at the institution now."""
+
     _attr_device_class = SensorDeviceClass.ENUM
 
     def __init__(self, coordinator: AulaDataCoordinator, profile: AulaChildProfile) -> None:
@@ -94,7 +102,6 @@ class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
         self._init_data()
 
     def _set_values(self, data: AulaDataCoordinatorData, context: AulaChildProfile) -> None:
-         # self._attr_translation_placeholders = self.coordinator.data[""]["state"]
         attributes = dict[str, Any]()
         daily_overview: AulaDailyOverview | None = None
         for item in data.daily_overviews:
@@ -109,6 +116,7 @@ class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
         attributes["exit_with"] = None
         attributes["institution_name"] = None
         attributes["main_group"] = self._profile.main_group.name
+        self._attr_native_value = None
 
         if daily_overview is not None:
             statemeta = StateMetaParser.parse_presence(daily_overview.status)
@@ -123,6 +131,8 @@ class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
         self._attr_extra_state_attributes = attributes
 
 class AulaPresenceDurationSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
+    """How many minutes a child has been, or was, present at the institution today."""
+
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
@@ -137,7 +147,6 @@ class AulaPresenceDurationSensor(AulaEntityBase[AulaChildProfile], SensorEntity)
         self._init_data()
 
     def _set_values(self, data: AulaDataCoordinatorData, context: AulaChildProfile) -> None:
-         # self._attr_translation_placeholders = self.coordinator.data[""]["state"]
         attributes = dict[str, Any]()
         daily_overview: AulaDailyOverview | None = None
         for item in data.daily_overviews:
@@ -148,6 +157,7 @@ class AulaPresenceDurationSensor(AulaEntityBase[AulaChildProfile], SensorEntity)
         attributes["check_in_time"] = None
         attributes["check_out_time"] = None
         attributes["main_group"] = self._profile.main_group.name
+        self._attr_native_value = None
 
         if daily_overview is not None:
             statemeta = StateMetaParser.parse_presencetimer(daily_overview.status)
@@ -168,17 +178,21 @@ class AulaPresenceDurationSensor(AulaEntityBase[AulaChildProfile], SensorEntity)
                 indatetime = datetime.datetime.today() + datetime.timedelta(hours=intime.hour, minutes=intime.minute, seconds=intime.second)
                 outdatetime = datetime.datetime.today() + datetime.timedelta(hours=outtime.hour, minutes=outtime.minute, seconds=outtime.second)
                 timervalue = (outdatetime - indatetime).total_seconds() / 60
-                timervalue = round(timervalue, 0)
+                timervalue = round(timervalue)
             _LOGGER.debug(f"Presence duration calculated: {timervalue} (check_in_time={intime}, check_out_time={outtime}{"" if nowtime is None else f"(calculated from current time: '{nowtime}')"})")
             self._attr_native_value = timervalue
         self._attr_extra_state_attributes = attributes
 
 @dataclass
 class StateMeta:
+    """The presence and the icon a status is shown with."""
+
     presence: str|None
     icon: str
 
 class StateFlag:
+    """The presence statuses Aula gives a child."""
+
     NOT_PRESENT = 0
     SICK = 1
     REPORTED_ABSCENT = 2
@@ -192,11 +206,15 @@ class StateFlag:
     RESERVED_2 = 10
 
 class PresenceFlag:
+    """The states of the presence sensor."""
+
     NOT_PRESENT = "not_present"
     PRESENT = "present"
     UNKNOWN = "unknown"
 
 class StateMetaParser:
+    """The options of the status and presence sensors, and how a status is shown."""
+
     state_options: List[int] = [
         StateFlag.NOT_PRESENT,
         StateFlag.SICK,
@@ -219,6 +237,7 @@ class StateMetaParser:
 
     @staticmethod
     def parse_presence(status: int|None) -> StateMeta:
+        """The presence a status means, and the icon of the status and presence sensors."""
         match status:
             case StateFlag.NOT_PRESENT:
                 return StateMeta( presence = PresenceFlag.NOT_PRESENT, icon = "mdi:map-marker-question" )
@@ -233,6 +252,8 @@ class StateMetaParser:
 
     @staticmethod
     def parse_presencetimer(status: int|None) -> StateMeta:
+        """The icon of the presence duration sensor for a status; no presence."""
+
         match status:
             case StateFlag.NOT_PRESENT:
                 return StateMeta( presence = None, icon = "mdi:timer" )

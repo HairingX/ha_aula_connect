@@ -57,3 +57,16 @@ async def test_an_entry_without_a_token_asks_to_log_in_again(hass: HomeAssistant
     assert entry.state is ConfigEntryState.SETUP_ERROR
     assert [flow.get("context", {}).get("source") for flow in hass.config_entries.flow.async_progress_by_handler(DOMAIN)] == ["reauth"]
 
+
+
+@pytest.mark.usefixtures("offline")
+async def test_the_tokens_the_client_renews_are_kept_in_the_entry(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="Aula", title="Aula", data=DATA, version=2)
+    entry.add_to_hass(hass)
+    with patch("custom_components.aula_connect.AulaClient") as client:
+        assert await hass.config_entries.async_setup(entry.entry_id)
+    client.call_args.kwargs["token_update_callback"]("renewed-access", "renewed-refresh", 3.0)
+    assert entry.data["access_token"] == "renewed-access"
+    assert entry.data["refresh_token"] == "renewed-refresh"
+    assert entry.data["token_expires_at"] == 3.0
+    assert entry.data["mitid_username"] == "parent"

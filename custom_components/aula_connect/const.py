@@ -1,9 +1,10 @@
+"""The integration's constants, and the unique id of an entry."""
+
 import hashlib
 
 MANUFACTURER = "Aula"
 DOMAIN = "aula_connect"
 
-# MitID authentication constants
 CONF_ACCESS_TOKEN = "access_token"
 CONF_REFRESH_TOKEN = "refresh_token"
 CONF_TOKEN_EXPIRES_AT = "token_expires_at"

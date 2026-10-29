@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import concurrent.futures
+import asyncio
 from dataclasses import dataclass
 from typing import Any
 
+import aiohttp
 from aula_connect.login.client import AulaLoginClient
 from homeassistant.core import HomeAssistant
 from homeassistant.util.hass_dict import HassKey
@@ -25,8 +26,18 @@ class AuthSession:
     completed: bool = False
     error: str | None = None
     tokens: dict[str, Any] | None = None
-    identity_future: concurrent.futures.Future[str] | None = None
+    http_session: aiohttp.ClientSession | None = None
+    identity_future: asyncio.Future[str] | None = None
     available_identities: list[str] | None = None
+    task: asyncio.Task[None] | None = None
+
+    def end(self) -> None:
+        """Stop the login if it still runs, and let go of its HTTP session."""
+        if self.task is not None and not self.task.done():
+            self.task.cancel()
+        if self.http_session is not None:
+            self.http_session.detach()
+            self.http_session = None
 
 
 def auth_sessions(hass: HomeAssistant) -> dict[str, AuthSession]:

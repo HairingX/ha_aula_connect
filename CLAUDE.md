@@ -16,9 +16,6 @@ into Home Assistant devices and entities. How and why it is built as it is: `doc
   which is set up anew. An existing installation of this one keeps its entities: a unique id is
   the name the entry was set up under (`entity_prefix`) and the entity's key, and changing one is
   agreed with the user first.
-- The integration is on its way to the shared standard (`[tool.hairingx-workflows] transition`
-  in `pyproject.toml`): pyright checks every file, and the tests reach the coverage stated there.
-  Each pull request raises the coverage.
 - The README names every entity and attribute, and a test holds it to them.
 - The library developed alongside it is `aula_connect`, listed in `pyproject.toml` for test
   builds and CI.
