@@ -77,11 +77,7 @@ rules:
       Entities follow the coordinator's last update; the presence sensors are also unavailable
       without a daily overview for their child.
   integration-owner: done
-  log-when-unavailable:
-    status: todo
-    comment: >-
-      A failed refresh is logged once by the coordinator, but a partial failure (daily
-      overviews, messages or notifications) logs a warning at every poll until the third.
+  log-when-unavailable: done
   parallel-updates:
     status: todo
     comment: No platform sets PARALLEL_UPDATES.
@@ -141,9 +137,7 @@ rules:
     status: todo
     comment: No entity is disabled by default, and which are rarely used has not been assessed.
   entity-translations: done
-  exception-translations:
-    status: todo
-    comment: Exceptions are raised with English messages, not translation keys.
+  exception-translations: done
   icon-translations:
     status: todo
     comment: Icons are set in code through _attr_icon; there is no icons.json.

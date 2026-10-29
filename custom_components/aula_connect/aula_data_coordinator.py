@@ -5,6 +5,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+from .const import DOMAIN
 import asyncio
 import logging
 
@@ -59,6 +61,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         )
         self._client = client
         self._consecutive_failures = 0
+        self._partly_unreadable = False
         self.device_id = device_id
         self.aula_version = client.aula_version
 
@@ -79,7 +82,11 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         try:
             await self.hass.async_add_executor_job(self._connection_check)
         except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed from err
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
+        except Exception as err:
+            raise UpdateFailed(
+                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": str(err)}
+            ) from err
 
     async def _async_update_data(self) -> AulaDataCoordinatorData:
         """Fetch data from API endpoint.
@@ -103,14 +110,11 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                     raise data
                 return data
         except AulaCredentialError as err:
-            # Raising ConfigEntryAuthFailed will cancel future updates
-            # and start a config flow with SOURCE_REAUTH (async_step_reauth)
-            raise ConfigEntryAuthFailed from err
-        except Exception as error:
-            if error.args and isinstance(error.args[0], str):
-                raise UpdateFailed(error.args[0]) from error
-            else:
-                raise UpdateFailed from error
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
+        except Exception as err:
+            raise UpdateFailed(
+                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": str(err)}
+            ) from err
 
     def weekly_plans_supported(self) -> bool:
         return self._client.has_widget(AulaWidgetId.WEEKPLAN_PARENTS)
@@ -139,11 +143,11 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         except AulaCredentialError:
             raise
         except Exception as ex:
-            _LOGGER.error(f"Login failed: {ex}")
             return ex
 
         children = [child for profile in profiles for child in profile.children]
         had_failure = False
+        failures = list[str]()
 
         daily_overviews = list[AulaDailyOverview]()
         try:
@@ -152,7 +156,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             raise
         except Exception as ex:
             had_failure = True
-            _LOGGER.warning(f"Failed to fetch daily overviews: {ex}")
+            failures.append(f"daily overviews: {ex}")
 
         message_threads = list[AulaMessageThread]()
         try:
@@ -161,7 +165,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             raise
         except Exception as ex:
             had_failure = True
-            _LOGGER.warning(f"Failed to fetch message threads: {ex}")
+            failures.append(f"message threads: {ex}")
 
         notifications = list[AULA_NOTIFICATION_TYPES]()
         try:
@@ -170,15 +174,21 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             raise
         except Exception as ex:
             had_failure = True
-            _LOGGER.warning(f"Failed to fetch notifications: {ex}")
+            failures.append(f"notifications: {ex}")
 
         if had_failure:
+            # Logged once when Aula can be read only in part, and once when it can be read in full.
+            if not self._partly_unreadable:
+                self._partly_unreadable = True
+                _LOGGER.warning("Aula could be read only in part: %s", "; ".join(failures))
             self._consecutive_failures += 1
             if self._consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
                 self._consecutive_failures = 0
                 return Exception(f"Aula API failed {MAX_CONSECUTIVE_FAILURES} consecutive times")
-            _LOGGER.debug(f"Fetch had partial failures ({self._consecutive_failures}/{MAX_CONSECUTIVE_FAILURES} before unavailable)")
         else:
+            if self._partly_unreadable:
+                self._partly_unreadable = False
+                _LOGGER.info("Aula can be read in full again")
             self._consecutive_failures = 0
 
         return AulaDataCoordinatorData(
