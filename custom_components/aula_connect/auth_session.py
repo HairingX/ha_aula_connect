@@ -31,7 +31,6 @@ class AuthSession:
     available_identities: list[str] | None = None
     task: asyncio.Task[None] | None = None
 
-
     def end(self) -> None:
         """Stop the login if it still runs, and let go of its HTTP session."""
         if self.task is not None and not self.task.done():

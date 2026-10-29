@@ -1,3 +1,5 @@
+"""The coordinator that reads an Aula login's profiles, daily overviews, messages and notifications."""
+
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import List
@@ -24,14 +26,15 @@ from aula_connect.api.aula_errors import AulaCredentialError
 
 _LOGGER = logging.getLogger(__name__)
 
-# Coordinator polling interval
 DATA_COORDINATOR_POLL_INTERVAL = timedelta(minutes=5)
 
-# Number of consecutive fetch failures before raising UpdateFailed
 MAX_CONSECUTIVE_FAILURES = 3
+"""How many reads in a row may fail in part before the coordinator reports a failure."""
 
 @dataclass
 class AulaDataCoordinatorData:
+    """What one read of Aula found for the login."""
+
     device_id: str
     aula_version: int
     profiles: List[AulaProfile]
@@ -41,23 +44,17 @@ class AulaDataCoordinatorData:
     notifications: List[AULA_NOTIFICATION_TYPES]
 
 class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
-    """My custom coordinator."""
+    """Reads the login's profiles, daily overviews, message threads and notifications from Aula."""
 
     _client: AulaClient
 
     def __init__(self, device_id: str, hass: HomeAssistant, client: AulaClient, config_entry: ConfigEntry):
-        """Initialize my coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            # Name of the data. For logging purposes.
             name="general",
             config_entry=config_entry,
-            # Polling interval. Will only be polled if there are subscribers.
             update_interval=DATA_COORDINATOR_POLL_INTERVAL,
-            # Set always_update to `False` if the data returned from the
-            # api can be compared via `__eq__` to avoid duplicate updates
-            # being dispatched to listeners
             always_update=True,
         )
         self._client = client
@@ -69,17 +66,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         _LOGGER.debug(f"Coordinator {device_id} initialized")
 
     async def _async_setup(self) -> None:
-        """Set up the coordinator
-
-        This is the place to set up your coordinator,
-        or to load data, that only needs to be loaded once.
-
-        This method will be called automatically during
-        coordinator.async_config_entry_first_refresh.
-
-        If the refresh fails, async_config_entry_first_refresh will
-        raise ConfigEntryNotReady and setup will try again later
-        """
+        """Check that Aula can be reached with the entry's login."""
         try:
             await self._client.connection_check()
         except AulaCredentialError as err:
@@ -91,22 +78,9 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             ) from None
 
     async def _async_update_data(self) -> AulaDataCoordinatorData:
-        """Fetch data from API endpoint.
-
-        This is the place to pre-process the data to lookup tables
-        so entities can quickly look up their data.
-        """
+        """Read the login's data from Aula, a part it cannot read left empty."""
         try:
-
-            # Note: asyncio.TimeoutError and aiohttp.ClientError are already
-            # handled by the data update coordinator.
             async with asyncio.timeout(120):
-                # Grab active context variables to limit data required to be fetched from API
-                # Note: using context is not required if there is no need or ability to limit
-                # data retrieved from API.
-                # listening_idx = set(self.async_contexts())
-
-                # always retrieve profiles first
                 data = await self._fetch_data()
                 if isinstance(data, Exception):
                     raise data
@@ -120,23 +94,28 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             ) from None
 
     def weekly_plans_supported(self) -> bool:
+        """Whether the login's institutions offer weekly plans."""
         return self._client.has_widget(AulaWidgetId.WEEKPLAN_PARENTS)
 
     def easyiq_weekplan_supported(self) -> bool:
+        """Whether the login's institutions offer EasyIQ weekly plans."""
         return self._client.has_widget(AulaWidgetId.EASYIQ_WEEKPLAN)
 
     def reminders_supported(self) -> bool:
+        """Whether the login's institutions offer reminders."""
         return self._client.has_widget(AulaWidgetId.REMINDERS)
 
     def newsletter_supported(self) -> bool:
+        """Whether the login's institutions offer MinUddannelse newsletters."""
         return self._client.has_widget(AulaWidgetId.MY_EDUCATION_WEEKLETTER)
 
     def assignments_supported(self) -> bool:
+        """Whether the login's institutions offer MinUddannelse assignments."""
         return self._client.has_widget(AulaWidgetId.MY_EDUCATION_ASSIGNMENTS)
 
     async def _fetch_data(self) -> AulaDataCoordinatorData|Exception:
-        # Login is required for all fetches — if this fails, nothing works
         try:
+
             logindata = await self._client.login()
             profiles = logindata.profiles
             self.aula_version = logindata.api_version

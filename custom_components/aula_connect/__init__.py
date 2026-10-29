@@ -31,9 +31,11 @@ PLATFORMS: list[Platform] = [
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
-    """Set up platform from a ConfigEntry."""
+    """Set up the entry's Aula client, its coordinators and its platforms.
 
-    # Guard: if tokens are missing, ask to log in again
+    Raises:
+        ConfigEntryAuthFailed: The entry has no access token; logging in again is asked for.
+    """
     if CONF_ACCESS_TOKEN not in entry.data or not entry.data[CONF_ACCESS_TOKEN]:
         raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired")
 
@@ -77,14 +79,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Note: No add_update_listener here — token persistence via async_update_entry
-    # would trigger reload loops. Reauth/reconfigure handle config changes already.
-
+    # No update listener: writing the renewed tokens to the entry would reload it each time.
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
-    """Unload a config entry."""
+    """Unload the entry's platforms."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 

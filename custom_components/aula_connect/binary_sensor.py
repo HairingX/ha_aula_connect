@@ -1,3 +1,5 @@
+"""The binary sensors of an Aula login: unread messages, media, calendar events, posts and presence."""
+
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.core import HomeAssistant
@@ -16,7 +18,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback):
-    """Setup binary sensors from a config entry created in the integrations UI."""
+    """Add the login's unread message, gallery, calendar, post and presence binary sensors."""
     coordinator = entry.runtime_data.data_coordinator
     entities: List[BinarySensorEntity] = []
     entities.append(AulaUnreadMessageBinarySensor(coordinator))
@@ -28,6 +30,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
 
 
 class AulaUnreadGalleryBinarySensor(AulaEntityBase[None], BinarySensorEntity):
+    """Whether Aula has notified of new pictures or albums, with how many."""
+
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_gallery", context=None)
         self._init_data()
@@ -49,6 +53,8 @@ class AulaUnreadGalleryBinarySensor(AulaEntityBase[None], BinarySensorEntity):
         self._attr_extra_state_attributes = attributes
 
 class AulaUnreadCalendarEventBinarySensor(AulaEntityBase[None], BinarySensorEntity):
+    """Whether Aula has unread calendar event notifications, with the first, an alert before others."""
+
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_calendar", context=None)
         self._init_data()
@@ -85,6 +91,8 @@ class AulaUnreadCalendarEventBinarySensor(AulaEntityBase[None], BinarySensorEnti
         self._attr_extra_state_attributes = attributes
 
 class AulaUnreadMessageBinarySensor(AulaEntityBase[None], BinarySensorEntity):
+    """Whether the login has unread message threads, with the first, an unmuted one before others."""
+
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_message", context=None)
         self._init_data()
@@ -126,12 +134,16 @@ class AulaUnreadMessageBinarySensor(AulaEntityBase[None], BinarySensorEntity):
                 text = latestmsg.text
                 html = None if text is None else text.html
                 attributes["text"] = html
-            if first.sensitive: #sensitive messages have no subject and text
+            # Aula gives a sensitive message no subject and no text.
+            if first.sensitive:
+
                 attributes["subject"] = "Sensitive"
                 attributes["text"] = "This message is sensitive. Please log into Aula to read it."
         self._attr_extra_state_attributes = attributes
 
 class AulaUnreadPostBinarySensor(AulaEntityBase[None], BinarySensorEntity):
+    """Whether Aula has unread post notifications, with the first, an alert before others."""
+
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_post", context=None)
         self._init_data()
@@ -162,6 +174,8 @@ class AulaUnreadPostBinarySensor(AulaEntityBase[None], BinarySensorEntity):
         self._attr_extra_state_attributes = attributes
 
 class AulaUnreadPresenceBinarySensor(AulaEntityBase[None], BinarySensorEntity):
+    """Whether Aula has unread presence notifications, with the first, an alert before others."""
+
     def __init__(self, coordinator: AulaDataCoordinator):
         super().__init__(coordinator, name="unread_presence", context=None)
         self._init_data()

@@ -1,3 +1,5 @@
+"""The calendars of an Aula login: events, birthdays, weekly plans and newsletters."""
+
 from calendar import isleap
 from datetime import datetime, timedelta, date
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
@@ -36,13 +38,13 @@ from .entity import AulaCalendarEntityBase
 _LOGGER = logging.getLogger(__name__)
 
 def to_datetime(value: datetime | date, tzinfo: Any) -> datetime:
-    """Convert a date or datetime to a datetime with timezone."""
+    """The datetime itself, or a date's midnight in `tzinfo`."""
     if isinstance(value, datetime):
         return value
     return datetime.combine(value, datetime.min.time(), tzinfo)
 
 def _is_event_in_range(event: CalendarEvent, start: datetime, end: datetime) -> bool:
-    """Return True if the event overlaps with the given range."""
+    """Whether the event overlaps the range from `start` to `end`."""
     event_start = to_datetime(event.start, start.tzinfo)
     event_end = to_datetime(event.end, start.tzinfo)
     return event_start < end and event_end >= start
@@ -52,7 +54,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    """Set up the calendar platform."""
+    """Add the calendars of the entry's profiles and children, each kind where Aula offers it."""
     data_coordinator = entry.runtime_data.data_coordinator
     calendar_coordinator = entry.runtime_data.calendar_coordinator
     entities: List[CalendarEntity] = []
@@ -78,7 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
     async_add_entities(entities)
 
 class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
-    """A calendar event entity."""
+    """The birthdays at a child's institution."""
     _event: CalendarEvent | None = None
     _profile: AulaChildProfile
     _institution: AulaInstitutionProfile
@@ -94,25 +96,24 @@ class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
         self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
 
     async def async_will_remove_from_hass(self):
+        """Stop having the coordinator read the child's birthdays."""
         await self.coordinator.async_remove_birthday_key(self._profile)
         return await super().async_will_remove_from_hass()
 
     async def async_added_to_hass(self):
+        """Have the coordinator read the child's birthdays."""
         await self.coordinator.async_add_birthday_key(self._profile)
         return await super().async_added_to_hass()
 
     def _handle_data_updated(self, data: AulaCalendarCoordinatorData) -> bool:
-        """Handle the update and return True if data has changed for the entity."""
         if self._profile.id in data.updated_birthdays_for_listener_keys:
             return True
         return False
 
     @property
     def event(self) -> CalendarEvent | None:
-        """Return the next upcoming event."""
-        result = self._get_active_or_upcoming_event()
-        # _LOGGER.debug(f"event = {None if result is None else result.summary}")
-        return result
+        """The next birthday, today's included."""
+        return self._get_active_or_upcoming_event()
 
     async def async_get_events(self, hass: HomeAssistant, start_date: datetime, end_date: datetime) -> List[CalendarEvent]:
         """The birthdays in the range, each in every year of the range it falls in."""
@@ -159,7 +160,7 @@ class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
         return birthday.replace(year=year)
 
 class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
-    """A calendar event entity."""
+    """The events of a profile or a child at one institution."""
     _event: CalendarEvent | None = None
     _profile: AulaChildProfile|AulaProfile
     _institution: AulaInstitutionProfile
@@ -177,10 +178,12 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
         self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
 
     async def async_will_remove_from_hass(self):
+        """Stop having the coordinator read the institution's events."""
         await self.coordinator.async_remove_event_key(self._institution)
         return await super().async_will_remove_from_hass()
 
     async def async_added_to_hass(self):
+        """Have the coordinator read the institution's events."""
         await self.coordinator.async_add_event_key(self._institution)
         return await super().async_added_to_hass()
 
@@ -191,23 +194,19 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
 
     @property
     def event(self) -> CalendarEvent | None:
-        """Return the next upcoming event."""
-        # (event, _) = self._event_with_offset()
-        result = self._get_active_or_upcoming_event()
-        # _LOGGER.debug(f"event = {None if result is None else result.summary}")
-        return result
+        """The event going on now, or else the next one."""
+        return self._get_active_or_upcoming_event()
 
     def _event_filter(self, event: AulaCalendarEvent) -> bool:
-        """Return True if the event is visible."""
+        """Whether the event is shown in this calendar."""
         if self._profile_is_child:
-            # following meetings can be without kids, leave them out of the kids calendar
+            # These meetings may be for the parents alone, which a child's calendar leaves out.
             if event.type == AulaCalendarEventType.SCHOOL_HOME_MEETING or event.type == AulaCalendarEventType.PARENTAL_MEETING:
                 return len(self._get_required_children(event)) > 0
         return True
 
     async def async_get_events(self, hass: HomeAssistant, start_date: datetime, end_date: datetime) -> List[CalendarEvent]:
-        """Get all events in a specific time frame."""
-        # _LOGGER.debug(f"Getting events for profile: {self._profile.name}, interval: {start_date} - {end_date}")
+        """The events in the range, read from Aula now."""
         result_items = await self.coordinator.get_events_for_interval([self._institution], start_date, end_date)
         events = list_without_none(self._create_calendar_event(event) for event in filter(self._event_filter, result_items))
         return [e for e in events if _is_event_in_range(e, start_date, end_date)]
@@ -219,13 +218,11 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
             if event.end_datetime >= current_time:
                 calendar_event = self._create_calendar_event(event)
                 if calendar_event is not None and calendar_event.end >= current_time:
-                    # _LOGGER.debug(f"Event found key:{self._institution.id}, dict keys: {[f"{key}|{len(evts)}" for (key, evts) in self.coordinator.data.events.items()]})")
                     return calendar_event
-        # _LOGGER.debug(f"No present/future events found for the {len(events)} events (key:{self._institution.id}, dict keys: {[f"{key}|{len(evts)}" for (key, evts) in self.coordinator.data.events.items()]})")
         return None
 
     def _create_calendar_event(self, event: AulaCalendarEvent) -> CalendarEvent|None:
-        """Return a CalendarEvent from an API event."""
+        """The calendar event that shows Aula's event, at the booked time slot of a meeting."""
         icon = CALENDAR_EVENT_ICON.get(event.type, "")
         summary = event.title
         details = list[str]()
@@ -235,7 +232,7 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
         if event.primary_resource is not None:
             location = event.primary_resource.name
 
-        # meetings have timeslots parents book into. The meeting runs over many days, but we only want to display it for the duration booked, once the booking has been done.
+        # A meeting spans every day parents can book a time slot on; once booked, only the slot is shown.
         if event.type == AulaCalendarEventType.SCHOOL_HOME_MEETING or event.type == AulaCalendarEventType.PARENTAL_MEETING:
             required_children = self._get_required_children(event)
             id = self._institution.id
@@ -296,7 +293,7 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
         if isinstance(self._profile, AulaChildProfile):
             if self._institution.id in event.belongs_to_profiles:
                 result.append(self._profile)
-        else: #parent profile
+        else:
             for child in self._profile.children:
                 if child.id in event.belongs_to_profiles:
                     result.append(child)
@@ -304,7 +301,7 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
 
 
 class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
-    """A calendar event entity."""
+    """The tasks of a child's weekly plans, each on its day."""
     _event: CalendarEvent | None = None
     _profile: AulaChildProfile
     _institution: AulaInstitutionProfile
@@ -320,26 +317,24 @@ class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
         self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
 
     async def async_will_remove_from_hass(self):
+        """Stop having the coordinator read the child's weekly plans."""
         await self.coordinator.async_remove_weekly_plan_key(self._profile)
         return await super().async_will_remove_from_hass()
 
     async def async_added_to_hass(self):
+        """Have the coordinator read the child's weekly plans."""
         await self.coordinator.async_add_weekly_plan_key(self._profile)
         return await super().async_added_to_hass()
 
     def _handle_data_updated(self, data: AulaCalendarCoordinatorData) -> bool:
-        """Handle the update and return True if data has changed for the entity."""
         if self._profile.id in data.updated_weekly_plans_for_listener_keys:
             return True
         return False
 
-
     @property
     def event(self) -> CalendarEvent | None:
-        """Return the next upcoming event."""
-        result = self._get_active_or_upcoming_event()
-        # _LOGGER.debug(f"event = {None if result is None else result.summary}")
-        return result
+        """The first task of today, or else of the next day that has one."""
+        return self._get_active_or_upcoming_event()
 
     def _filter_plan(self, dailyplan: AulaDailyPlan) -> bool:
         """Return True if the daily plan is visible."""
@@ -350,8 +345,7 @@ class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
         return True
 
     async def async_get_events(self, hass: HomeAssistant, start_date: datetime, end_date: datetime) -> List[CalendarEvent]:
-        """HA Get all events in a specific time frame."""
-        # _LOGGER.debug(f"Getting events for profile: {self._profile.name}, interval: {start_date} - {end_date}")
+        """The tasks in the range, read from Aula now."""
         weekplans = await self.coordinator.get_weekly_plans_for_interval([self._profile], start_date, end_date)
         events = list[CalendarEvent]()
         for weekplan, dayplan, task in self._weekplans_iterable(weekplans):
@@ -368,12 +362,10 @@ class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
             if dayplan.date +  END_DELTA > current_time.date():
                 calendar_event = self._create_calendar_event(weekplan, dayplan, task)
                 if calendar_event.end > current_time.date():
-                    # _LOGGER.debug(f"Event found key:{self._institution.id}, dict keys: {[f"{key}|{len(evts)}" for (key, evts) in self.coordinator.data.events.items()]})")
                     return calendar_event
-        # _LOGGER.debug(f"No present/future events found for the {len(events)} events (key:{self._institution.id}, dict keys: {[f"{key}|{len(evts)}" for (key, evts) in self.coordinator.data.events.items()]})")
         return None
 
-    def _weekplans_iterable(self, weekplans: List[AulaWeeklyPlan]):# -> Iterator[(AulaWeeklyPlan, AulaDailyPlan, AulaDailyPlanTask)]:
+    def _weekplans_iterable(self, weekplans: List[AulaWeeklyPlan]):
         for weekplan in weekplans:
             for dailyplan in weekplan.daily_plans:
                 if not self._filter_plan(dailyplan): continue
@@ -382,7 +374,7 @@ class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
                     yield weekplan, dailyplan, task
 
     def _create_calendar_event(self, weekplan: AulaWeeklyPlan, dailyplan: AulaDailyPlan, task: AulaDailyPlanTask) -> CalendarEvent:
-        """Return a CalendarEvent from a API weekplan."""
+        """The all-day calendar event that shows a task of the plan."""
         icon = WEEKLY_PLAN_TASK_ICON.get(task.type, "")
         summary = task.title if task.title else task.content
         if len(summary) > 75: summary = summary[:73] + "..."
@@ -416,7 +408,7 @@ class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
 
 
 class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
-    """A calendar entity for EasyIQ weekly plans (widget 0001)."""
+    """The events of a child's EasyIQ weekly plans."""
     _profile: AulaChildProfile
     _institution: AulaInstitutionProfile
     _data_coordinator: AulaDataCoordinator
@@ -431,10 +423,12 @@ class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
         self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
 
     async def async_will_remove_from_hass(self):
+        """Stop having the coordinator read the child's EasyIQ weekly plans."""
         await self.coordinator.async_remove_easyiq_weekplan_key(self._profile)
         return await super().async_will_remove_from_hass()
 
     async def async_added_to_hass(self):
+        """Have the coordinator read the child's EasyIQ weekly plans."""
         await self.coordinator.async_add_easyiq_weekplan_key(self._profile)
         return await super().async_added_to_hass()
 
@@ -445,6 +439,7 @@ class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
 
     @property
     def event(self) -> CalendarEvent | None:
+        """The first event of the plans that has not ended."""
         current_time = now()
         plans = self.coordinator.get_easyiq_weekly_plans(self._profile)
         for _plan, dayplan, event in self._plans_iterable(plans):
@@ -454,6 +449,7 @@ class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
         return None
 
     async def async_get_events(self, hass: HomeAssistant, start_date: datetime, end_date: datetime) -> List[CalendarEvent]:
+        """The events in the range, read from Aula now."""
         plans = await self.coordinator.get_easyiq_weekly_plans_for_interval([self._profile], start_date, end_date)
         events = list[CalendarEvent]()
         for _plan, dayplan, event in self._plans_iterable(plans):
@@ -492,9 +488,7 @@ class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
 
 
 class AulaNewsletterCalendar(AulaCalendarEntityBase, CalendarEntity):
-    """A calendar entity for MinUddannelse newsletters (widget 0029).
-    Each newsletter is displayed as an all-day event on the Monday of its week.
-    The HTML content is preserved in the description for custom card rendering."""
+    """A child's MinUddannelse newsletters, each over the days of its week with its HTML as description."""
     _profile: AulaChildProfile
     _institution: AulaInstitutionProfile
     _data_coordinator: AulaDataCoordinator
@@ -509,15 +503,18 @@ class AulaNewsletterCalendar(AulaCalendarEntityBase, CalendarEntity):
         self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
 
     async def async_will_remove_from_hass(self):
+        """Stop having the coordinator read the child's newsletters."""
         await self.coordinator.async_remove_newsletter_key(self._profile)
         return await super().async_will_remove_from_hass()
 
     async def async_added_to_hass(self):
+        """Have the coordinator read the child's newsletters."""
         await self.coordinator.async_add_newsletter_key(self._profile)
         return await super().async_added_to_hass()
 
     @property
     def event(self) -> CalendarEvent | None:
+        """The first newsletter of the first week that has not ended."""
         current_time = now()
         newsletters = self.coordinator.get_newsletters(self._profile)
         for weekly in newsletters:
@@ -527,7 +524,9 @@ class AulaNewsletterCalendar(AulaCalendarEntityBase, CalendarEntity):
         return None
 
     async def async_get_events(self, hass: HomeAssistant, start_date: datetime, end_date: datetime) -> List[CalendarEvent]:
-        newsletters = await self.coordinator.get_newsletters_for_interval([self._profile], start_date, end_date)
+        """The newsletters in the range, read from Aula now."""
+        newsletters = await self.coordinator.get_newsletters_for_interval(
+[self._profile], start_date, end_date)
         events = list[CalendarEvent]()
         for weekly in newsletters:
             for newsletter in weekly.newsletters:
