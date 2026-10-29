@@ -223,7 +223,7 @@ class StateMetaParser:
             case StateFlag.NOT_PRESENT:
                 return StateMeta( presence = PresenceFlag.NOT_PRESENT, icon = "mdi:map-marker-question" )
             case StateFlag.SICK | StateFlag.REPORTED_ABSCENT:
-                return StateMeta( presence = PresenceFlag.PRESENT, icon = "mdi:hospital-marker" )
+                return StateMeta( presence = PresenceFlag.NOT_PRESENT, icon = "mdi:hospital-marker" )
             case StateFlag.SPARE_TIME_ACTIVITY | StateFlag.CHECKED_OUT:
                 return StateMeta( presence = PresenceFlag.NOT_PRESENT, icon = "mdi:map-marker-check" )
             case StateFlag.PRESENT | StateFlag.FIELD_TRIP | StateFlag.SLEEPING | StateFlag.PRESENT_AT_LOCATION:

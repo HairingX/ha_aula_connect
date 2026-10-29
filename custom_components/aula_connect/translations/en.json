@@ -33,13 +33,9 @@
         "title": "Log in with MitID",
         "description": "Approve the login by scanning the QR code with the MitID app on your phone. If no page opens, open the [MitID login]({login_path}) yourself."
       },
-      "complete": {
-        "title": "Authentication Complete",
-        "description": "MitID authentication successful! Setting up your Aula integration..."
-      },
       "auth_error": {
-        "title": "Authentication Failed",
-        "description": "MitID authentication failed. Click Submit to retry."
+        "title": "Login failed",
+        "description": "The MitID login failed. Select Next to try again."
       },
       "reauth_username": {
         "title": "MitID user ID needed",
@@ -59,15 +55,8 @@
         }
       },
       "reauth_confirm": {
-        "title": "Re-authenticate Aula",
-        "description": "Your Aula session needs to be re-authenticated. Username: {username}\n\nClick Submit to continue with MitID authentication."
-      },
-      "options": {
-        "data": {
-          "schoolschedule": "Add school schedules as calendar entities?"
-        },
-        "description": "",
-        "title": "Options"
+        "title": "Log in to Aula again",
+        "description": "Aula no longer accepts the login of MitID user ID {username}. Select Next, and approve with MitID."
       }
     }
   },
@@ -90,6 +79,9 @@
           },
           "total": {
             "name": "Total"
+          },
+          "alert": {
+            "name": "Alert"
           }
         }
       },
@@ -118,6 +110,15 @@
           },
           "total": {
             "name": "Total"
+          },
+          "sensitive": {
+            "name": "Sensitive"
+          },
+          "muted": {
+            "name": "Muted"
+          },
+          "marked": {
+            "name": "Marked"
           }
         }
       },
@@ -129,6 +130,9 @@
           },
           "total": {
             "name": "Total"
+          },
+          "alert": {
+            "name": "Alert"
           }
         }
       },
@@ -149,6 +153,9 @@
           },
           "end_datetime": {
             "name": "End"
+          },
+          "alert": {
+            "name": "Alert"
           }
         }
       }
@@ -167,51 +174,7 @@
         "name": "Newsletter {name} {institution}"
       },
       "weekly_plan": {
-        "name": "Weekly Plans {name} {institution}",
-        "state_attributes": {
-          "friday": {
-            "name": "Friday"
-          },
-          "monday": {
-            "name": "Monday"
-          },
-          "next_friday": {
-            "name": "Next Friday"
-          },
-          "next_monday": {
-            "name": "Next Monday"
-          },
-          "next_saturday": {
-            "name": "Next Saturday"
-          },
-          "next_sunday": {
-            "name": "Next Sunday"
-          },
-          "next_thursday": {
-            "name": "Next Thursday"
-          },
-          "next_tuesday": {
-            "name": "Next Tuesday"
-          },
-          "next_wednesday": {
-            "name": "Next Wednesday"
-          },
-          "saturday": {
-            "name": "Saturday"
-          },
-          "sunday": {
-            "name": "Sunday"
-          },
-          "thursday": {
-            "name": "Thursday"
-          },
-          "tuesday": {
-            "name": "Tuesday"
-          },
-          "wednesday": {
-            "name": "Wednesday"
-          }
-        }
+        "name": "Weekly Plans {name} {institution}"
       }
     },
     "sensor": {
@@ -227,19 +190,22 @@
             "name": "Check-in Time"
           },
           "check_in_time_expected": {
-            "name": "Entry Time"
+            "name": "Check-in Time Expected"
           },
           "check_out_time": {
             "name": "Check-out Time"
           },
           "check_out_time_expected": {
-            "name": "Exit Time"
+            "name": "Check-out Time Expected"
           },
           "exit_with": {
             "name": "Exit With"
           },
           "institution_name": {
             "name": "Institution Name"
+          },
+          "main_group": {
+            "name": "Main group"
           }
         }
       },
@@ -251,6 +217,9 @@
           },
           "check_out_time": {
             "name": "Check-out Time"
+          },
+          "main_group": {
+            "name": "Main group"
           }
         }
       },
@@ -296,47 +265,12 @@
           },
           "location_name": {
             "name": "Location Name"
+          },
+          "main_group": {
+            "name": "Main group"
           }
         }
       }
-    }
-  },
-  "options": {
-    "error": {
-      "1": "Unknown error"
-    },
-    "step": {
-      "options": {
-        "data": {
-          "schoolschedule": "Add school schedules as calendar entities?"
-        },
-        "description": "",
-        "title": "Options"
-      },
-      "user": {
-        "data": {
-          "mitid_username": "MitID Username",
-          "auth_method": "Authentication Method"
-        },
-        "description": "Enter your MitID credentials.",
-        "title": "Authentication"
-      }
-    }
-  },
-  "services": {
-    "api_call": {
-      "description": "Make a custom API call to Aula",
-      "fields": {
-        "post_data": {
-          "description": "JSON formatted post data, if not defined, request will be GET",
-          "name": "post_data"
-        },
-        "uri": {
-          "description": "URI for the call",
-          "name": "uri"
-        }
-      },
-      "name": "API Call"
     }
   },
   "exceptions": {

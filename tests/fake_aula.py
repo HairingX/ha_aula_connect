@@ -9,6 +9,7 @@ from aula_connect.api.models.module import (
     AulaBirthdayEvent,
     AulaCalendarEvent,
     AulaChildProfile,
+    AulaDailyOverview,
     AulaEasyiqWeeklyPlan,
     AulaInstitutionGroup,
     AulaInstitutionProfile,
@@ -54,6 +55,7 @@ class FakeAula:
         self.weekly_plans: list[AulaWeeklyPlan] = []
         self.easyiq_plans: list[AulaEasyiqWeeklyPlan] = []
         self.newsletters: list[AulaWeeklyNewsletter] = []
+        self.daily_overviews: list[AulaDailyOverview] = []
 
     def connection_check(self) -> None:
         return None
@@ -64,8 +66,8 @@ class FakeAula:
     def has_widget(self, widget_id: str) -> bool:
         return widget_id in self.widgets
 
-    def get_daily_overviews(self, profiles: Any) -> list[Any]:
-        return []
+    def get_daily_overviews(self, profiles: Any) -> list[AulaDailyOverview]:
+        return list(self.daily_overviews)
 
     def get_message_threads(self) -> list[Any]:
         return []

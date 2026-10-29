@@ -33,13 +33,9 @@
         "title": "Log ind med MitID",
         "description": "Godkend login ved at scanne QR-koden med MitID-appen på din telefon. Åbner der ingen side, så åbn selv [MitID-login]({login_path})."
       },
-      "complete": {
-        "title": "Godkendelse fuldført",
-        "description": "MitID-godkendelse lykkedes! Opsætter din Aula-integration..."
-      },
       "auth_error": {
-        "title": "Godkendelse mislykkedes",
-        "description": "MitID-godkendelse mislykkedes. Klik Indsend for at prøve igen."
+        "title": "Login mislykkedes",
+        "description": "MitID-login mislykkedes. Vælg Næste for at prøve igen."
       },
       "reauth_username": {
         "title": "MitID bruger-ID mangler",
@@ -59,15 +55,8 @@
         }
       },
       "reauth_confirm": {
-        "title": "Genautentificer Aula",
-        "description": "Din Aula-session skal genautentificeres. Brugernavn: {username}\n\nKlik Indsend for at fortsætte med MitID-godkendelse."
-      },
-      "options": {
-        "data": {
-          "schoolschedule": "Tilføj skoleskemaer som kalender entiteter?"
-        },
-        "description": "",
-        "title": "Indstillinger"
+        "title": "Log ind på Aula igen",
+        "description": "Aula accepterer ikke længere login for MitID-bruger-id {username}. Vælg Næste, og godkend med MitID."
       }
     }
   },
@@ -90,6 +79,9 @@
           },
           "total": {
             "name": "Total"
+          },
+          "alert": {
+            "name": "Alarm"
           }
         }
       },
@@ -118,6 +110,15 @@
           },
           "total": {
             "name": "Total"
+          },
+          "sensitive": {
+            "name": "Følsom"
+          },
+          "muted": {
+            "name": "Lydløs"
+          },
+          "marked": {
+            "name": "Markeret"
           }
         }
       },
@@ -129,6 +130,9 @@
           },
           "total": {
             "name": "Total"
+          },
+          "alert": {
+            "name": "Alarm"
           }
         }
       },
@@ -149,6 +153,9 @@
           },
           "end_datetime": {
             "name": "Slut"
+          },
+          "alert": {
+            "name": "Alarm"
           }
         }
       }
@@ -167,51 +174,7 @@
         "name": "Ugebrev {name} {institution}"
       },
       "weekly_plan": {
-        "name": "Ugeplaner {name} {institution}",
-        "state_attributes": {
-          "friday": {
-            "name": "Fredag"
-          },
-          "monday": {
-            "name": "Mandag"
-          },
-          "next_friday": {
-            "name": "Næste fredag"
-          },
-          "next_monday": {
-            "name": "Næste mandag"
-          },
-          "next_saturday": {
-            "name": "Næste lørdag"
-          },
-          "next_sunday": {
-            "name": "Næste søndag"
-          },
-          "next_thursday": {
-            "name": "Næste torsdag"
-          },
-          "next_tuesday": {
-            "name": "Næste tirsdag"
-          },
-          "next_wednesday": {
-            "name": "Næste onsdag"
-          },
-          "saturday": {
-            "name": "Lørdag"
-          },
-          "sunday": {
-            "name": "Søndag"
-          },
-          "thursday": {
-            "name": "Torsdag"
-          },
-          "tuesday": {
-            "name": "Tirsdag"
-          },
-          "wednesday": {
-            "name": "Onsdag"
-          }
-        }
+        "name": "Ugeplaner {name} {institution}"
       }
     },
     "sensor": {
@@ -240,6 +203,9 @@
           },
           "institution_name": {
             "name": "Institutionsnavn"
+          },
+          "main_group": {
+            "name": "Hovedgruppe"
           }
         }
       },
@@ -251,6 +217,9 @@
           },
           "check_out_time": {
             "name": "Check-out Tid"
+          },
+          "main_group": {
+            "name": "Hovedgruppe"
           }
         }
       },
@@ -296,47 +265,12 @@
           },
           "location_name": {
             "name": "Lokationsnavn"
+          },
+          "main_group": {
+            "name": "Hovedgruppe"
           }
         }
       }
-    }
-  },
-  "options": {
-    "error": {
-      "1": "Unknown error"
-    },
-    "step": {
-      "user": {
-        "data": {
-          "mitid_username": "MitID Brugernavn",
-          "auth_method": "Godkendelsesmetode"
-        },
-        "description": "Indtast dine MitID-oplysninger.",
-        "title": "Login"
-      },
-      "options": {
-        "data": {
-          "schoolschedule": "Tilføj skoleskemaer som kalender entiteter?"
-        },
-        "description": "",
-        "title": "Login"
-      }
-    }
-  },
-  "services": {
-    "api_call": {
-      "description": "Lav et brugerdefineret API-kald til Aula",
-      "fields": {
-        "post_data": {
-          "description": "Post data i JSON format. Hvis ikke angivet, laver vi et GET request",
-          "name": "post_data"
-        },
-        "uri": {
-          "description": "URI for kaldet",
-          "name": "uri"
-        }
-      },
-      "name": "API Kald"
     }
   },
   "exceptions": {
