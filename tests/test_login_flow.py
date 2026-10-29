@@ -273,3 +273,27 @@ def test_the_mitid_status_is_none_before_mitid_has_started() -> None:
     assert mitid_status(client) is None
     client.get_mitid_client.return_value = SimpleNamespace(status_message="Open your MitID app now...")
     assert mitid_status(client) == "Open your MitID app now..."
+
+
+async def test_a_flow_closed_while_the_user_chooses_an_identity_stops_waiting(hass: HomeAssistant, login: Any) -> None:
+    async def choose(client: FakeLogin) -> dict[str, Any]:
+        assert client.identity_selector is not None
+        await client.identity_selector(["Parent", "Teacher"])
+        return {"success": True, "tokens": TOKENS}
+
+    login.outcome = choose
+    flow_id = await _start(hass)
+    flow: Any = hass.config_entries.flow
+    await flow.async_configure(flow_id, {"id": "Aula", "mitid_username": "parent"})
+    session = auth_session(hass, flow_id)
+    assert session is not None
+    for _ in range(100):
+        if session.identity_future is not None:
+            break
+        await asyncio.sleep(0.01)
+    future = session.identity_future
+    assert future is not None
+    hass.config_entries.flow.async_abort(flow_id)
+    assert future.cancelled()
+    await hass.async_block_till_done()
+    assert not hass.config_entries.async_entries(DOMAIN)

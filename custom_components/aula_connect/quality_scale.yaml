@@ -13,8 +13,10 @@ rules:
     comment: Its own icon and logo, shipped in brand/, which Home Assistant serves for custom integrations.
   common-modules: done
   config-flow-test-coverage:
-    status: todo
-    comment: The config flow has no tests.
+    status: done
+    comment: >-
+      The tests cover every line of the config flow: setup, logging in again, reconfiguring, a
+      failed login, and an account or name already set up.
   config-flow:
     status: todo
     comment: >-
@@ -62,15 +64,15 @@ rules:
   entity-unavailable:
     status: done
     comment: >-
-      Entities follow the coordinator's last update; the presence sensors are also unavailable
-      without a daily overview for their child.
+      Entities follow the coordinator's last update; the presence sensors are unknown without a
+      daily overview for their child.
   integration-owner: done
   log-when-unavailable: done
   parallel-updates: done
   reauthentication-flow: done
   test-coverage:
-    status: todo
-    comment: The tests cover about 29% of the code; above 95% is required.
+    status: done
+    comment: The tests cover every line of the integration; the build fails below 100%.
 
   # Gold
   devices: done

@@ -36,8 +36,6 @@ class AuthSession:
         """Stop the login if it still runs, and let go of its HTTP session."""
         if self.task is not None and not self.task.done():
             self.task.cancel()
-        if self.identity_future is not None and not self.identity_future.done():
-            self.identity_future.cancel()
         if self.http_session is not None:
             self.http_session.detach()
             self.http_session = None

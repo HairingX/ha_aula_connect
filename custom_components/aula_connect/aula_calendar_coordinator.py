@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 import datetime
+from collections.abc import Awaitable
 from typing import Dict, List, TypeVar
 from homeassistant.util.dt import now
 from homeassistant.config_entries import ConfigEntry
@@ -267,22 +268,32 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         )
 
 
+    async def _read_period[R](self, what: str, read: Awaitable[List[R]]) -> List[R]:
+        """What `read` reads from Aula; nothing, and a warning, when Aula cannot be read.
+
+        Raises:
+            ConfigEntryAuthFailed: Aula no longer accepts the login; logging in again is asked for.
+        """
+        try:
+            return await read
+        except AulaCredentialError as err:
+            # Home Assistant asks to log in again by itself only for an error raised by a refresh.
+            entry = self.config_entry
+            assert entry is not None
+            entry.async_start_reauth(self.hass)
+            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
+        except Exception as ex:
+            _LOGGER.warning("Aula could not read the %s for the period: %s", what, error_text(ex))
+            return []
+
     #region Birthdays
 
     async def get_birthdays_for_interval(self, profiles: List[AulaChildProfile], start_datetime: datetime.datetime, end_datetime: datetime.datetime) -> List[AulaBirthdayEvent]:
-        try:
-            return await self._client.get_birthday_events(profiles, start_datetime, end_datetime)
-        except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
-        except Exception as ex:
-            _LOGGER.warning("Failed to fetch birthdays for interval: %s", error_text(ex))
-            return []
+        """Aula's birthdays of the period, read now; none when Aula cannot be read."""
+        return await self._read_period("birthdays", self._client.get_birthday_events(profiles, start_datetime, end_datetime))
 
     def get_birthdays(self, profile: AulaChildProfile) -> List[AulaBirthdayEvent]:
-        key = profile.id
-        if key not in self._birthday_listeners:
-            raise KeyError(f"Listener not found for the birthday key. Ensure you add the key when component is added to HASS (async_add_birthday_key), and remove when component is removed from HASS (async_remove_birthday_key)")
-        return self._birthdaymap.get(key, [])
+        return self._birthdaymap.get(profile.id, [])
 
     async def async_add_birthday_key(self, profile: AulaChildProfile) -> None:
         id = profile.id
@@ -324,19 +335,11 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
     #region Events
 
     async def get_events_for_interval(self, profiles: List[AulaInstitutionProfile], start_date: datetime.datetime, end_date: datetime.datetime) -> List[AulaCalendarEvent]:
-        try:
-            return await self._client.get_calendar_events(profiles, start_date, end_date)
-        except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
-        except Exception as ex:
-            _LOGGER.warning("Failed to fetch events for interval: %s", error_text(ex))
-            return []
+        """Aula's events of the period, read now; none when Aula cannot be read."""
+        return await self._read_period("events", self._client.get_calendar_events(profiles, start_date, end_date))
 
     def get_events(self, profile: AulaInstitutionProfile) -> List[AulaCalendarEvent]:
-        key = profile.id
-        if key not in self._event_listeners:
-            raise KeyError(f"Listener not found for the event key. Ensure you add the key when component is added to HASS (async_add_event_key), and remove when component is removed from HASS (async_remove_event_key)")
-        return self._eventmap.get(key, [])
+        return self._eventmap.get(profile.id, [])
 
     async def async_add_event_key(self, profile: AulaInstitutionProfile) -> None:
         id = profile.id
@@ -376,19 +379,11 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
     #region Weekly Plans
 
     async def get_weekly_plans_for_interval(self, profiles: List[AulaChildProfile], start_datetime: datetime.datetime, end_datetime: datetime.datetime) -> List[AulaWeeklyPlan]:
-        try:
-            return await self._client.get_weekly_plans(profiles, start_datetime, end_datetime)
-        except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
-        except Exception as ex:
-            _LOGGER.warning("Failed to fetch weekly plans for interval: %s", error_text(ex))
-            return []
+        """Aula's weekly plans of the period, read now; none when Aula cannot be read."""
+        return await self._read_period("weekly plans", self._client.get_weekly_plans(profiles, start_datetime, end_datetime))
 
     def get_weekly_plans(self, profile: AulaChildProfile) -> List[AulaWeeklyPlan]:
-        key = profile.id
-        if key not in self._weekly_plan_listeners:
-            raise KeyError(f"Listener not found for the weekly_plan key. Ensure you add the key when component is added to HASS (async_add_weekly_plan_key), and remove when component is removed from HASS (async_remove_weekly_plan_key)")
-        return self._weeklyplanmap.get(key, [])
+        return self._weeklyplanmap.get(profile.id, [])
 
     async def async_add_weekly_plan_key(self, profile: AulaChildProfile) -> None:
         id = profile.id
@@ -430,19 +425,11 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
     #region EasyIQ Weekly Plans
 
     async def get_easyiq_weekly_plans_for_interval(self, profiles: List[AulaChildProfile], start_datetime: datetime.datetime, end_datetime: datetime.datetime) -> List[AulaEasyiqWeeklyPlan]:
-        try:
-            return await self._client.get_easyiq_weekly_plans(profiles, start_datetime, end_datetime)
-        except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
-        except Exception as ex:
-            _LOGGER.warning("Failed to fetch EasyIQ weekly plans for interval: %s", error_text(ex))
-            return []
+        """Aula's EasyIQ weekly plans of the period, read now; none when Aula cannot be read."""
+        return await self._read_period("EasyIQ weekly plans", self._client.get_easyiq_weekly_plans(profiles, start_datetime, end_datetime))
 
     def get_easyiq_weekly_plans(self, profile: AulaChildProfile) -> List[AulaEasyiqWeeklyPlan]:
-        key = profile.id
-        if key not in self._easyiq_weekplan_listeners:
-            raise KeyError(f"Listener not found for the easyiq_weekplan key. Ensure you add the key when component is added to HASS (async_add_easyiq_weekplan_key), and remove when component is removed from HASS (async_remove_easyiq_weekplan_key)")
-        return self._easyiqweekplanmap.get(key, [])
+        return self._easyiqweekplanmap.get(profile.id, [])
 
     async def async_add_easyiq_weekplan_key(self, profile: AulaChildProfile) -> None:
         id = profile.id
@@ -483,19 +470,11 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
     #region Newsletters (MinUddannelse)
 
     async def get_newsletters_for_interval(self, profiles: List[AulaChildProfile], start_datetime: datetime.datetime, end_datetime: datetime.datetime) -> List[AulaWeeklyNewsletter]:
-        try:
-            return await self._client.get_newsletters(profiles, start_datetime, end_datetime)
-        except AulaCredentialError as err:
-            raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
-        except Exception as ex:
-            _LOGGER.warning("Failed to fetch newsletters for interval: %s", error_text(ex))
-            return []
+        """Aula's newsletters of the period, read now; none when Aula cannot be read."""
+        return await self._read_period("newsletters", self._client.get_newsletters(profiles, start_datetime, end_datetime))
 
     def get_newsletters(self, profile: AulaChildProfile) -> List[AulaWeeklyNewsletter]:
-        key = profile.id
-        if key not in self._newsletter_listeners:
-            raise KeyError(f"Listener not found for the newsletter key. Ensure you add the key when component is added to HASS (async_add_newsletter_key), and remove when component is removed from HASS (async_remove_newsletter_key)")
-        return self._newslettermap.get(key, [])
+        return self._newslettermap.get(profile.id, [])
 
     async def async_add_newsletter_key(self, profile: AulaChildProfile) -> None:
         id = profile.id

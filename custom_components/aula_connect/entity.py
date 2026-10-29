@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import abstractmethod
 from typing import Generic, TypeVar
 
 from homeassistant.core import callback
@@ -101,6 +102,6 @@ class AulaCalendarEntityBase(Entity):
             self._attr_available = available
             self.async_write_ha_state()
 
+    @abstractmethod
     def _handle_data_updated(self, data: AulaCalendarCoordinatorData) -> bool:
-        """Handle the update and return True if data has changed for the entity."""
-        return False
+        """Take in what the coordinator read; True if it changed anything for the entity."""

@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from aula_connect.api.models.module import (
+    AULA_NOTIFICATION_TYPES,
     AulaBirthdayEvent,
     AulaCalendarEvent,
     AulaChildProfile,
@@ -14,6 +15,7 @@ from aula_connect.api.models.module import (
     AulaInstitutionGroup,
     AulaInstitutionProfile,
     AulaLoginData,
+    AulaMessageThread,
     AulaProfile,
     AulaWeeklyNewsletter,
     AulaWeeklyPlan,
@@ -56,6 +58,8 @@ class FakeAula:
         self.easyiq_plans: list[AulaEasyiqWeeklyPlan] = []
         self.newsletters: list[AulaWeeklyNewsletter] = []
         self.daily_overviews: list[AulaDailyOverview] = []
+        self.message_threads: list[AulaMessageThread] = []
+        self.notifications: list[AULA_NOTIFICATION_TYPES] = []
 
     async def connection_check(self) -> None:
         return None
@@ -69,11 +73,11 @@ class FakeAula:
     async def get_daily_overviews(self, profiles: Any) -> list[AulaDailyOverview]:
         return list(self.daily_overviews)
 
-    async def get_message_threads(self) -> list[Any]:
-        return []
+    async def get_message_threads(self) -> list[AulaMessageThread]:
+        return list(self.message_threads)
 
-    async def get_notifications(self, children: Any) -> list[Any]:
-        return []
+    async def get_notifications(self, children: Any) -> list[AULA_NOTIFICATION_TYPES]:
+        return list(self.notifications)
 
     async def get_birthday_events(self, profiles: Any, start: datetime, end: datetime) -> list[AulaBirthdayEvent]:
         return list(self.birthdays)

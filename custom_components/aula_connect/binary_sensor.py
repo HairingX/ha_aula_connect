@@ -116,8 +116,10 @@ class AulaUnreadMessageBinarySensor(AulaEntityBase[None], BinarySensorEntity):
             attributes["sensitive"] = first.sensitive
             attributes["muted"] = first.muted
             attributes["marked"] = first.marked
-            attributes["recipients"] = ", ".join(rec.answer_directly_name for rec in first.recipients)
-            if first.extra_recipients_count > 0: attributes["recipients"] += f", +{first.extra_recipients_count}"
+            recipients = [rec.answer_directly_name for rec in first.recipients]
+            if first.extra_recipients_count > 0:
+                recipients.append(f"+{first.extra_recipients_count}")
+            attributes["recipients"] = ", ".join(recipients)
             latestmsg = first.latest_message
             if latestmsg is not None:
                 attributes["timestamp"] = latestmsg.send_datetime

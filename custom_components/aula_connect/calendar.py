@@ -228,7 +228,7 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
         """Return a CalendarEvent from an API event."""
         icon = CALENDAR_EVENT_ICON.get(event.type, "")
         summary = event.title
-        description = ""
+        details = list[str]()
         start_datetime = event.start_datetime
         end_datetime = event.end_datetime
         location:str|None = None
@@ -253,7 +253,7 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
                                 end_datetime = timeslotindex.end_datetime
                                 summary = f"{summary} {self._institution.institution_name}"
                                 if location is None: location = self._institution.institution_name
-                                if required_children: description += f"{get_label('bring_children')} {", ".join(child.name for child in required_children)}"
+                                if required_children: details.append(f"{get_label('bring_children')} {", ".join(child.name for child in required_children)}")
                                 unbooked_meeting = False
                         if not unbooked_meeting: break
                     if not unbooked_meeting: break
@@ -273,17 +273,14 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
                 p.teacher_name for p in event.lesson.participants if p.teacher_name
             )
             if teachers:
-                if description:
-                    description += "\n"
-                description += teachers
+                details.append(teachers)
 
         if event.response_status and event.response_status != "accepted":
             label = get_label(f"response_{event.response_status}")
-            if description:
-                description += "\n"
-            description += f"{get_label('status_prefix')}: {label}"
+            details.append(f"{get_label('status_prefix')}: {label}")
 
         summary = f"{icon} {summary}" if icon else summary
+        description = "\n".join(details)
 
         return CalendarEvent(
             uid=str(event.id),

@@ -54,7 +54,8 @@ the entry in place.
 The library refreshes the access token when it expires, and hands the new tokens to a callback
 that stores them in the entry. When Aula refuses the refresh token (`invalid_grant`), the
 library raises `AulaCredentialError`; the coordinators turn it into `ConfigEntryAuthFailed`, and
-Home Assistant asks the user to log in again.
+Home Assistant asks the user to log in again. A calendar reading a period outside the two weeks
+does so outside a refresh, so it starts logging in again itself.
 
 Neither a token nor the MitID user ID is logged or in the diagnostics. Aula takes the access token
 in the URL, and the HTTP client puts the URL in its errors, so every error text is redacted before

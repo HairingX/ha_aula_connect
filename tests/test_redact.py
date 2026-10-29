@@ -92,5 +92,5 @@ async def test_a_calendar_that_cannot_be_read_logs_no_token(
     client.get_birthday_events.side_effect = _unreachable()
     coordinator = AulaCalendarCoordinator("Aula", hass, client, entry)
     assert await coordinator.get_birthdays_for_interval([], MagicMock(), MagicMock()) == []
-    assert "Failed to fetch birthdays" in caplog.text
+    assert "Aula could not read the birthdays for the period" in caplog.text
     assert SECRET not in caplog.text
