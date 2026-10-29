@@ -219,7 +219,7 @@ class AulaAuthStatusView(HomeAssistantView):
 
         qr_svg: str | None = None
         if not session.available_identities:
-            codes = await self.hass.async_add_executor_job(qr_codes_svg, session.client)
+            codes = qr_codes_svg(session.client)
             if codes is not None:
                 # MitID shows two QR codes in turn, a second each.
                 qr_svg = codes[int(time.time()) % 2]

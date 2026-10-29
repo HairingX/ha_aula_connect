@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from custom_components.aula_connect.aula_calendar_coordinator import AulaCalendarCoordinatorData
 from custom_components.aula_connect.aula_data_coordinator import AulaDataCoordinatorData
@@ -39,11 +39,11 @@ def aula_without_children() -> Iterator[None]:
     """An Aula account with no children, no messages and no notifications."""
     data = AulaDataCoordinatorData("Aula", 23, [], [], [], [], [])
     calendar = AulaCalendarCoordinatorData([], [], [], [], [])
+    client = MagicMock(connection_check=AsyncMock(), aula_version=23, has_widget=MagicMock(return_value=False))
     with (
-        patch("custom_components.aula_connect.AulaDataCoordinator._connection_check"),
-        patch("custom_components.aula_connect.AulaDataCoordinator._fetch_data", return_value=data),
-        patch("custom_components.aula_connect.AulaCalendarCoordinator._connection_check"),
-        patch("custom_components.aula_connect.AulaCalendarCoordinator._fetch_data", return_value=calendar),
+        patch("custom_components.aula_connect.AulaClient", return_value=client),
+        patch("custom_components.aula_connect.AulaDataCoordinator._fetch_data", AsyncMock(return_value=data)),
+        patch("custom_components.aula_connect.AulaCalendarCoordinator._fetch_data", AsyncMock(return_value=calendar)),
     ):
         yield
 

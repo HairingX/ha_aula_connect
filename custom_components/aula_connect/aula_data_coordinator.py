@@ -81,7 +81,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         raise ConfigEntryNotReady and setup will try again later
         """
         try:
-            await self.hass.async_add_executor_job(self._connection_check)
+            await self._client.connection_check()
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as err:
@@ -107,7 +107,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 # listening_idx = set(self.async_contexts())
 
                 # always retrieve profiles first
-                data = await self.hass.async_add_executor_job(self._fetch_data)
+                data = await self._fetch_data()
                 if isinstance(data, Exception):
                     raise data
                 return data
@@ -134,13 +134,10 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
     def assignments_supported(self) -> bool:
         return self._client.has_widget(AulaWidgetId.MY_EDUCATION_ASSIGNMENTS)
 
-    def _connection_check(self) -> None:
-        self._client.connection_check()
-
-    def _fetch_data(self) -> AulaDataCoordinatorData|Exception:
+    async def _fetch_data(self) -> AulaDataCoordinatorData|Exception:
         # Login is required for all fetches — if this fails, nothing works
         try:
-            logindata = self._client.login()
+            logindata = await self._client.login()
             profiles = logindata.profiles
             self.aula_version = logindata.api_version
         except AulaCredentialError:
@@ -154,7 +151,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
 
         daily_overviews = list[AulaDailyOverview]()
         try:
-            daily_overviews = self._client.get_daily_overviews(profiles)
+            daily_overviews = await self._client.get_daily_overviews(profiles)
         except AulaCredentialError:
             raise
         except Exception as ex:
@@ -163,7 +160,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
 
         message_threads = list[AulaMessageThread]()
         try:
-            message_threads = self._client.get_message_threads()
+            message_threads = await self._client.get_message_threads()
         except AulaCredentialError:
             raise
         except Exception as ex:
@@ -172,7 +169,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
 
         notifications = list[AULA_NOTIFICATION_TYPES]()
         try:
-            notifications = self._client.get_notifications(children)
+            notifications = await self._client.get_notifications(children)
         except AulaCredentialError:
             raise
         except Exception as ex:

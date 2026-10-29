@@ -120,10 +120,10 @@ rules:
     comment: An entry is one device, which goes with the entry.
 
   # Platinum
-  async-dependency:
-    status: todo
-    comment: The client uses requests, a synchronous library, through executor jobs.
+  async-dependency: done
   inject-websession:
-    status: todo
-    comment: The client opens its own requests sessions; it cannot take Home Assistant's aiohttp session.
+    status: done
+    comment: >-
+      Each entry and each login gets a session of its own from async_create_clientsession, as
+      Aula's and MitID's cookies are the login's.
   strict-typing: done

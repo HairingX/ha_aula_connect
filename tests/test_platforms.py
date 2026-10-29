@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from unittest.mock import patch
 
+import aiohttp
 import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -47,17 +51,25 @@ async def test_an_account_without_children_has_only_its_unread_sensors(hass: Hom
 async def test_the_entry_keeps_its_client_and_coordinators_as_runtime_data(hass: HomeAssistant) -> None:
     entry = MockConfigEntry(domain=DOMAIN, unique_id="Aula", title="Aula", data=DATA, version=2)
     entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
+    sessions: list[aiohttp.ClientSession] = []
+
+    def create(*args: Any, **kwargs: Any) -> aiohttp.ClientSession:
+        sessions.append(async_create_clientsession(*args, **kwargs))
+        return sessions[-1]
+
+    with patch("custom_components.aula_connect.async_create_clientsession", side_effect=create):
+        assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
+    [session] = sessions
     runtime = entry.runtime_data
     assert isinstance(runtime, AulaRuntimeData)
     assert runtime.data_coordinator.config_entry is entry
     assert runtime.calendar_coordinator.config_entry is entry
     assert DOMAIN not in hass.data or entry.entry_id not in hass.data[DOMAIN]
 
-    with patch.object(runtime.client, "close") as close:
-        assert await hass.config_entries.async_unload(entry.entry_id)
-    close.assert_called_once_with()
+    assert not session.closed
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert session.closed
 
 
 @pytest.mark.usefixtures("aula_without_children")

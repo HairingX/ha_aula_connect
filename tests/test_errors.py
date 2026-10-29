@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from multidict import CIMultiDict, CIMultiDictProxy
 from aula_connect.api.aula_errors import AulaCredentialError
+from aula_connect.http import HttpResponse, SentRequest
 from aula_connect.login import AulaLoginClient
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -29,8 +31,8 @@ def _entry(hass: HomeAssistant) -> MockConfigEntry:
 async def test_a_login_aula_no_longer_accepts_asks_to_log_in_again(hass: HomeAssistant) -> None:
     entry = _entry(hass)
     with patch(
-        "custom_components.aula_connect.AulaDataCoordinator._connection_check",
-        side_effect=AulaCredentialError("refresh token rejected"),
+        "custom_components.aula_connect.AulaClient",
+        return_value=MagicMock(connection_check=AsyncMock(side_effect=AulaCredentialError("refresh token rejected"))),
     ):
         assert not await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -44,8 +46,8 @@ async def test_aula_out_of_reach_at_start_is_tried_again_without_an_unexpected_e
 ) -> None:
     entry = _entry(hass)
     with patch(
-        "custom_components.aula_connect.AulaDataCoordinator._connection_check",
-        side_effect=ConnectionError("no route to Aula"),
+        "custom_components.aula_connect.AulaClient",
+        return_value=MagicMock(connection_check=AsyncMock(side_effect=ConnectionError("no route to Aula"))),
     ):
         assert not await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -72,7 +74,7 @@ async def test_a_partial_failure_is_logged_once_and_the_recovery_once(
     hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
     entry = _entry(hass)
-    client = MagicMock()
+    client = AsyncMock()
     client.login.return_value = MagicMock(profiles=[], api_version=23)
     client.get_message_threads.side_effect = [ConnectionError("down"), ConnectionError("down"), []]
     coordinator = AulaDataCoordinator("Aula", hass, client, entry)
@@ -86,10 +88,17 @@ async def test_a_partial_failure_is_logged_once_and_the_recovery_once(
 
 async def test_a_refresh_token_aula_calls_invalid_asks_to_log_in_again(hass: HomeAssistant) -> None:
     """Through the library: Aula's token endpoint answers 400 invalid_grant for the expired token."""
-    body = {"error": "invalid_grant"}
-    response = MagicMock(status_code=400, text=json.dumps(body), json=MagicMock(return_value=body))
-    login_client = AulaLoginClient(mitid_username="parent")
-    setattr(login_client.session, "post", MagicMock(return_value=response))
+    response = HttpResponse(
+        status_code=400,
+        reason="Bad Request",
+        url="https://login.aula.dk/simplesaml/module.php/oidc/token.php",
+        headers=CIMultiDictProxy(CIMultiDict[str]()),
+        content=json.dumps({"error": "invalid_grant"}).encode(),
+        encoding="utf-8",
+        request=SentRequest("POST", "https://login.aula.dk/simplesaml/module.php/oidc/token.php"),
+    )
+    login_client = AulaLoginClient(MagicMock(), mitid_username="parent")
+    setattr(login_client.session, "post", AsyncMock(return_value=response))
     entry = _entry(hass)
     with patch("custom_components.aula_connect.AulaLoginClient", return_value=login_client):
         assert not await hass.config_entries.async_setup(entry.entry_id)

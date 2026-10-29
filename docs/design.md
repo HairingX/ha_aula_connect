@@ -9,8 +9,11 @@ Aula itself:
   documented there.
 - This repository holds the config flow, the login page, the coordinators and the entities.
 
-The library is synchronous, built on `requests`; every call to it runs in Home Assistant's
-executor.
+The libraries are asynchronous, on aiohttp. Each entry, and each login of the setup, gets a
+session of its own from `async_create_clientsession`, with a cookie jar of its own: Aula's and
+MitID's cookies are the login's, and must not mix with other integrations' or other logins'.
+Home Assistant lets go of an entry's session when the entry is unloaded; a login lets go of its
+own when it ends, or when the dialog is closed, which also stops it.
 
 ## The entry
 
@@ -98,4 +101,7 @@ placeholders. A few calendar details are Aula's rather than Home Assistant's:
 The tests set up entries against a made-up Aula account (`tests/fake_aula.py`), a stand-in for
 the library's client, and read the entities through Home Assistant: their states, and the
 calendars through the `calendar.get_events` action. The login flow runs with a stand-in MitID
-client. A test checks that the README names every entity and attribute there is, and no other.
+client. One test runs the whole way on the real libraries: the setup's MitID login through the
+library's simulated Aula login chain (`aula_connect.testing`, with `mitid_connect`'s simulated
+MitID behind it), and the entities read from its simulated API. A test checks that the README
+names every entity and attribute there is, and no other.

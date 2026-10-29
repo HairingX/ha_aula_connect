@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Mapping
-import concurrent.futures
+from collections.abc import Mapping
 from contextlib import suppress
 from datetime import datetime
 import logging
@@ -16,9 +15,11 @@ from homeassistant.const import CONF_ID
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import UnknownFlow
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.http import current_request
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.network import NoURLAvailableError, get_url
+import aiohttp
 import probatio
 
 from .auth_session import AuthSession, auth_sessions, mitid_status
@@ -108,21 +109,25 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         self.hass.http.register_view(AulaAuthStatusView(self.hass))
         self.hass.http.register_view(AulaAuthSelectIdentityView(self.hass))
 
-        client = AulaLoginClient(mitid_username=self._mitid_username, auth_method=AUTH_METHOD_APP)
-        session = AuthSession(client=client)
+        # A session of the login's own, as its cookies are the login's.
+        http_session = async_create_clientsession(self.hass, auto_cleanup=False, cookie_jar=aiohttp.CookieJar())
+        client = AulaLoginClient(http_session, mitid_username=self._mitid_username, auth_method=AUTH_METHOD_APP)
+        session = AuthSession(client=client, http_session=http_session)
         auth_sessions(self.hass)[self.flow_id] = session
 
-        def choose_identity(identities: list[str]) -> str:
+        async def choose_identity(identities: list[str]) -> str:
             """Wait for the user to choose between several MitID identities on the login page."""
             session.available_identities = identities
             session.status_message = "Please select an identity"
-            future: concurrent.futures.Future[str] = concurrent.futures.Future()
+            future: asyncio.Future[str] = self.hass.loop.create_future()
             session.identity_future = future
-            return future.result(timeout=IDENTITY_TIMEOUT)
+            async with asyncio.timeout(IDENTITY_TIMEOUT):
+                return await future
 
-        # The library looks for this hook on the client; it has no parameter for it.
-        setattr(client, "identity_selector", choose_identity)
-        self.hass.async_create_task(self._authenticate_async(session))
+        client.identity_selector = choose_identity
+        session.task = self.hass.async_create_background_task(
+            self._authenticate_async(session), f"{DOMAIN} MitID login {self.flow_id}"
+        )
 
     def _external_login(self) -> ConfigFlowResult:
         """The step that opens the MitID login page, and links to it should the browser not."""
@@ -177,9 +182,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
             self._monitor_client_status(session), f"{DOMAIN} MitID status {self.flow_id}"
         )
         try:
-            # The library declares a bare Dict, which a strict check reads as partly unknown.
-            authenticate: Callable[[], dict[str, Any]] = getattr(session.client, "authenticate")
-            result = await self.hass.async_add_executor_job(authenticate)
+            result = await session.client.authenticate()
         except Exception as err:  # noqa: BLE001 - any failure of the login is shown to the user
             _LOGGER.error("MitID authentication error: %s", err)
             session.error = str(err)
@@ -195,6 +198,9 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.error("MitID authentication failed: %s", session.error)
         finally:
             monitor.cancel()
+            if session.http_session is not None:
+                session.http_session.detach()
+                session.http_session = None
 
         self.hass.async_create_task(self._continue_flow())
 
@@ -231,8 +237,10 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         async_call_later(self.hass, LOGIN_KEPT_FOR, forget)
 
     def _cleanup_session(self, flow_id: str) -> None:
-        """Forget the login of the flow `flow_id`."""
-        auth_sessions(self.hass).pop(flow_id, None)
+        """Stop and forget the login of the flow `flow_id`."""
+        session = auth_sessions(self.hass).pop(flow_id, None)
+        if session is not None:
+            session.end()
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
         """Log an entry in again, whose login Aula no longer accepts."""

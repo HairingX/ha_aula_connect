@@ -401,7 +401,7 @@ async def test_the_calendars_show_what_aula_says_a_day_later(
 async def test_calendars_aula_cannot_be_read_at_start_are_tried_again(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
-    with patch.object(aula, "login", side_effect=[aula.login(), ConnectionError("down")]):
+    with patch.object(aula, "login", side_effect=[await aula.login(), ConnectionError("down")]):
         await set_up(hass, freezer, loads=False)
     [entry] = hass.config_entries.async_entries(DOMAIN)
     assert entry.state is ConfigEntryState.SETUP_RETRY
@@ -410,7 +410,7 @@ async def test_calendars_aula_cannot_be_read_at_start_are_tried_again(
 async def test_calendars_whose_login_aula_no_longer_accepts_ask_to_log_in_again(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
-    with patch.object(aula, "login", side_effect=[aula.login(), AulaCredentialError("expired")]):
+    with patch.object(aula, "login", side_effect=[await aula.login(), AulaCredentialError("expired")]):
         await set_up(hass, freezer, loads=False)
     [entry] = hass.config_entries.async_entries(DOMAIN)
     assert entry.state is ConfigEntryState.SETUP_ERROR

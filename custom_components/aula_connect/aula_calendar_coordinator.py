@@ -106,9 +106,6 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         _LOGGER.debug(f"Coordinator Calendar {device_id} initialized")
 
-    def _connection_check(self) -> None:
-        self._client.connection_check()
-
     async def _async_setup(self) -> None:
         """Set up the coordinator
 
@@ -122,7 +119,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         raise ConfigEntryNotReady and setup will try again later
         """
         try:
-            await self.hass.async_add_executor_job(self._connection_check)
+            await self._client.connection_check()
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as err:
@@ -148,7 +145,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
                 # listening_ids = set(self.async_contexts())
 
                 # always retrieve profiles first
-                data = await self.hass.async_add_executor_job(self._fetch_data, self._birthday_listeners, self._event_listeners, self._weekly_plan_listeners, self._easyiq_weekplan_listeners, self._newsletter_listeners)
+                data = await self._fetch_data(self._birthday_listeners, self._event_listeners, self._weekly_plan_listeners, self._easyiq_weekplan_listeners, self._newsletter_listeners)
                 if isinstance(data, Exception):
                     raise data
                 return data
@@ -160,10 +157,10 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
                 translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": error_text(err)}
             ) from None
 
-    def _fetch_data(self, birthdaylisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], eventlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaInstitutionProfile]], weekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], easyiqweekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], newsletterlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]) -> AulaCalendarCoordinatorData|Exception:
+    async def _fetch_data(self, birthdaylisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], eventlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaInstitutionProfile]], weekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], easyiqweekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], newsletterlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]) -> AulaCalendarCoordinatorData|Exception:
         # Login is required for all fetches — if this fails, nothing works
         try:
-            logindata = self._client.login()
+            logindata = await self._client.login()
             self.aula_version = logindata.api_version
         except AulaCredentialError:
             raise
@@ -176,7 +173,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         new_birtyday_keys = list[int]()
         try:
-            new_birthdaymap, new_birtyday_keys = self._fetch_birthdays(birthdaylisteners)
+            new_birthdaymap, new_birtyday_keys = await self._fetch_birthdays(birthdaylisteners)
             self._birthdaymap = new_birthdaymap
         except AulaCredentialError:
             raise
@@ -186,7 +183,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         new_event_keys = list[int]()
         try:
-            new_eventmap, new_event_keys = self._fetch_events(eventlisteners)
+            new_eventmap, new_event_keys = await self._fetch_events(eventlisteners)
             self._eventmap = new_eventmap
         except AulaCredentialError:
             raise
@@ -196,7 +193,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         new_weeklyplan_keys = list[int]()
         try:
-            new_weeklyplanmap, new_weeklyplan_keys = self._fetch_weekly_plans(weekplanlisteners)
+            new_weeklyplanmap, new_weeklyplan_keys = await self._fetch_weekly_plans(weekplanlisteners)
             self._weeklyplanmap = new_weeklyplanmap
         except AulaCredentialError:
             raise
@@ -206,7 +203,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         new_easyiq_keys = list[int]()
         try:
-            new_easyiqweekplanmap, new_easyiq_keys = self._fetch_easyiq_weekly_plans(easyiqweekplanlisteners)
+            new_easyiqweekplanmap, new_easyiq_keys = await self._fetch_easyiq_weekly_plans(easyiqweekplanlisteners)
             self._easyiqweekplanmap = new_easyiqweekplanmap
         except AulaCredentialError:
             raise
@@ -216,7 +213,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         new_newsletter_keys = list[int]()
         try:
-            new_newslettermap, new_newsletter_keys = self._fetch_newsletters(newsletterlisteners)
+            new_newslettermap, new_newsletter_keys = await self._fetch_newsletters(newsletterlisteners)
             self._newslettermap = new_newslettermap
         except AulaCredentialError:
             raise
@@ -274,7 +271,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
     async def get_birthdays_for_interval(self, profiles: List[AulaChildProfile], start_datetime: datetime.datetime, end_datetime: datetime.datetime) -> List[AulaBirthdayEvent]:
         try:
-            return await self.hass.async_add_executor_job(self._client.get_birthday_events, profiles, start_datetime, end_datetime)
+            return await self._client.get_birthday_events(profiles, start_datetime, end_datetime)
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
@@ -305,7 +302,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             self._birthday_listeners.pop(id)
             self._birthdaymap.pop(id)
 
-    def _fetch_birthdays(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]):
+    async def _fetch_birthdays(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]):
         request_data_profiles = list[AulaChildProfile]()
         new_birthdaymap = dict[int, List[AulaBirthdayEvent]]()
         for (id, meta) in listeners.items():
@@ -316,7 +313,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         for profile in request_data_profiles:
             #Batch fetching and then splitting birthdays across profiles is very difficult, so we fetch per institution
-            birthdays = self._client.get_birthday_events([profile], now(), now() + SYNC_EVENT_MAX_TIME)
+            birthdays = await self._client.get_birthday_events([profile], now(), now() + SYNC_EVENT_MAX_TIME)
             _LOGGER.debug(f"Fetching birthdays for id: {profile.id}, got {len(birthdays)} birthdays")
             new_birthdaymap[profile.id] = birthdays
 
@@ -328,7 +325,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
     async def get_events_for_interval(self, profiles: List[AulaInstitutionProfile], start_date: datetime.datetime, end_date: datetime.datetime) -> List[AulaCalendarEvent]:
         try:
-            return await self.hass.async_add_executor_job(self._client.get_calendar_events, profiles, start_date, end_date)
+            return await self._client.get_calendar_events(profiles, start_date, end_date)
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
@@ -359,7 +356,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             self._event_listeners.pop(id)
             self._eventmap.pop(id)
 
-    def _fetch_events(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaInstitutionProfile]]):
+    async def _fetch_events(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaInstitutionProfile]]):
         request_data_institutions = list[AulaInstitutionProfile]()
         new_eventmap = dict[int, List[AulaCalendarEvent]]()
         for (id, meta) in listeners.items():
@@ -369,7 +366,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
                 new_eventmap[id] = self._eventmap.get(id, list[AulaCalendarEvent]())
         for institution in request_data_institutions:
             #Batch fetching and then splitting events across profiles is very difficult, so we fetch per institution
-            events = self._client.get_calendar_events([institution], now(), now() + SYNC_EVENT_MAX_TIME)
+            events = await self._client.get_calendar_events([institution], now(), now() + SYNC_EVENT_MAX_TIME)
             _LOGGER.debug(f"Fetching events for id: {institution.id}, got {len(events)} events")
             new_eventmap[institution.id] = events
         return (new_eventmap, [inst.id for inst in request_data_institutions])
@@ -380,7 +377,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
     async def get_weekly_plans_for_interval(self, profiles: List[AulaChildProfile], start_datetime: datetime.datetime, end_datetime: datetime.datetime) -> List[AulaWeeklyPlan]:
         try:
-            return await self.hass.async_add_executor_job(self._client.get_weekly_plans, profiles, start_datetime, end_datetime)
+            return await self._client.get_weekly_plans(profiles, start_datetime, end_datetime)
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
@@ -411,7 +408,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             self._weekly_plan_listeners.pop(id)
             self._weeklyplanmap.pop(id)
 
-    def _fetch_weekly_plans(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]):
+    async def _fetch_weekly_plans(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]):
         request_data_institutions = list[AulaChildProfile]()
         new_weeklyplanmap = dict[int, List[AulaWeeklyPlan]]()
         for (id, meta) in listeners.items():
@@ -422,7 +419,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         for institution in request_data_institutions:
             #Batch fetching and then splitting weekly_plans across profiles is very difficult, so we fetch per institution
-            weekly_plans = self._client.get_weekly_plans([institution], now(), now() + SYNC_EVENT_MAX_TIME)
+            weekly_plans = await self._client.get_weekly_plans([institution], now(), now() + SYNC_EVENT_MAX_TIME)
             _LOGGER.debug(f"Fetching weekly_plans for id: {institution.id}, got {len(weekly_plans)} weekly_plans")
             new_weeklyplanmap[institution.id] = weekly_plans
 
@@ -434,7 +431,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
     async def get_easyiq_weekly_plans_for_interval(self, profiles: List[AulaChildProfile], start_datetime: datetime.datetime, end_datetime: datetime.datetime) -> List[AulaEasyiqWeeklyPlan]:
         try:
-            return await self.hass.async_add_executor_job(self._client.get_easyiq_weekly_plans, profiles, start_datetime, end_datetime)
+            return await self._client.get_easyiq_weekly_plans(profiles, start_datetime, end_datetime)
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
@@ -465,7 +462,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             self._easyiq_weekplan_listeners.pop(id)
             self._easyiqweekplanmap.pop(id)
 
-    def _fetch_easyiq_weekly_plans(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]):
+    async def _fetch_easyiq_weekly_plans(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]):
         request_data_profiles = list[AulaChildProfile]()
         new_easyiqmap = dict[int, List[AulaEasyiqWeeklyPlan]]()
         for (id, meta) in listeners.items():
@@ -475,7 +472,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
                 new_easyiqmap[id] = self._easyiqweekplanmap.get(id, list[AulaEasyiqWeeklyPlan]())
 
         for profile in request_data_profiles:
-            plans = self._client.get_easyiq_weekly_plans([profile], now(), now() + SYNC_EVENT_MAX_TIME)
+            plans = await self._client.get_easyiq_weekly_plans([profile], now(), now() + SYNC_EVENT_MAX_TIME)
             _LOGGER.debug(f"Fetching easyiq weekplans for id: {profile.id}, got {len(plans)} plans")
             new_easyiqmap[profile.id] = plans
 
@@ -487,7 +484,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
     async def get_newsletters_for_interval(self, profiles: List[AulaChildProfile], start_datetime: datetime.datetime, end_datetime: datetime.datetime) -> List[AulaWeeklyNewsletter]:
         try:
-            return await self.hass.async_add_executor_job(self._client.get_newsletters, profiles, start_datetime, end_datetime)
+            return await self._client.get_newsletters(profiles, start_datetime, end_datetime)
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
@@ -518,7 +515,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             self._newsletter_listeners.pop(id)
             self._newslettermap.pop(id)
 
-    def _fetch_newsletters(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]):
+    async def _fetch_newsletters(self, listeners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]):
         request_data_profiles = list[AulaChildProfile]()
         new_newslettermap = dict[int, List[AulaWeeklyNewsletter]]()
         for (id, meta) in listeners.items():
@@ -528,7 +525,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
                 new_newslettermap[id] = self._newslettermap.get(id, list[AulaWeeklyNewsletter]())
 
         for profile in request_data_profiles:
-            newsletters = self._client.get_newsletters([profile], now(), now() + SYNC_EVENT_MAX_TIME)
+            newsletters = await self._client.get_newsletters([profile], now(), now() + SYNC_EVENT_MAX_TIME)
             _LOGGER.debug(f"Fetching newsletters for id: {profile.id}, got {len(newsletters)} newsletters")
             new_newslettermap[profile.id] = newsletters
 
