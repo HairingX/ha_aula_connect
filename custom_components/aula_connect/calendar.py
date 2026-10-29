@@ -27,6 +27,7 @@ from aula_connect.api.models.module import (
     AulaNewsletter,
     AulaProfile,
     AulaCalendarEvent,
+    AulaCalendarEventTimeSlotEntryIndex,
     AulaDailyPlanTask,
     AulaWeeklyNewsletter,
     AulaWeeklyPlan,
@@ -51,6 +52,52 @@ def _is_event_in_range(event: CalendarEvent, start: datetime, end: datetime) -> 
 
 # The entities read what the coordinators fetched, so updating them never waits on Aula.
 PARALLEL_UPDATES = 0
+
+
+def celebrated_on(event: AulaBirthdayEvent, year: int) -> date:
+    """The day the birthday falls on in `year`: 28 February for 29 February outside a leap year."""
+    birthday = event.birthday_date
+    if (birthday.month, birthday.day) == (2, 29) and not isleap(year):
+        return date(year, 2, 28)
+    return birthday.replace(year=year)
+
+
+def is_meeting(event: AulaCalendarEvent) -> bool:
+    """Whether the event is a meeting parents book a time slot in."""
+    return event.type == AulaCalendarEventType.SCHOOL_HOME_MEETING or event.type == AulaCalendarEventType.PARENTAL_MEETING
+
+
+def required_children(profile: AulaChildProfile | AulaProfile, institution: AulaInstitutionProfile, event: AulaCalendarEvent) -> List[AulaChildProfile]:
+    """The children of the profile the event belongs to; for a child, the child itself if it does."""
+    result = list[AulaChildProfile]()
+    if isinstance(profile, AulaChildProfile):
+        if institution.id in event.belongs_to_profiles:
+            result.append(profile)
+    else:
+        for child in profile.children:
+            if child.id in event.belongs_to_profiles:
+                result.append(child)
+    return result
+
+
+def shown_for(profile: AulaChildProfile | AulaProfile, institution: AulaInstitutionProfile, event: AulaCalendarEvent) -> bool:
+    """Whether the profile's events at the institution show the event."""
+    if isinstance(profile, AulaChildProfile) and is_meeting(event):
+        # These meetings may be for the parents alone, which a child's calendar leaves out.
+        return len(required_children(profile, institution, event)) > 0
+    return True
+
+
+def booked_time_slot(institution: AulaInstitutionProfile, event: AulaCalendarEvent) -> AulaCalendarEventTimeSlotEntryIndex | None:
+    """The time booked for the institution profile in a meeting; None when none is."""
+    if event.time_slot is None:
+        return None
+    for slot in event.time_slot.time_slots:
+        for answer in slot.answers:
+            if answer.inst_profile_id == institution.id or answer.concerning_profile_id == institution.id:
+                if len(slot.time_slot_indexes) > answer.selected_time_slot_index:
+                    return slot.time_slot_indexes[answer.selected_time_slot_index]
+    return None
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
@@ -131,7 +178,7 @@ class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
         upcoming = [
             (start, birthday)
             for birthday in self.coordinator.get_birthdays(self._profile)
-            for start in (self._celebrated_on(birthday, today.year), self._celebrated_on(birthday, today.year + 1))
+            for start in (celebrated_on(birthday, today.year), celebrated_on(birthday, today.year + 1))
             if start >= today
         ]
         if not upcoming:
@@ -143,7 +190,7 @@ class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
         icon = CALENDAR_EVENT_ICON.get(AulaCalendarEventType.BIRTHDAY, "")
         age = year - event.birthday_date.year
         summary = f"{icon} {event.full_name} ({event.main_group_name}) {get_label('birthday_turns')} {age}"
-        start_date = self._celebrated_on(event, year)
+        start_date = celebrated_on(event, year)
         return CalendarEvent(
             uid=str(event.institution_profile_id),
             summary=summary,
@@ -151,13 +198,6 @@ class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
             end=start_date + timedelta(days=1),
         )
 
-    @staticmethod
-    def _celebrated_on(event: AulaBirthdayEvent, year: int) -> date:
-        """The day the birthday falls on in `year`: 28 February for 29 February outside a leap year."""
-        birthday = event.birthday_date
-        if (birthday.month, birthday.day) == (2, 29) and not isleap(year):
-            return date(year, 2, 28)
-        return birthday.replace(year=year)
 
 class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
     """The events of a profile or a child at one institution."""
@@ -170,7 +210,6 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
         super().__init__(calendar_coordinator, name="events")
         self._data_coordinator = data_coordinator
         self._profile = profile
-        self._profile_is_child = isinstance(self._profile, AulaChildProfile)
         self._institution = institution
         first_name = profile.first_name
         institution_name = institution.institution_name
@@ -199,11 +238,7 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
 
     def _event_filter(self, event: AulaCalendarEvent) -> bool:
         """Whether the event is shown in this calendar."""
-        if self._profile_is_child:
-            # These meetings may be for the parents alone, which a child's calendar leaves out.
-            if event.type == AulaCalendarEventType.SCHOOL_HOME_MEETING or event.type == AulaCalendarEventType.PARENTAL_MEETING:
-                return len(self._get_required_children(event)) > 0
-        return True
+        return shown_for(self._profile, self._institution, event)
 
     async def async_get_events(self, hass: HomeAssistant, start_date: datetime, end_date: datetime) -> List[CalendarEvent]:
         """The events in the range, read from Aula now."""
@@ -233,30 +268,17 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
             location = event.primary_resource.name
 
         # A meeting spans every day parents can book a time slot on; once booked, only the slot is shown.
-        if event.type == AulaCalendarEventType.SCHOOL_HOME_MEETING or event.type == AulaCalendarEventType.PARENTAL_MEETING:
-            required_children = self._get_required_children(event)
-            id = self._institution.id
-            unbooked_meeting = True
-            timeslot = event.time_slot
-            if timeslot is not None:
-                timeslots = timeslot.time_slots
-                for slot in timeslots:
-                    for answer in slot.answers:
-                        if answer.inst_profile_id == id or answer.concerning_profile_id == id:
-                            timeslotindexes = slot.time_slot_indexes
-                            if len(timeslotindexes) > answer.selected_time_slot_index:
-                                timeslotindex = timeslotindexes[answer.selected_time_slot_index]
-                                start_datetime = timeslotindex.start_datetime
-                                end_datetime = timeslotindex.end_datetime
-                                summary = f"{summary} {self._institution.institution_name}"
-                                if location is None: location = self._institution.institution_name
-                                if required_children: details.append(f"{get_label('bring_children')} {", ".join(child.name for child in required_children)}")
-                                unbooked_meeting = False
-                        if not unbooked_meeting: break
-                    if not unbooked_meeting: break
-
-                if unbooked_meeting:
-                    summary += " <!>"
+        if is_meeting(event) and event.time_slot is not None:
+            required = required_children(self._profile, self._institution, event)
+            booked = booked_time_slot(self._institution, event)
+            if booked is None:
+                summary += " <!>"
+            else:
+                start_datetime = booked.start_datetime
+                end_datetime = booked.end_datetime
+                summary = f"{summary} {self._institution.institution_name}"
+                if location is None: location = self._institution.institution_name
+                if required: details.append(f"{get_label('bring_children')} {", ".join(child.name for child in required)}")
 
         if event.lesson is not None and event.lesson.participants:
             initials = ", ".join(
@@ -287,17 +309,6 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
             description=None if len(description.strip()) == 0 else description,
             location=location,
         )
-
-    def _get_required_children(self, event: AulaCalendarEvent) -> List[AulaChildProfile]:
-        result = list[AulaChildProfile]()
-        if isinstance(self._profile, AulaChildProfile):
-            if self._institution.id in event.belongs_to_profiles:
-                result.append(self._profile)
-        else:
-            for child in self._profile.children:
-                if child.id in event.belongs_to_profiles:
-                    result.append(child)
-        return result
 
 
 class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):

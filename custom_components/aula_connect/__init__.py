@@ -1,10 +1,14 @@
 """Aula integration for Home Assistant."""
 
+from collections.abc import Callable
+
 import aiohttp
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.typing import ConfigType
 import logging
 
 from .aula_data import AulaConfigEntry, AulaRuntimeData
@@ -21,6 +25,7 @@ from .const import (
     DOMAIN,
     account_id,
 )
+from .websocket_api import async_register as async_register_websocket_api
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [
@@ -28,6 +33,18 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.CALENDAR,
 ]
+# Home Assistant's annotation of it leaves a type unknown to a strict check, a bare `dict`; it is
+# taken by name, with the type it has.
+_config_entry_only_config_schema: Callable[[str], Callable[[ConfigType], ConfigType]] = getattr(
+    cv, "config_entry_only_config_schema"
+)
+CONFIG_SCHEMA = _config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the integration's websocket commands."""
+    async_register_websocket_api(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
