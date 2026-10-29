@@ -81,8 +81,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool
     data_coordinator = AulaDataCoordinator(entry.title, hass, client, entry)
     calendar_coordinator = AulaCalendarCoordinator(entry.title, hass, client, entry)
 
-    # Fetch initial data so we have data when entities subscribe
     await data_coordinator.async_config_entry_first_refresh()
+    await calendar_coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = AulaRuntimeData(client, data_coordinator, calendar_coordinator)
 
