@@ -17,16 +17,10 @@ typeCheckingMode = "strict"
 reportMissingTypeStubs = "none"
 # A "# type: ignore" hides an error, which the conventions do not allow.
 enableTypeIgnoreComments = false
-# Not yet checked, during the transition below; each pull request takes files off this list.
-ignore = [
-    "custom_components/aula_connect/calendar.py",
-    "custom_components/aula_connect/config_flow.py",
-    "custom_components/aula_connect/views.py",
-]
 
 [tool.hairingx-workflows]
 transition = """The integration starts from the Aula integration, written before the shared \
-standard: its config flow, views and entities are typed and tested module by module."""
+standard: its modules are tested one by one."""
 # The coverage the tests reach now; each pull request raises it, until it is 100.
-coverage = 46
+coverage = 51
 libraries = ["aula_connect"]
