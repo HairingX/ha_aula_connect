@@ -26,17 +26,9 @@ rules:
   docs-conditions:
     status: exempt
     comment: The integration provides no conditions.
-  docs-high-level-description:
-    status: todo
-    comment: The README says only that it integrates Aula; it does not describe what Aula is.
-  docs-installation-instructions:
-    status: todo
-    comment: >-
-      The README covers installing through HACS, but not adding the integration and logging in
-      with MitID.
-  docs-removal-instructions:
-    status: todo
-    comment: The README does not say how to remove the integration.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
   docs-triggers:
     status: exempt
     comment: The integration provides no triggers.
@@ -66,11 +58,7 @@ rules:
   docs-configuration-parameters:
     status: exempt
     comment: The integration has no options flow.
-  docs-installation-parameters:
-    status: todo
-    comment: >-
-      The README does not describe the setup fields: the ID, the MitID username, and the
-      hardware token's password and code.
+  docs-installation-parameters: done
   entity-unavailable:
     status: done
     comment: >-
@@ -93,29 +81,15 @@ rules:
   discovery:
     status: exempt
     comment: A cloud service has nothing on the network to discover.
-  docs-data-update:
-    status: todo
-    comment: The README does not say how often data is fetched.
-  docs-examples:
-    status: done
-    comment: The README shows dashboards and template sensors built from the calendars.
-  docs-known-limitations:
-    status: todo
-    comment: >-
-      The README lists features not implemented and calendars not tested, but no limitations
-      of what is implemented.
+  docs-data-update: done
+  docs-examples: done
+  docs-known-limitations: done
   docs-supported-devices:
     status: exempt
     comment: The integration connects to the Aula service, not to devices.
-  docs-supported-functions:
-    status: todo
-    comment: The README lists the entities, but not the Unread Presence binary sensor.
-  docs-troubleshooting:
-    status: todo
-    comment: The README has no troubleshooting section.
-  docs-use-cases:
-    status: todo
-    comment: The README shows dashboard examples but describes no use cases.
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
   dynamic-devices:
     status: todo
     comment: >-
