@@ -31,6 +31,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from pytest_homeassistant_custom_component.typing import MockHAClientWebSocket, WebSocketGenerator
 
 from custom_components.aula_connect.const import DOMAIN
+from custom_components.aula_connect.websocket_api import all_day_dates
 
 from .fake_aula import CHILD, PARENT, SCHOOL, FakeAula
 from .test_calendars import at, event, set_up
@@ -178,6 +179,7 @@ async def test_the_days_are_the_lessons_events_tasks_and_birthdays_aula_was_read
     assert days == {
         "start": "2026-12-28",
         "end": "2027-01-11",
+        "week_plan": True,
         "lessons": [
             {
                 "id": "2",
@@ -210,8 +212,8 @@ async def test_the_days_are_the_lessons_events_tasks_and_birthdays_aula_was_read
             },
             {
                 "id": "4",
-                "start": "2026-12-30T00:00:00+01:00",
-                "end": "2026-12-31T00:00:00+01:00",
+                "start": "2026-12-30",
+                "end": "2026-12-31",
                 "all_day": True,
                 "title": "Trip",
                 "type": "event",
@@ -312,7 +314,7 @@ async def test_an_institution_without_weekly_plans_has_no_tasks_or_birthdays(
     days = await _subscribe(client, _entry_id(hass), "2026-12-28", "2027-01-11")
 
     assert [lesson["title"] for lesson in days["lessons"]] == ["Math"]
-    assert (days["tasks"], days["birthdays"]) == ([], [])
+    assert (days["week_plan"], days["tasks"], days["birthdays"]) == (False, [], [])
 
 
 async def test_days_aula_cannot_be_read_for_are_left_empty_and_said_so_once(
@@ -578,3 +580,20 @@ async def test_a_child_gone_from_aula_ends_its_subscription(
     await coordinator.async_refresh()
     await client.send_json_auto_id({"type": "aula_connect/children"})
     assert (await client.receive_json())["result"] == {"children": []}
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "days"),
+    [
+        (at(30, 0), at(31, 0), (date(2026, 12, 30), date(2026, 12, 31))),
+        (at(30, 0), at(30, 23, 59), (date(2026, 12, 30), date(2026, 12, 31))),
+        (at(30, 0), at(30, 0), (date(2026, 12, 30), date(2026, 12, 31))),
+        (at(29, 23), at(31, 23), (date(2026, 12, 29), date(2027, 1, 1))),
+    ],
+    ids=["midnight to midnight", "ends before midnight", "no length", "two days and a bit"],
+)
+async def test_an_all_day_event_covers_whole_local_days(
+    hass: HomeAssistant, start: datetime, end: datetime, days: tuple[date, date]
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Copenhagen")
+    assert all_day_dates(start, end) == days

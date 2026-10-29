@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any, cast
 
 import probatio
@@ -239,17 +239,27 @@ async def async_child_days(entry: AulaConfigEntry, child: AulaChildProfile, days
     tasks: list[dict[str, Any]] = []
     birthdays: list[dict[str, Any]] = []
     # The weekly plan widget brings the birthday calendar too.
-    if entry.runtime_data.data_coordinator.weekly_plans_supported():
+    week_plan = entry.runtime_data.data_coordinator.weekly_plans_supported()
+    if week_plan:
         tasks = await _async_tasks(entry, child, days)
         birthdays = await _async_birthdays(entry, child, days)
     return {
         "start": days[0].isoformat(),
         "end": days[1].isoformat(),
+        "week_plan": week_plan,
         "lessons": lessons,
         "events": events,
         "tasks": tasks,
         "birthdays": birthdays,
     }
+
+
+def all_day_dates(start: datetime, end: datetime) -> tuple[date, date]:
+    """The local days an all-day event covers: the first, and the day after the last."""
+    first = dt_util.as_local(start).date()
+    last = dt_util.as_local(end)
+    after = last.date() if last.time() == time(0) else last.date() + timedelta(days=1)
+    return first, max(after, first + timedelta(days=1))
 
 
 def _times(child: AulaChildProfile, event: AulaCalendarEvent) -> tuple[datetime, datetime, bool]:
@@ -297,10 +307,11 @@ async def _async_events(
             else:
                 if booked and location is None:
                     location = institution.institution_name
+                first, after = all_day_dates(start, end) if event.all_day else (start, end)
                 events.append((start, end, {
                     "id": str(event.id),
-                    "start": start.isoformat(),
-                    "end": end.isoformat(),
+                    "start": first.isoformat(),
+                    "end": after.isoformat(),
                     "all_day": event.all_day,
                     "title": event.title,
                     "type": event.type,

@@ -123,7 +123,11 @@ When the entry is unloaded (as it is to reload it or remove it), or Aula no long
 child, the subscription sends `{"ended": true}` once and sends nothing more; unsubscribing
 afterwards is still answered as a success. The card then asks for the children again and
 subscribes anew.
-A Meebook task's content is sent as Meebook has it, HTML included.
+A Meebook task's content is sent as Meebook has it, HTML included. Times are ISO 8601 with
+their offset; an all-day event is sent as the local days it covers, its `end` the day after the
+last. A lesson's `teachers` are full names, and its `status` is Aula's own (`normal` and
+`substitute` are the ones known). `week_plan` says whether the institution has the weekly plan
+widget, without which there are no tasks or birthdays to send.
 
 ## Tests
 
