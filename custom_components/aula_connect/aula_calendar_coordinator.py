@@ -260,6 +260,36 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             _LOGGER.warning("Aula could not read the %s for the period: %s", what, error_text(ex))
             return []
 
+    @staticmethod
+    def _day_read(meta: AulaCalendarCoordinatorMeta[AulaInstitutionProfile] | AulaCalendarCoordinatorMeta[AulaChildProfile] | None) -> datetime.date | None:
+        """The day the profile's data was last read on; None when it was not."""
+        if meta is None or meta.last_updated is None:
+            return None
+        return meta.last_updated.date()
+
+    def birthdays_read_for(self, profile: AulaChildProfile) -> tuple[datetime.date, datetime.date] | None:
+        """The first day and the day after the last that the child's birthdays were last read for; None when they were not."""
+        day = self._day_read(self._birthday_listeners.get(profile.id))
+        if day is None:
+            return None
+        # Aula answers up to the end of the last day asked for.
+        return (day, day + SYNC_EVENT_MAX_TIME + timedelta(days=1))
+
+    def events_read_for(self, profile: AulaInstitutionProfile) -> tuple[datetime.date, datetime.date] | None:
+        """The first day and the day after the last that the profile's events were last read for; None when they were not."""
+        day = self._day_read(self._event_listeners.get(profile.id))
+        if day is None:
+            return None
+        return (day, day + SYNC_EVENT_MAX_TIME)
+
+    def weekly_plans_read_for(self, profile: AulaChildProfile) -> tuple[datetime.date, datetime.date] | None:
+        """The first day and the day after the last that the child's weekly plans were last read for; None when they were not."""
+        day = self._day_read(self._weekly_plan_listeners.get(profile.id))
+        if day is None:
+            return None
+        # Meebook answers whole weeks, from the Monday of the first day asked for.
+        return (day - timedelta(days=day.weekday()), day + SYNC_EVENT_MAX_TIME)
+
     async def get_birthdays_for_interval(self, profiles: List[AulaChildProfile], start_datetime: datetime.datetime, end_datetime: datetime.datetime) -> List[AulaBirthdayEvent]:
         """Aula's birthdays of the period, read now; none when Aula cannot be read."""
         return await self._read_period("birthdays", self._client.get_birthday_events(profiles, start_datetime, end_datetime))

@@ -97,6 +97,38 @@ placeholders. A few calendar details are Aula's rather than Home Assistant's:
 - A birthday is shown in every year of the period asked for, on 28 February outside a leap year
   for one born on 29 February.
 
+## The card's API
+
+A dashboard card shows each child's weeks through two websocket commands. They only read: they
+mark nothing read and write nothing to Aula. Any user may call them, as a dashboard's viewers
+need not be administrators; they send no token, no MitID user ID and no UNI-login.
+
+- `aula_connect/children` answers with the children of every loaded entry, each with its
+  entry's id and the id its calendars are kept under (`child_id`), its names and its
+  institution's name.
+- `aula_connect/week/subscribe` takes an entry, a child and a period of 1 to 21 days (`start`
+  included, `end` not), answers, and then sends the period's lessons, other events, Meebook
+  tasks and birthdays, each sorted by time. A malformed period is refused as `invalid_format`, an
+  entry or child not loaded as `not_found`.
+
+The days are chosen as the child's calendars choose them: lessons and events as the child's
+events calendar (a meeting without the child left out, a booked meeting at its booked time),
+tasks and birthdays only where the weekly plan widget is, and a birthday on 29 February on 28
+February outside a leap year. What the calendar coordinator last read covers the days it was
+read for; days outside them are read from Aula, as a calendar reads a period: a part that cannot
+be read is left out and logged, and a login Aula no longer accepts starts logging in again. The
+days are sent again each time the coordinator reads the child's events, weekly plans or
+birthdays anew - not at every poll, which mostly reads nothing - until the subscription ends.
+When the entry is unloaded (as it is to reload it or remove it), or Aula no longer lists the
+child, the subscription sends `{"ended": true}` once and sends nothing more; unsubscribing
+afterwards is still answered as a success. The card then asks for the children again and
+subscribes anew.
+A Meebook task's content is sent as Meebook has it, HTML included. Times are ISO 8601 with
+their offset; an all-day event is sent as the local days it covers, its `end` the day after the
+last. A lesson's `teachers` are full names, and its `status` is Aula's own (`normal` and
+`substitute` are the ones known). `week_plan` says whether the institution has the weekly plan
+widget, without which there are no tasks or birthdays to send.
+
 ## Tests
 
 The tests set up entries against a made-up Aula account (`tests/fake_aula.py`), a stand-in for
