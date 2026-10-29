@@ -8,6 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .redact import error_text
 from .const import DOMAIN
 import asyncio
 import logging
@@ -125,9 +126,10 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as err:
+            # Not chained: the error's own text holds the access token, which a traceback would log.
             raise UpdateFailed(
-                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": str(err)}
-            ) from err
+                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": error_text(err)}
+            ) from None
 
     async def _async_update_data(self) -> AulaCalendarCoordinatorData:
         """Fetch data from API endpoint.
@@ -153,9 +155,10 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as err:
+            # Not chained: the error's own text holds the access token, which a traceback would log.
             raise UpdateFailed(
-                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": str(err)}
-            ) from err
+                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": error_text(err)}
+            ) from None
 
     def _fetch_data(self, birthdaylisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], eventlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaInstitutionProfile]], weekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], easyiqweekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], newsletterlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]) -> AulaCalendarCoordinatorData|Exception:
         # Login is required for all fetches — if this fails, nothing works
@@ -179,7 +182,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            failures.append(f"birthdays: {ex}")
+            failures.append(f"birthdays: {error_text(ex)}")
 
         new_event_keys = list[int]()
         try:
@@ -189,7 +192,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            failures.append(f"events: {ex}")
+            failures.append(f"events: {error_text(ex)}")
 
         new_weeklyplan_keys = list[int]()
         try:
@@ -199,7 +202,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            failures.append(f"weekly plans: {ex}")
+            failures.append(f"weekly plans: {error_text(ex)}")
 
         new_easyiq_keys = list[int]()
         try:
@@ -209,7 +212,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            failures.append(f"EasyIQ weekplans: {ex}")
+            failures.append(f"EasyIQ weekplans: {error_text(ex)}")
 
         new_newsletter_keys = list[int]()
         try:
@@ -219,7 +222,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             raise
         except Exception as ex:
             had_failure = True
-            failures.append(f"newsletters: {ex}")
+            failures.append(f"newsletters: {error_text(ex)}")
 
         # Track consecutive failures — only raise after MAX_CONSECUTIVE_FAILURES
         if had_failure:
@@ -275,7 +278,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
-            _LOGGER.warning("Failed to fetch birthdays for interval: %s", ex)
+            _LOGGER.warning("Failed to fetch birthdays for interval: %s", error_text(ex))
             return []
 
     def get_birthdays(self, profile: AulaChildProfile) -> List[AulaBirthdayEvent]:
@@ -329,7 +332,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
-            _LOGGER.warning("Failed to fetch events for interval: %s", ex)
+            _LOGGER.warning("Failed to fetch events for interval: %s", error_text(ex))
             return []
 
     def get_events(self, profile: AulaInstitutionProfile) -> List[AulaCalendarEvent]:
@@ -381,7 +384,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
-            _LOGGER.warning("Failed to fetch weekly plans for interval: %s", ex)
+            _LOGGER.warning("Failed to fetch weekly plans for interval: %s", error_text(ex))
             return []
 
     def get_weekly_plans(self, profile: AulaChildProfile) -> List[AulaWeeklyPlan]:
@@ -435,7 +438,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
-            _LOGGER.warning("Failed to fetch EasyIQ weekly plans for interval: %s", ex)
+            _LOGGER.warning("Failed to fetch EasyIQ weekly plans for interval: %s", error_text(ex))
             return []
 
     def get_easyiq_weekly_plans(self, profile: AulaChildProfile) -> List[AulaEasyiqWeeklyPlan]:
@@ -488,7 +491,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as ex:
-            _LOGGER.warning("Failed to fetch newsletters for interval: %s", ex)
+            _LOGGER.warning("Failed to fetch newsletters for interval: %s", error_text(ex))
             return []
 
     def get_newsletters(self, profile: AulaChildProfile) -> List[AulaWeeklyNewsletter]:

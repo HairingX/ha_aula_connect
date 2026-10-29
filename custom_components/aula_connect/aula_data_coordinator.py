@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .redact import error_text
 from .const import DOMAIN
 import asyncio
 import logging
@@ -84,9 +85,10 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as err:
+            # Not chained: the error's own text holds the access token, which a traceback would log.
             raise UpdateFailed(
-                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": str(err)}
-            ) from err
+                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": error_text(err)}
+            ) from None
 
     async def _async_update_data(self) -> AulaDataCoordinatorData:
         """Fetch data from API endpoint.
@@ -112,9 +114,10 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         except AulaCredentialError as err:
             raise ConfigEntryAuthFailed(translation_domain=DOMAIN, translation_key="login_expired") from err
         except Exception as err:
+            # Not chained: the error's own text holds the access token, which a traceback would log.
             raise UpdateFailed(
-                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": str(err)}
-            ) from err
+                translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": error_text(err)}
+            ) from None
 
     def weekly_plans_supported(self) -> bool:
         return self._client.has_widget(AulaWidgetId.WEEKPLAN_PARENTS)
@@ -156,7 +159,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             raise
         except Exception as ex:
             had_failure = True
-            failures.append(f"daily overviews: {ex}")
+            failures.append(f"daily overviews: {error_text(ex)}")
 
         message_threads = list[AulaMessageThread]()
         try:
@@ -165,7 +168,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             raise
         except Exception as ex:
             had_failure = True
-            failures.append(f"message threads: {ex}")
+            failures.append(f"message threads: {error_text(ex)}")
 
         notifications = list[AULA_NOTIFICATION_TYPES]()
         try:
@@ -174,7 +177,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             raise
         except Exception as ex:
             had_failure = True
-            failures.append(f"notifications: {ex}")
+            failures.append(f"notifications: {error_text(ex)}")
 
         if had_failure:
             # Logged once when Aula can be read only in part, and once when it can be read in full.
