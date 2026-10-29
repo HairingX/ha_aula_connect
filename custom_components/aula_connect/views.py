@@ -1,32 +1,36 @@
-import logging
-import time
-import asyncio
-from aiohttp import web
-from homeassistant.components.http import HomeAssistantView
-from .const import DOMAIN
+"""The MitID login page, and what it asks Home Assistant while the login runs."""
 
-_LOGGER = logging.getLogger(__name__)
+from __future__ import annotations
+
+import time
+from typing import cast
+
+from aiohttp import web
+from homeassistant.helpers.http import HomeAssistantView
+from homeassistant.core import HomeAssistant
+
+from .auth_session import auth_session, qr_codes_svg
 
 
 class AulaAuthView(HomeAssistantView):
+    """The page that shows the QR code of a MitID login and how far it has come."""
+
     url = "/api/aula_connect/auth/{flow_id}"
     name = "api:aula_connect:auth"
+    # The page is opened from the setup dialog in a new tab, without Home Assistant's token; the
+    # flow id in its address is known only to the one who started the setup.
     requires_auth = False
 
-    def __init__(self, hass):
+    def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
 
-    async def get(self, request, flow_id):
-        if (
-            DOMAIN not in self.hass.data
-            or "auth_sessions" not in self.hass.data[DOMAIN]
-            or flow_id not in self.hass.data[DOMAIN]["auth_sessions"]
-        ):
+    async def get(self, request: web.Request, flow_id: str) -> web.Response:
+        """The login page of the flow `flow_id`, or 404 when it has no login."""
+        if auth_session(self.hass, flow_id) is None:
             return web.Response(status=404, text="Session not found or expired.")
-
         return web.Response(text=self._get_html(flow_id), content_type="text/html", charset="utf-8")
 
-    def _get_html(self, flow_id):
+    def _get_html(self, flow_id: str) -> str:
         return f"""
 <!DOCTYPE html>
 <html>
@@ -198,75 +202,62 @@ def login_stage(message: str, qr_shown: bool) -> tuple[str, str | None]:
 
 
 class AulaAuthStatusView(HomeAssistantView):
+    """How far a MitID login has come, as the login page asks for it each second."""
+
     url = "/api/aula_connect/auth/{flow_id}/status"
     name = "api:aula_connect:auth:status"
     requires_auth = False
 
-    def __init__(self, hass):
+    def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
 
-    async def get(self, request, flow_id):
-        if (
-            DOMAIN not in self.hass.data
-            or "auth_sessions" not in self.hass.data[DOMAIN]
-            or flow_id not in self.hass.data[DOMAIN]["auth_sessions"]
-        ):
-            return web.json_response(
-                {"error": "Session expired or not found"}, status=404
-            )
+    async def get(self, request: web.Request, flow_id: str) -> web.Response:
+        """The login's step, its QR code or code, and whether it has completed or failed."""
+        session = auth_session(self.hass, flow_id)
+        if session is None:
+            return web.json_response({"error": "Session expired or not found"}, status=404)
 
-        session = self.hass.data[DOMAIN]["auth_sessions"][flow_id]
-        client = session["client"]
+        qr_svg: str | None = None
+        if not session.available_identities:
+            codes = await self.hass.async_add_executor_job(qr_codes_svg, session.client)
+            if codes is not None:
+                # MitID shows two QR codes in turn, a second each.
+                qr_svg = codes[int(time.time()) % 2]
 
-        qr_svg = None
-        if not session.get("available_identities"):
-            if hasattr(client, "get_qr_codes_svg"):
-                svgs = await self.hass.async_add_executor_job(
-                    client.get_qr_codes_svg
-                )
-                if svgs:
-                    # Rotate QR code every second
-                    idx = int(time.time()) % 2
-                    qr_svg = svgs[idx]
-
-        message = session.get("status_message", "Processing...")
-        stage, code = login_stage(message, qr_svg is not None)
-        response = {
-            "message": message,
-            "stage": stage,
-            "code": code,
-            "qr_svg": qr_svg,
-            "identities": session.get("available_identities", []),
-            "completed": session.get("completed", False),
-            "error": session.get("error"),
-        }
-        return web.json_response(response)
+        stage, code = login_stage(session.status_message, qr_svg is not None)
+        return web.json_response(
+            {
+                "message": session.status_message,
+                "stage": stage,
+                "code": code,
+                "qr_svg": qr_svg,
+                "identities": session.available_identities or [],
+                "completed": session.completed,
+                "error": session.error,
+            }
+        )
 
 
 class AulaAuthSelectIdentityView(HomeAssistantView):
+    """The identity the user chose, of several MitID offered."""
+
     url = "/api/aula_connect/auth/{flow_id}/select_identity"
     name = "api:aula_connect:auth:select_identity"
     requires_auth = False
 
-    def __init__(self, hass):
+    def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
 
-    async def post(self, request, flow_id):
-        if (
-            DOMAIN not in self.hass.data
-            or "auth_sessions" not in self.hass.data[DOMAIN]
-            or flow_id not in self.hass.data[DOMAIN]["auth_sessions"]
-        ):
+    async def post(self, request: web.Request, flow_id: str) -> web.Response:
+        """Hand the chosen identity to the login waiting for it."""
+        session = auth_session(self.hass, flow_id)
+        if session is None:
             return web.json_response({"error": "Session not found"}, status=404)
 
-        data = await request.json()
-        identity_index = data.get("identity")
-
-        session = self.hass.data[DOMAIN]["auth_sessions"][flow_id]
-        future = session.get("identity_future")
-
-        if future and not future.done():
-            future.set_result(str(identity_index))
-            session["available_identities"] = None
-
+        body: object = await request.json()
+        identity: object = cast(dict[str, object], body).get("identity") if isinstance(body, dict) else None
+        future = session.identity_future
+        if identity is not None and future is not None and not future.done():
+            future.set_result(str(identity))
+            session.available_identities = None
         return web.json_response({"status": "ok"})

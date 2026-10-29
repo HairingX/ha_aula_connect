@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import hashlib
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
@@ -12,10 +13,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.aula_connect import async_migrate_entry
-from custom_components.aula_connect.config_flow import AulaCustomConfigFlow
+from custom_components.aula_connect.auth_session import AuthSession
+from custom_components.aula_connect.config_flow import LOGIN_KEPT_FOR, AulaCustomConfigFlow
 from custom_components.aula_connect.const import DOMAIN
 
 from .test_init import DATA
@@ -27,8 +30,9 @@ def account(username: str) -> str:
     return hashlib.sha256(username.encode()).hexdigest()
 
 
-async def _logged_in(flow: AulaCustomConfigFlow, session_data: dict[str, Any]) -> None:
-    session_data.update(tokens=TOKENS, completed=True)
+async def _logged_in(flow: AulaCustomConfigFlow, session: AuthSession) -> None:
+    session.tokens = dict(TOKENS)
+    session.completed = True
     manager: Any = flow.hass.config_entries.flow
     flow.hass.async_create_task(manager.async_configure(flow_id=flow.flow_id))
 
@@ -47,14 +51,14 @@ async def _finish_login(hass: HomeAssistant, flow_id: str) -> dict[str, Any]:
 
 
 @pytest.fixture
-def mitid_login() -> Any:
+async def mitid_login(hass: HomeAssistant) -> Any:
     """A MitID login that succeeds at once."""
     with (
         patch("custom_components.aula_connect.config_flow.AulaLoginClient", MagicMock()),
         patch.object(AulaCustomConfigFlow, "_authenticate_async", _logged_in),
-        patch.object(AulaCustomConfigFlow, "_delayed_cleanup", AsyncMock()),
     ):
         yield
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=LOGIN_KEPT_FOR + 1))
 
 
 @pytest.mark.usefixtures("aula_without_children")

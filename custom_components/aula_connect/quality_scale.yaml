@@ -152,6 +152,4 @@ rules:
   inject-websession:
     status: todo
     comment: The client opens its own requests sessions; it cannot take Home Assistant's aiohttp session.
-  strict-typing:
-    status: todo
-    comment: pyright strict does not yet pass on all files.
+  strict-typing: done

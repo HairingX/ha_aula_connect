@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, date
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.dt import now
@@ -450,7 +449,7 @@ class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
     def event(self) -> CalendarEvent | None:
         current_time = now()
         plans = self.coordinator.get_easyiq_weekly_plans(self._profile)
-        for plan, dayplan, event in self._plans_iterable(plans):
+        for _plan, dayplan, event in self._plans_iterable(plans):
             event_end = event.end
             if event_end >= current_time:
                 return self._create_calendar_event(dayplan, event)
@@ -459,7 +458,7 @@ class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
     async def async_get_events(self, hass: HomeAssistant, start_date: datetime, end_date: datetime) -> List[CalendarEvent]:
         plans = await self.coordinator.get_easyiq_weekly_plans_for_interval([self._profile], start_date, end_date)
         events = list[CalendarEvent]()
-        for plan, dayplan, event in self._plans_iterable(plans):
+        for _plan, dayplan, event in self._plans_iterable(plans):
             calendar_event = self._create_calendar_event(dayplan, event)
             if _is_event_in_range(calendar_event, start_date, end_date):
                 events.append(calendar_event)
