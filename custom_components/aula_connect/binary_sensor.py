@@ -11,6 +11,10 @@ from aula_connect.api.module import AulaMessageThread, AulaAlbumNotification, Au
 
 _LOGGER = logging.getLogger(__name__)
 
+# The entities read what the coordinators fetched, so updating them never waits on Aula.
+PARALLEL_UPDATES = 0
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback):
     """Setup binary sensors from a config entry created in the integrations UI."""
     coordinator = entry.runtime_data.data_coordinator
