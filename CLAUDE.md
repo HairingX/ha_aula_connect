@@ -4,7 +4,7 @@ A Home Assistant integration, installed through HACS, for the Danish school and 
 platform Aula: the children's presence, calendars, weekly plans, birthdays, messages and
 notifications as sensors, binary sensors and calendars, logged in through MitID. Aula itself -
 the login and the API - is modelled by the `aula_connect` library; this repository only turns it
-into Home Assistant devices and entities. How it is built: `docs/overview/`.
+into Home Assistant devices and entities. How and why it is built as it is: `docs/design.md`.
 
 ## This integration
 
@@ -14,11 +14,12 @@ into Home Assistant devices and entities. How it is built: `docs/overview/`.
 - It is a new integration under the domain `aula_connect`, replacing `HairingX/aula` (the domain
   `aula`, which other integrations use too): nothing is taken over from an installation of it,
   which is set up anew. An existing installation of this one keeps its entities: a unique id is
-  the entry's unique id and the entity's key, and changing one is agreed with the user first.
+  the name the entry was set up under (`entity_prefix`) and the entity's key, and changing one is
+  agreed with the user first.
 - The integration is on its way to the shared standard (`[tool.hairingx-workflows] transition`
-  in `pyproject.toml`): the files in `[tool.pyright] ignore` are not yet checked, and the tests
-  reach the coverage stated there. Each pull request takes files off the list and raises the
-  coverage.
+  in `pyproject.toml`): pyright checks every file, and the tests reach the coverage stated there.
+  Each pull request raises the coverage.
+- The README names every entity and attribute, and a test holds it to them.
 - The library developed alongside it is `aula_connect`, listed in `pyproject.toml` for test
   builds and CI.
 - The code is GPL-3.0-or-later, as the Aula integration it comes from.

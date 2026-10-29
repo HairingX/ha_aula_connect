@@ -1,5 +1,5 @@
-"""Home Assistant with this integration loadable, a check that it uses nothing deprecated, and a
-made-up Aula account."""
+"""Home Assistant with this integration loadable, a check that it uses nothing deprecated, and
+made-up Aula accounts."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from unittest.mock import patch
 
 from custom_components.aula_connect.aula_calendar_coordinator import AulaCalendarCoordinatorData
 from custom_components.aula_connect.aula_data_coordinator import AulaDataCoordinatorData
+
+from .fake_aula import PARENT, FakeAula
 
 
 @pytest.fixture(autouse=True)
@@ -44,3 +46,11 @@ def aula_without_children() -> Iterator[None]:
         patch("custom_components.aula_connect.AulaCalendarCoordinator._fetch_data", return_value=calendar),
     ):
         yield
+
+
+@pytest.fixture
+def aula() -> Iterator[FakeAula]:
+    """A made-up Aula account with one parent and one child, in place of the real client."""
+    fake = FakeAula(PARENT)
+    with patch("custom_components.aula_connect.AulaClient", return_value=fake):
+        yield fake
