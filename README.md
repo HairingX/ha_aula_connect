@@ -70,7 +70,7 @@ first name and `<institution>` the institution's name, as Aula has them.
 | Entity | State | Attributes |
 |--------|-------|------------|
 | `sensor.aula_status_<child>_<institution>` | What Aula says about the child today: Not present, Sick, Reported absent, Present, Field trip, Sleeping, Spare time activity, Present at location or Checked out. | `check_in_time`, `check_out_time`, `check_in_time_expected`, `check_out_time_expected`, `exit_with`, `institution_name`, `location_description`, `location_icon`, `location_name`, `main_group` |
-| `sensor.aula_presence_<child>_<institution>` | Present, Not present or Unknown. | `check_in_time`, `check_out_time`, `check_in_time_expected`, `check_out_time_expected`, `exit_with`, `institution_name`, `main_group` |
+| `sensor.aula_presence_<child>_<institution>` | Present while the child is at the institution, on a field trip, asleep or at a location; Not present before arriving, when sick or reported absent, at a spare time activity and when checked out; Unknown otherwise. | `check_in_time`, `check_out_time`, `check_in_time_expected`, `check_out_time_expected`, `exit_with`, `institution_name`, `main_group` |
 | `sensor.aula_present_duration_<child>_<institution>` | Minutes the child has been checked in today. | `check_in_time`, `check_out_time`, `main_group` |
 | `calendar.aula_events_<child>_<institution>` | The institution's calendar: lessons with teachers and substitutes, events, holidays and booked meetings. | |
 | `calendar.aula_weekly_plans_<child>_<institution>` | The weekly plan's tasks and comments, one all-day event each. | |
