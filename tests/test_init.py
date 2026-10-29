@@ -29,6 +29,10 @@ def offline() -> Iterator[None]:
             "custom_components.aula_connect.AulaDataCoordinator.async_config_entry_first_refresh",
             AsyncMock(),
         ),
+        patch(
+            "custom_components.aula_connect.AulaCalendarCoordinator.async_config_entry_first_refresh",
+            AsyncMock(),
+        ),
         patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups", AsyncMock()),
         patch("homeassistant.config_entries.ConfigEntries.async_unload_platforms", AsyncMock(return_value=True)),
     ):

@@ -1,3 +1,4 @@
+from calendar import isleap
 from datetime import datetime, timedelta, date
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
@@ -54,7 +55,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
     """Set up the calendar platform."""
     data_coordinator = entry.runtime_data.data_coordinator
     calendar_coordinator = entry.runtime_data.calendar_coordinator
-    await calendar_coordinator.async_config_entry_first_refresh()
     entities: List[CalendarEntity] = []
     for child in data_coordinator.data.children:
         entities.append(AulaEventCalendar(calendar_coordinator, data_coordinator, child, child.institution_profile))
@@ -115,47 +115,48 @@ class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
         return result
 
     async def async_get_events(self, hass: HomeAssistant, start_date: datetime, end_date: datetime) -> List[CalendarEvent]:
-        """HA Get all events in a specific time frame."""
+        """The birthdays in the range, each in every year of the range it falls in."""
         birthdays = await self.coordinator.get_birthdays_for_interval([self._profile], start_date, end_date)
         events = list[CalendarEvent]()
         for birthday in birthdays:
-            event = self._create_calendar_event(birthday)
-            if event and _is_event_in_range(event, start_date, end_date):
-                events.append(event)
+            for year in range(start_date.year, end_date.year + 1):
+                event = self._create_calendar_event(birthday, year)
+                if _is_event_in_range(event, start_date, end_date):
+                    events.append(event)
         return events
 
     def _get_active_or_upcoming_event(self) -> CalendarEvent | None:
-        current_time = now()
-        birthdays = self.coordinator.get_birthdays(self._profile)
-        for birthday in birthdays:
-            if self._get_event_start(birthday) >= current_time.date():
-                calendar_event = self._create_calendar_event(birthday)
-                return calendar_event
-        return None
+        today = now().date()
+        upcoming = [
+            (start, birthday)
+            for birthday in self.coordinator.get_birthdays(self._profile)
+            for start in (self._celebrated_on(birthday, today.year), self._celebrated_on(birthday, today.year + 1))
+            if start >= today
+        ]
+        if not upcoming:
+            return None
+        start, birthday = min(upcoming, key=lambda item: item[0])
+        return self._create_calendar_event(birthday, start.year)
 
-    def _create_calendar_event(self, event: AulaBirthdayEvent) -> CalendarEvent:
-        age = self._get_age(event)
+    def _create_calendar_event(self, event: AulaBirthdayEvent, year: int) -> CalendarEvent:
         icon = CALENDAR_EVENT_ICON.get(AulaCalendarEventType.BIRTHDAY, "")
+        age = year - event.birthday_date.year
         summary = f"{icon} {event.full_name} ({event.main_group_name}) {get_label('birthday_turns')} {age}"
-        description = ""
-        start_date = self._get_event_start(event)
-        end_date = start_date + timedelta(days=1)
-
+        start_date = self._celebrated_on(event, year)
         return CalendarEvent(
             uid=str(event.institution_profile_id),
             summary=summary,
             start=start_date,
-            end=end_date,
-            description=None if len(description.strip()) == 0 else description,
+            end=start_date + timedelta(days=1),
         )
 
-    def _get_age(self, event: AulaBirthdayEvent) -> int:
-        """Return the age of the child."""
-        return now().year - event.birthday_date.year
-
-    def _get_event_start(self, event: AulaBirthdayEvent) -> date:
-        """Return the start date of the event."""
-        return event.birthday_date.replace(year=now().year)
+    @staticmethod
+    def _celebrated_on(event: AulaBirthdayEvent, year: int) -> date:
+        """The day the birthday falls on in `year`: 28 February for 29 February outside a leap year."""
+        birthday = event.birthday_date
+        if (birthday.month, birthday.day) == (2, 29) and not isleap(year):
+            return date(year, 2, 28)
+        return birthday.replace(year=year)
 
 class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
     """A calendar event entity."""
