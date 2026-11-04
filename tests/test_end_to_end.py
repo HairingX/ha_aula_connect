@@ -4,6 +4,7 @@ MitID login of the setup, and the entities read from Aula's API."""
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Iterator
 from functools import partial
 from typing import Any
@@ -20,6 +21,7 @@ from homeassistant.setup import async_setup_component
 
 from custom_components.aula_connect.auth_session import auth_session
 from custom_components.aula_connect.const import DOMAIN
+from custom_components.aula_connect.diagnostics import async_get_config_entry_diagnostics
 
 from .test_login_flow import a_minute_later, run_flow
 
@@ -72,5 +74,15 @@ async def test_a_setup_logs_in_with_mitid_and_reads_aula(hass: HomeAssistant) ->
         assert presence.state == "present"
         assert hass.states.get("calendar.aula_weekly_plans_alma_school") is not None
         assert "presence.getDailyOverview" in api.requests
+
+        diagnostics: Any = await async_get_config_entry_diagnostics(hass, entry)
+        aula = diagnostics["aula"]
+        assert aula["not_read"] == [] and aula["aula_api_version"] == SimulatedAulaApi.VERSION
+        endpoints = {exchange["endpoint"] for exchange in aula["exchanges"]}
+        assert {"profiles.getProfilesByLogin", "presence.getDailyOverview", "/meebook/relatedweekplan/all"} <= endpoints
+        text = json.dumps(diagnostics)
+        secrets = (entry.data["mitid_username"], entry.data["access_token"], entry.data["refresh_token"])
+        for value in ("Alma", "Example", "School", '"alma"', '"pat"', *secrets):
+            assert value not in text, value
         assert await hass.config_entries.async_unload(entry.entry_id)
         a_minute_later(hass)

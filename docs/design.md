@@ -57,6 +57,12 @@ library raises `AulaCredentialError`; the coordinators turn it into `ConfigEntry
 Home Assistant asks the user to log in again. A calendar reading a period outside the two weeks
 does so outside a refresh, so it starts logging in again itself.
 
+The diagnostics read Aula once more through the library, which keeps the newest answer to each
+request in memory and hands them out with every id, name, contact detail and link replaced by
+another of the same length, keyed by a secret kept in Home Assistant's storage: the same value
+gets the same replacement in every answer and every download, so that a download shows how
+Aula's answers hang together and what they hold now, without saying who anyone is.
+
 Neither a token nor the MitID user ID is logged or in the diagnostics. Aula takes the access token
 in the URL, and the HTTP client puts the URL in its errors, so every error text is redacted before
 it is logged or shown, and the coordinators raise their own errors unchained from the client's.

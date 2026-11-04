@@ -41,6 +41,7 @@ async def test_the_diagnostics_hold_no_credentials_and_no_childrens_data(hass: H
         "notifications": 0,
     }
     assert diagnostics["calendar"]["last_update_success"] is True
+    assert diagnostics["aula"] == {"not_read": [], "aula_api_version": 23, "exchanges": [], "shapes": {}}
     text = json.dumps(diagnostics)
     for secret in ("parent", "access", "refresh", "Family", "account"):
         assert secret not in text
@@ -59,3 +60,41 @@ async def test_the_diagnostics_show_the_last_error_without_its_token(hass: HomeA
     diagnostics: Any = await async_get_config_entry_diagnostics(hass, entry)
 
     assert diagnostics["data"]["last_exception"] == "url: /api?access_token=REDACTED"
+
+
+@pytest.mark.usefixtures("aula_without_children")
+async def test_the_diagnostics_read_this_week_and_two_more_and_say_what_they_could_not(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="account", data={**DATA, "entity_prefix": "Aula"}, version=2, minor_version=2
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    client: Any = entry.runtime_data.client
+    client.read_everything.side_effect = ConnectionError("url: /api?access_token=s3cr3t")
+
+    diagnostics: Any = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert diagnostics["aula"]["not_read"] == ["url: /api?access_token=REDACTED"]
+    start, end = client.read_everything.call_args.args
+    assert (start.weekday(), start.hour, (end - start).days) == (0, 0, 21)
+
+
+@pytest.mark.usefixtures("aula_without_children")
+async def test_the_diagnostics_replace_with_one_key_made_once_and_kept_private(
+    hass: HomeAssistant, hass_storage: dict[str, Any]
+) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="account", data={**DATA, "entity_prefix": "Aula"}, version=2, minor_version=2
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    client: Any = entry.runtime_data.client
+
+    await async_get_config_entry_diagnostics(hass, entry)
+    await async_get_config_entry_diagnostics(hass, entry)
+
+    [first], [second] = (call.args for call in client.responses.call_args_list)
+    assert first == second and len(first) == 32
+    assert hass_storage["aula_connect.pseudonym_key"]["data"] == {"key": first.hex()}
