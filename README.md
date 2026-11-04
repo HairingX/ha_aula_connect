@@ -206,8 +206,10 @@ entities:
 - **The entities are unavailable.** Aula could not be read; the log says why. Aula Connect tries
   again by itself.
 - **Something looks wrong.** Download the diagnostics from the integration's entry. They read
-  Aula once more, from the start of this week and three weeks on, and hold what it answers, with
-  no MitID user ID and no tokens. Every id, name, e-mail address, phone number, address and link
+  Aula once more, from the start of this week and three weeks on, and hold what it answers - the
+  messages of every thread too, except those marked sensitive - with each answer's headers and when
+  it came, and the newest failure of each request, an error such as a timeout among them, even
+  where it later succeeded. The MitID user ID and every token are hidden wherever they stand. Every id, name, e-mail address, phone number, address and link
   in the answers is replaced by another of the same length - "Alma" by "Pyny", the same each
   time - so that what belongs together still does, and the text fills as much as on the screen.
   Dates, times and the rest of the texts are kept; a name Aula writes into a text without saying

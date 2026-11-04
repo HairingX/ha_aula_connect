@@ -81,7 +81,8 @@ async def test_a_setup_logs_in_with_mitid_and_reads_aula(hass: HomeAssistant) ->
         endpoints = {exchange["endpoint"] for exchange in aula["exchanges"]}
         assert {"profiles.getProfilesByLogin", "presence.getDailyOverview", "/meebook/relatedweekplan/all"} <= endpoints
         text = json.dumps(diagnostics)
-        for value in ("Alma", "Example", "School", '"alma"', '"pat"', entry.data["access_token"], entry.data["refresh_token"]):
+        secrets = (entry.data["mitid_username"], entry.data["access_token"], entry.data["refresh_token"])
+        for value in ("Alma", "Example", "School", '"alma"', '"pat"', *secrets):
             assert value not in text, value
         assert await hass.config_entries.async_unload(entry.entry_id)
         a_minute_later(hass)
