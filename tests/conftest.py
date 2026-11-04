@@ -39,7 +39,13 @@ def aula_without_children() -> Iterator[None]:
     """An Aula account with no children, no messages and no notifications."""
     data = AulaDataCoordinatorData("Aula", 23, [], [], [], [], [])
     calendar = AulaCalendarCoordinatorData([], [], [], [], [])
-    client = MagicMock(connection_check=AsyncMock(), aula_version=23, has_widget=MagicMock(return_value=False))
+    client = MagicMock(
+        connection_check=AsyncMock(),
+        aula_version=23,
+        has_widget=MagicMock(return_value=False),
+        read_everything=AsyncMock(return_value=[]),
+        responses=MagicMock(return_value={"aula_api_version": 23, "exchanges": [], "shapes": {}}),
+    )
     with (
         patch("custom_components.aula_connect.AulaClient", return_value=client),
         patch("custom_components.aula_connect.AulaDataCoordinator._fetch_data", AsyncMock(return_value=data)),

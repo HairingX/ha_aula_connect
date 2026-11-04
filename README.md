@@ -205,10 +205,17 @@ entities:
 - **The login fails.** Select **Next** on the error to start a new login.
 - **The entities are unavailable.** Aula could not be read; the log says why. Aula Connect tries
   again by itself.
-- **Something looks wrong.** Download the diagnostics from the integration's entry. They hold
-  only counts and states: no MitID user ID, no tokens and nothing about your children. To see
-  more, turn on debug logging under the integration's entry. A debug log can hold your
-  children's data: read it through before sharing it.
+- **Something looks wrong.** Download the diagnostics from the integration's entry. They read
+  Aula once more, from the start of this week and three weeks on, and hold what it answers, with
+  no MitID user ID and no tokens. Every id, name, e-mail address, phone number, address and link
+  in the answers is replaced by another of the same length - "Alma" by "Pyny", the same each
+  time - so that what belongs together still does, and the text fills as much as on the screen.
+  Dates, times and the rest of the texts are kept; a name Aula writes into a text without saying
+  it is one, such as a classmate's in a message, stays, so read the file through before sharing
+  it, and share it only with who needs it. A thread marked sensitive is never read. The secret
+  that picks the replacements is kept in Home Assistant only. To see more, turn on debug logging
+  under the integration's entry. A debug log can hold your children's data: read it through
+  before sharing it.
 
 ## Removal
 
