@@ -1,0 +1,7 @@
+{
+  "services": {
+    "read": {
+      "service": "mdi:database-search-outline"
+    }
+  }
+}

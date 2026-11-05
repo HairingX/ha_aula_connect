@@ -25,6 +25,7 @@ from .const import (
     DOMAIN,
     account_id,
 )
+from .services import async_register_services
 from .websocket_api import async_register as async_register_websocket_api
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,8 +43,9 @@ CONFIG_SCHEMA = _config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Register the integration's websocket commands."""
+    """Register the integration's websocket commands and actions."""
     async_register_websocket_api(hass)
+    async_register_services(hass)
     return True
 
 

@@ -279,6 +279,38 @@
     },
     "cannot_connect": {
       "message": "Aula could not be read: {error}"
+    },
+    "entry_not_loaded": {
+      "message": "The Aula Connect entry is not loaded."
+    },
+    "method_not_read_only": {
+      "message": "{method} is not a method of Aula's API that only gets."
+    }
+  },
+  "issues": {
+    "aula_changed": {
+      "title": "Aula sends something Aula Connect does not know",
+      "description": "Aula sent something Aula Connect could not read or does not know yet:\n\n{surprises}\n\nDownload the diagnostics from the integration's entry and share them with the developer, so that Aula Connect can learn it. The download replaces every name, id and contact detail; read it through before sharing it."
+    }
+  },
+  "services": {
+    "read": {
+      "name": "Read from Aula",
+      "description": "Reads one method of Aula's API that only gets, and answers with who someone is replaced, as the diagnostics do.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry to read with."
+        },
+        "method": {
+          "name": "Method",
+          "description": "The method of Aula's API, named <area>.get<What>, such as profiles.getProfileContext."
+        },
+        "params": {
+          "name": "Parameters",
+          "description": "The method's parameters, by name."
+        }
+      }
     }
   }
 }

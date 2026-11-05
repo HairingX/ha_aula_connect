@@ -279,6 +279,38 @@
     },
     "cannot_connect": {
       "message": "Aula kunne ikke læses: {error}"
+    },
+    "entry_not_loaded": {
+      "message": "Aula Connect-posten er ikke indlæst."
+    },
+    "method_not_read_only": {
+      "message": "{method} er ikke en metode i Aulas API, der kun henter."
+    }
+  },
+  "issues": {
+    "aula_changed": {
+      "title": "Aula sender noget, Aula Connect ikke kender",
+      "description": "Aula sendte noget, Aula Connect ikke kunne læse eller endnu ikke kender:\n\n{surprises}\n\nHent diagnostikken fra integrationens post og del den med udvikleren, så Aula Connect kan lære det. Hentningen erstatter alle navne, id'er og kontaktoplysninger; læs den igennem, før du deler den."
+    }
+  },
+  "services": {
+    "read": {
+      "name": "Læs fra Aula",
+      "description": "Læser én metode i Aulas API, der kun henter, og svarer med navne og id'er erstattet, som diagnostikken gør.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Den Aula Connect-post, der skal læses med."
+        },
+        "method": {
+          "name": "Metode",
+          "description": "Metoden i Aulas API, navngivet <område>.get<Hvad>, fx profiles.getProfileContext."
+        },
+        "params": {
+          "name": "Parametre",
+          "description": "Metodens parametre, efter navn."
+        }
+      }
     }
   }
 }
