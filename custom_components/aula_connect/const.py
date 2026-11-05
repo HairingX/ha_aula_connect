@@ -25,6 +25,6 @@ ANOMALY_WINDOW = timedelta(days=1)
 """How long what Aula sent that is not known keeps its repair issue after it was last met."""
 
 
-def anomaly_issue_id(kind: str, device_id: str) -> str:
+def anomaly_issue_id(kind: str, entry_id: str) -> str:
     """The id of the repair issue for one kind of anomaly of an entry."""
-    return f"{kind}_{device_id}"
+    return f"{kind}_{entry_id}"

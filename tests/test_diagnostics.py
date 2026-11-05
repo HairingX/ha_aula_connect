@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Any
 
 import pytest
+from aula_connect import Anomaly, AnomalyKind
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -13,6 +15,21 @@ from custom_components.aula_connect.const import DOMAIN
 from custom_components.aula_connect.diagnostics import async_get_config_entry_diagnostics
 
 from .test_init import DATA
+
+
+@pytest.mark.usefixtures("aula_without_children")
+async def test_the_diagnostics_name_what_aula_sent_that_is_not_known(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="account", data={**DATA, "entity_prefix": "Aula"}, version=2, minor_version=2)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    seen = datetime(2026, 12, 28, 8, tzinfo=timezone.utc)
+    entry.runtime_data.client.anomalies.return_value = (Anomaly(AnomalyKind.UNKNOWN_NOTIFICATION_AREA, "Homework", seen),)
+
+    diagnostics: Any = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert diagnostics["anomalies"] == [
+        {"kind": "unknown_notification_area", "detail": "Homework", "last_seen": "2026-12-28T08:00:00+00:00"}
+    ]
 
 
 @pytest.mark.usefixtures("aula_without_children")
@@ -41,6 +58,7 @@ async def test_the_diagnostics_hold_no_credentials_and_no_childrens_data(hass: H
         "notifications": 0,
     }
     assert diagnostics["calendar"]["last_update_success"] is True
+    assert diagnostics["anomalies"] == []
     assert diagnostics["aula"] == {"not_read": [], "aula_api_version": 23, "exchanges": [], "shapes": {}}
     text = json.dumps(diagnostics)
     for secret in ("parent", "access", "refresh", "Family", "account"):

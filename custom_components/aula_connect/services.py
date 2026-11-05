@@ -8,8 +8,9 @@ from typing import Any, Protocol
 import probatio
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
 from homeassistant.helpers import config_validation as cv
+from aula_connect.api.aula_errors import MethodRefusedError
 
 from .aula_data import AulaConfigEntry
 from .const import DOMAIN
@@ -43,9 +44,13 @@ class _Actions(Protocol):
 
 
 def async_register_services(hass: HomeAssistant) -> None:
-    """Register the action that reads one method of Aula's API."""
+    """Register the action that reads one method of Aula's API, for administrators only."""
 
     async def read(call: ServiceCall) -> ServiceResponse:
+        if call.context.user_id is not None:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            if user is None or not user.is_admin:
+                raise Unauthorized(context=call.context)
         entry: AulaConfigEntry | None = hass.config_entries.async_get_entry(call.data["config_entry_id"])
         if entry is None or entry.domain != DOMAIN or entry.state is not ConfigEntryState.LOADED:
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key="entry_not_loaded")
@@ -54,12 +59,12 @@ def async_register_services(hass: HomeAssistant) -> None:
             answer: dict[str, Any] = await entry.runtime_data.client.read(
                 method, dict(call.data["params"]), await pseudonym_key(hass)
             )
-        except ValueError as err:
+        except MethodRefusedError:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="method_not_read_only",
                 translation_placeholders={"method": method},
-            ) from err
+            ) from None
         except Exception as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,

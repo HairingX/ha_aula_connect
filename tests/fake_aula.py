@@ -53,6 +53,7 @@ class FakeAula:
         self.parent = parent
         self.aula_version = 23
         self.found: list[Anomaly] = []
+        self.login_error: Exception | None = None
         self.widgets: set[str] = {"0001", "0004", "0029"}
         self.birthdays: list[AulaBirthdayEvent] = []
         self.events: dict[int, list[AulaCalendarEvent]] = {}
@@ -70,6 +71,8 @@ class FakeAula:
         return None
 
     async def login(self) -> AulaLoginData:
+        if self.login_error is not None:
+            raise self.login_error
         return AulaLoginData(api_version=23, profiles=[self.parent], widgets=[])
 
     def has_widget(self, widget_id: str) -> bool:

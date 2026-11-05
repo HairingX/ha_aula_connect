@@ -12,12 +12,13 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.typing import ConfigType
 import logging
 
-from .aula_data import AulaConfigEntry, AulaRuntimeData
-from .aula_data_coordinator import AulaDataCoordinator
-from .aula_calendar_coordinator import AulaCalendarCoordinator
 from aula_connect import AnomalyKind
 from aula_connect.client import AulaClient
 from aula_connect.login import AulaLoginClient
+
+from .aula_data import AulaConfigEntry, AulaRuntimeData
+from .aula_data_coordinator import AulaDataCoordinator
+from .aula_calendar_coordinator import AulaCalendarCoordinator
 from .const import (
     CONF_ACCESS_TOKEN,
     CONF_REFRESH_TOKEN,
@@ -106,11 +107,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
-    """Unload the entry's platforms, and its repair issues, as what they say is known again."""
-    device_id = entry.runtime_data.data_coordinator.device_id
-    for kind in AnomalyKind:
-        ir.async_delete_issue(hass, DOMAIN, anomaly_issue_id(kind, device_id))
+    """Unload the entry's platforms."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> None:
+    """Remove the entry's repair issues."""
+    for kind in AnomalyKind:
+        ir.async_delete_issue(hass, DOMAIN, anomaly_issue_id(kind, entry.entry_id))
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:

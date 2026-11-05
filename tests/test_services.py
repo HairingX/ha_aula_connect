@@ -9,11 +9,13 @@ from typing import Any
 import pytest
 from aula_connect import Anomaly, AnomalyKind
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from aula_connect.api.aula_errors import MethodRefusedError, ParseError
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.core import Context, HomeAssistant
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUser
 
 from custom_components.aula_connect.const import DOMAIN
 
@@ -32,13 +34,16 @@ async def _entry(hass: HomeAssistant) -> MockConfigEntry:
     return entry
 
 
-async def _read(hass: HomeAssistant, entry_id: str, method: str = "profiles.getProfileContext") -> Any:
+async def _read(
+    hass: HomeAssistant, entry_id: str, method: str = "profiles.getProfileContext", context: Context | None = None
+) -> Any:
     return await hass.services.async_call(
         DOMAIN,
         "read",
         {"config_entry_id": entry_id, "method": method, "params": {"portalrole": "guardian"}},
         blocking=True,
         return_response=True,
+        context=context,
     )
 
 
@@ -56,13 +61,32 @@ async def test_the_action_reads_a_method_and_answers_as_the_diagnostics_do(hass:
 async def test_the_action_refuses_an_entry_not_loaded_and_a_method_that_does_not_only_get(hass: HomeAssistant) -> None:
     entry = await _entry(hass)
     client: Any = entry.runtime_data.client
-    with pytest.raises(ServiceValidationError) as unknown:
-        await _read(hass, "no-such-entry")
-    assert unknown.value.translation_key == "entry_not_loaded"
-    client.read.side_effect = ValueError("not a get")
+    other = MockConfigEntry(domain="other", state=ConfigEntryState.LOADED)
+    other.add_to_hass(hass)
+    for entry_id in ("no-such-entry", other.entry_id):
+        with pytest.raises(ServiceValidationError) as unknown:
+            await _read(hass, entry_id)
+        assert unknown.value.translation_key == "entry_not_loaded"
+    client.read.side_effect = MethodRefusedError("not a get")
     with pytest.raises(ServiceValidationError) as refused:
         await _read(hass, entry.entry_id, "messaging.deleteThread")
     assert refused.value.translation_placeholders == {"method": "messaging.deleteThread"}
+    assert refused.value.__cause__ is None and refused.value.__suppress_context__
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    with pytest.raises(ServiceValidationError) as unloaded:
+        await _read(hass, entry.entry_id)
+    assert unloaded.value.translation_key == "entry_not_loaded"
+
+
+@pytest.mark.usefixtures("aula_without_children")
+async def test_only_an_administrator_may_read_aula(
+    hass: HomeAssistant, hass_admin_user: MockUser, hass_read_only_user: MockUser
+) -> None:
+    entry = await _entry(hass)
+    assert await _read(hass, entry.entry_id, context=Context(user_id=hass_admin_user.id)) is not None
+    for user_id in (hass_read_only_user.id, "no-such-user"):
+        with pytest.raises(Unauthorized):
+            await _read(hass, entry.entry_id, context=Context(user_id=user_id))
 
 
 @pytest.mark.usefixtures("aula_without_children")
@@ -73,6 +97,10 @@ async def test_the_action_says_why_aula_could_not_be_read_without_its_token(hass
     with pytest.raises(HomeAssistantError) as failed:
         await _read(hass, entry.entry_id)
     assert failed.value.translation_placeholders == {"error": "url: /api?access_token=REDACTED"}
+    client.read.side_effect = ValueError("not a URL")
+    with pytest.raises(HomeAssistantError) as invalid:
+        await _read(hass, entry.entry_id)
+    assert not isinstance(invalid.value, ServiceValidationError)
 
 
 async def test_aula_sending_what_is_not_known_asks_for_the_diagnostics_a_kind_an_issue_until_it_stops(
@@ -82,8 +110,8 @@ async def test_aula_sending_what_is_not_known_asks_for_the_diagnostics_a_kind_an
     [entry] = hass.config_entries.async_entries(DOMAIN)
     coordinator = entry.runtime_data.data_coordinator
     issues = ir.async_get(hass)
-    unknown = f"unknown_notification_area_{coordinator.device_id}"
-    version = f"api_version_changed_{coordinator.device_id}"
+    unknown = f"unknown_notification_area_{entry.entry_id}"
+    version = f"api_version_changed_{entry.entry_id}"
     seen = dt_util.utcnow()
     aula.found = [
         Anomaly(AnomalyKind.UNKNOWN_NOTIFICATION_AREA, "Homework", seen),
@@ -101,14 +129,40 @@ async def test_aula_sending_what_is_not_known_asks_for_the_diagnostics_a_kind_an
     assert issues.async_get_issue(DOMAIN, unknown) is None
 
 
-async def test_unloading_an_entry_takes_its_issues_away(
+async def test_an_issue_outlives_an_unload_so_ignoring_it_holds_and_goes_with_the_entry(
     hass: HomeAssistant, freezer: FrozenDateTimeFactory, aula: FakeAula
 ) -> None:
     await set_up(hass, freezer)
     [entry] = hass.config_entries.async_entries(DOMAIN)
     aula.found = [Anomaly(AnomalyKind.UNREADABLE_RESPONSE, "notifications", dt_util.utcnow())]
     await entry.runtime_data.data_coordinator.async_refresh()
-    issue = f"unreadable_response_{entry.runtime_data.data_coordinator.device_id}"
+    issue = f"unreadable_response_{entry.entry_id}"
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is not None
     assert await hass.config_entries.async_unload(entry.entry_id)
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is not None
+    assert await hass.config_entries.async_remove(entry.entry_id)
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is None
+
+
+async def test_an_issue_names_ten_details_and_how_many_more(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, aula: FakeAula
+) -> None:
+    await set_up(hass, freezer)
+    [entry] = hass.config_entries.async_entries(DOMAIN)
+    aula.found = [Anomaly(AnomalyKind.UNKNOWN_NOTIFICATION_AREA, f"Area{n:02}", dt_util.utcnow()) for n in range(12)]
+    await entry.runtime_data.data_coordinator.async_refresh()
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, f"unknown_notification_area_{entry.entry_id}")
+    assert issue is not None and issue.translation_placeholders is not None
+    assert issue.translation_placeholders["details"] == ", ".join(f"Area{n:02}" for n in range(10)) + " +2"
+
+
+async def test_what_aula_sent_is_reported_when_the_login_fails_too(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, aula: FakeAula
+) -> None:
+    await set_up(hass, freezer)
+    [entry] = hass.config_entries.async_entries(DOMAIN)
+    aula.found = [Anomaly(AnomalyKind.UNREADABLE_RESPONSE, "profiles", dt_util.utcnow())]
+    aula.login_error = ParseError("Aula's answer of profiles could not be read")
+    await entry.runtime_data.data_coordinator.async_refresh()
+    assert not entry.runtime_data.data_coordinator.last_update_success
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"unreadable_response_{entry.entry_id}") is not None

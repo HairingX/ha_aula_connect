@@ -106,7 +106,7 @@ rules:
   exception-translations: done
   icon-translations:
     status: todo
-    comment: Icons are set in code through _attr_icon; there is no icons.json.
+    comment: The entities' icons are set in code through _attr_icon; icons.json holds only the action's.
   reconfiguration-flow: done
   repair-issues: done
   stale-devices:

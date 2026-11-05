@@ -3,6 +3,7 @@ replaced; no credentials."""
 
 from __future__ import annotations
 
+import asyncio
 import secrets
 from datetime import timedelta
 from typing import Any
@@ -21,11 +22,13 @@ READ_DAYS = 21
 
 async def pseudonym_key(hass: HomeAssistant) -> bytes:
     """The secret that replaces each value in Aula's answers by the same one, made once and kept."""
-    store: Store[dict[str, str]] = Store(hass, 1, f"{DOMAIN}.pseudonym_key", private=True)
-    saved = await store.async_load()
-    if saved is None or "key" not in saved:
-        saved = {"key": secrets.token_hex(32)}
-        await store.async_save(saved)
+    lock: asyncio.Lock = hass.data.setdefault(f"{DOMAIN}.pseudonym_key_lock", asyncio.Lock())
+    async with lock:
+        store: Store[dict[str, str]] = Store(hass, 1, f"{DOMAIN}.pseudonym_key", private=True)
+        saved = await store.async_load()
+        if saved is None or "key" not in saved:
+            saved = {"key": secrets.token_hex(32)}
+            await store.async_save(saved)
     return bytes.fromhex(saved["key"])
 
 
@@ -72,5 +75,9 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: AulaCon
                 error_text(calendar_coordinator.last_exception) if calendar_coordinator.last_exception else None
             ),
         },
+        "anomalies": [
+            {"kind": anomaly.kind.value, "detail": anomaly.detail, "last_seen": anomaly.last_seen.isoformat()}
+            for anomaly in runtime.client.anomalies()
+        ],
         "aula": {"not_read": failed, **answers},
     }

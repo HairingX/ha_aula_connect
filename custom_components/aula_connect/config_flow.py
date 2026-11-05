@@ -23,6 +23,7 @@ import aiohttp
 import probatio
 
 from .auth_session import AuthSession, auth_sessions, mitid_status
+from .redact import error_text
 from .const import (
     AUTH_METHOD_APP,
     CONF_ACCESS_TOKEN,
@@ -184,8 +185,8 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             result = await session.client.authenticate()
         except Exception as err:  # noqa: BLE001 - any failure of the login is shown to the user
-            _LOGGER.error("MitID authentication error: %s", err)
-            session.error = str(err)
+            _LOGGER.error("MitID authentication error: %s", error_text(err))
+            session.error = error_text(err)
         else:
             tokens: object = result.get("tokens")
             if result.get("success") and isinstance(tokens, dict) and tokens:

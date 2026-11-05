@@ -290,11 +290,11 @@
   "issues": {
     "unknown_notification_area": {
       "title": "Aula sends notifications Aula Connect does not know",
-      "description": "Aula sent notifications of a kind Aula Connect does not know yet: {details}. Download the diagnostics from the integration's entry and share them with the developer, so that Aula Connect can learn them. The download replaces every name, id and contact detail; read it through before sharing it."
+      "description": "Aula sent notifications of a kind Aula Connect does not know yet: {details}. Download the diagnostics from the integration's entry and share them with the developer, so that Aula Connect can learn them. The download replaces the names, ids and contact details it knows, but a name inside a text can remain; read it through before sharing it."
     },
     "unreadable_response": {
       "title": "Aula Connect could not read an answer from Aula",
-      "description": "Aula Connect could not read Aula's answer to: {details}. Aula may have changed it. Download the diagnostics from the integration's entry and share them with the developer. The download replaces every name, id and contact detail; read it through before sharing it."
+      "description": "Aula Connect could not read Aula's answer to: {details}. Aula may have changed it. Download the diagnostics from the integration's entry and share them with the developer. The download replaces the names, ids and contact details it knows, but a name inside a text can remain; read it through before sharing it."
     },
     "api_version_changed": {
       "title": "Aula's API has a new version",
@@ -304,7 +304,7 @@
   "services": {
     "read": {
       "name": "Read from Aula",
-      "description": "Reads one method of Aula's API that only gets, and answers with who someone is replaced, as the diagnostics do.",
+      "description": "Reads one method of Aula's API that only gets, and answers with who someone is replaced, as the diagnostics do. Only an administrator may use it.",
       "fields": {
         "config_entry_id": {
           "name": "Aula account",

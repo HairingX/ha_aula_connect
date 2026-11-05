@@ -80,11 +80,13 @@ async def test_a_partial_failure_is_logged_once_and_the_recovery_once(
 ) -> None:
     entry = _entry(hass)
     client = AsyncMock()
+    client.anomalies = MagicMock(return_value=())
     client.login.return_value = MagicMock(profiles=[], api_version=23)
     client.get_message_threads.side_effect = [ConnectionError("down"), ConnectionError("down"), []]
     coordinator = AulaDataCoordinator("Aula", hass, client, entry)
     for _ in range(3):
         await coordinator.async_refresh()
+        assert coordinator.last_update_success
     warnings = [r for r in caplog.records if r.getMessage().startswith("Aula could be read only in part")]
     recoveries = [r for r in caplog.records if r.getMessage() == "Aula can be read in full again"]
     assert len(warnings) == 1 and "message threads: down" in warnings[0].getMessage()

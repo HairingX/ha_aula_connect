@@ -5,7 +5,6 @@ from datetime import timedelta
 from typing import List
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from aula_connect import AnomalyKind
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -24,6 +23,7 @@ from aula_connect.api.models.module import (
     AulaProfile,
     AULA_NOTIFICATION_TYPES
 )
+from aula_connect import AnomalyKind
 from aula_connect.client import AulaClient
 from aula_connect.api.aula_errors import AulaCredentialError
 
@@ -46,6 +46,15 @@ class AulaDataCoordinatorData:
     message_threads: List[AulaMessageThread]
     notifications: List[AULA_NOTIFICATION_TYPES]
 
+MAX_DETAILS = 10
+"""How many details a repair issue names before it says how many more there are."""
+
+
+def _listed(details: list[str]) -> str:
+    shown = ", ".join(details[:MAX_DETAILS])
+    return shown if len(details) <= MAX_DETAILS else f"{shown} +{len(details) - MAX_DETAILS}"
+
+
 class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
     """Reads the login's profiles, daily overviews, message threads and notifications from Aula."""
 
@@ -64,6 +73,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         self._consecutive_failures = 0
         self._partly_unreadable = False
         self.device_id = device_id
+        self._entry_id = config_entry.entry_id
         self.aula_version = client.aula_version
 
         _LOGGER.debug(f"Coordinator {device_id} initialized")
@@ -95,15 +105,19 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             raise UpdateFailed(
                 translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": error_text(err)}
             ) from None
+        finally:
+            self._report_anomalies()
 
     def _report_anomalies(self) -> None:
-        """Ask for the diagnostics, one issue a kind, while Aula sends what the integration does
-        not know; an issue goes once nothing of its kind was met within the window."""
+        """Ask for the diagnostics, one issue a kind, while Aula sends what is not known.
+
+        An issue goes once nothing of its kind was met within the window.
+        """
         found: dict[AnomalyKind, list[str]] = {}
         for anomaly in self._client.anomalies(since=dt_util.utcnow() - ANOMALY_WINDOW):
             found.setdefault(anomaly.kind, []).append(anomaly.detail)
         for kind in AnomalyKind:
-            issue = anomaly_issue_id(kind, self.device_id)
+            issue = anomaly_issue_id(kind, self._entry_id)
             details = found.get(kind)
             if details is None:
                 ir.async_delete_issue(self.hass, DOMAIN, issue)
@@ -115,7 +129,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key=kind.value,
-                translation_placeholders={"details": ", ".join(sorted(details))},
+                translation_placeholders={"details": _listed(sorted(details))},
                 learn_more_url="https://github.com/HairingX/ha_aula_connect#troubleshooting",
             )
 
@@ -196,7 +210,6 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 _LOGGER.info("Aula can be read in full again")
             self._consecutive_failures = 0
 
-        self._report_anomalies()
         return AulaDataCoordinatorData(
             aula_version=self.aula_version,
             children=children,
