@@ -304,7 +304,7 @@
         },
         "method": {
           "name": "Method",
-          "description": "The method of Aula's API, named <area>.get<What>, such as profiles.getProfileContext."
+          "description": "The method of Aula's API, whose name starts with get after its area, such as profiles.getProfileContext."
         },
         "params": {
           "name": "Parameters",

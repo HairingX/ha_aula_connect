@@ -304,7 +304,7 @@
         },
         "method": {
           "name": "Metode",
-          "description": "Metoden i Aulas API, navngivet <område>.get<Hvad>, fx profiles.getProfileContext."
+          "description": "Metoden i Aulas API, hvis navn begynder med get efter området, fx profiles.getProfileContext."
         },
         "params": {
           "name": "Parametre",
