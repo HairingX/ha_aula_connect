@@ -44,6 +44,8 @@ def aula_without_children() -> Iterator[None]:
         aula_version=23,
         has_widget=MagicMock(return_value=False),
         read_everything=AsyncMock(return_value=[]),
+        surprises=[],
+        read=AsyncMock(return_value={"endpoint": "profiles.getProfileContext"}),
         responses=MagicMock(return_value={"aula_api_version": 23, "exchanges": [], "shapes": {}}),
     )
     with (

@@ -198,6 +198,23 @@ entities:
 - Nothing is sent to Aula: messages cannot be answered, nor presence registered, from Home
   Assistant.
 
+## Actions
+
+**Read from Aula** (`aula_connect.read`) reads one method of Aula's API and answers as the
+diagnostics do: every id, name, contact detail and link replaced by another of the same length,
+and no token. It reads only a method that gets, named `<area>.get<What>`, and never a thread's
+messages. Use it to see what Aula sends where the integration does not read it yet:
+
+```yaml
+action: aula_connect.read
+data:
+  config_entry_id: <the Aula Connect entry>
+  method: profiles.getProfileContext
+  params:
+    portalrole: guardian
+response_variable: answer
+```
+
 ## Troubleshooting
 
 - **No page opens after Next.** Use the link in the dialog. Home Assistant must be reached at the
@@ -205,6 +222,10 @@ entities:
 - **The login fails.** Select **Next** on the error to start a new login.
 - **The entities are unavailable.** Aula could not be read; the log says why. Aula Connect tries
   again by itself.
+- **Aula sends something Aula Connect does not know.** A notice under Settings > System >
+  Repairs names what - a notification of an unknown kind, an answer that could not be read, a new
+  version of Aula's API - and asks for the diagnostics; it goes away by itself once all is known
+  again.
 - **Something looks wrong.** Download the diagnostics from the integration's entry. They read
   Aula once more, from the start of this week and three weeks on, and hold what it answers - the
   messages of every thread too, except those marked sensitive - with each answer's headers and when

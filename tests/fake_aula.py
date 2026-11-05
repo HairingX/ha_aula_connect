@@ -51,6 +51,7 @@ class FakeAula:
     def __init__(self, parent: AulaProfile) -> None:
         self.parent = parent
         self.aula_version = 23
+        self.surprises: list[str] = []
         self.widgets: set[str] = {"0001", "0004", "0029"}
         self.birthdays: list[AulaBirthdayEvent] = []
         self.events: dict[int, list[AulaCalendarEvent]] = {}

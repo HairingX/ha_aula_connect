@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import List
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -93,6 +94,24 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": error_text(err)}
             ) from None
 
+    def _report_surprises(self) -> None:
+        """Ask for the diagnostics while Aula sends what the integration does not know."""
+        surprises = self._client.surprises
+        issue = f"aula_changed_{self.device_id}"
+        if surprises:
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                issue,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="aula_changed",
+                translation_placeholders={"surprises": "\n".join(f"- {item}" for item in surprises)},
+                learn_more_url="https://github.com/HairingX/ha_aula_connect#troubleshooting",
+            )
+        else:
+            ir.async_delete_issue(self.hass, DOMAIN, issue)
+
     def weekly_plans_supported(self) -> bool:
         """Whether the login's institutions offer weekly plans."""
         return self._client.has_widget(AulaWidgetId.WEEKPLAN_PARENTS)
@@ -170,6 +189,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 _LOGGER.info("Aula can be read in full again")
             self._consecutive_failures = 0
 
+        self._report_surprises()
         return AulaDataCoordinatorData(
             aula_version=self.aula_version,
             children=children,
