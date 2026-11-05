@@ -298,7 +298,7 @@
     },
     "api_version_changed": {
       "title": "Aulas API har en ny version",
-      "description": "Aulas API er i version {details}, som Aula Connect ikke er lavet til. Det kan virke som før; mangler der noget, så hent diagnostikken fra integrationens post og del den med udvikleren."
+      "description": "Aulas API er i version {details}, som Aula Connect ikke er lavet til. Det kan virke som før; mangler der noget, så hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter de navne, id'er og kontaktoplysninger, den kender, men et navn inde i en tekst kan blive stående; læs den igennem, før du deler den."
     }
   },
   "services": {

@@ -298,7 +298,7 @@
     },
     "api_version_changed": {
       "title": "Aula's API has a new version",
-      "description": "Aula's API is at version {details}, which Aula Connect was not made for. It may work as before; if anything is missing, download the diagnostics from the integration's entry and share them with the developer."
+      "description": "Aula's API is at version {details}, which Aula Connect was not made for. It may work as before; if anything is missing, download the diagnostics from the integration's entry and share them with the developer. The download replaces the names, ids and contact details it knows, but a name inside a text can remain; read it through before sharing it."
     }
   },
   "services": {

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from aula_connect import Anomaly
 from datetime import datetime
 from typing import Any
 
+from aula_connect import Anomaly
 from aula_connect.api.models.module import (
     AULA_NOTIFICATION_TYPES,
     AulaBirthdayEvent,

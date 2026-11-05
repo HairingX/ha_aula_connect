@@ -8,11 +8,11 @@ from typing import Any
 
 import pytest
 from aula_connect import Anomaly, AnomalyKind
-from freezegun.api import FrozenDateTimeFactory
 from aula_connect.api.aula_errors import MethodRefusedError, ParseError
+from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized, UnknownUser
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUser
@@ -84,9 +84,11 @@ async def test_only_an_administrator_may_read_aula(
 ) -> None:
     entry = await _entry(hass)
     assert await _read(hass, entry.entry_id, context=Context(user_id=hass_admin_user.id)) is not None
-    for user_id in (hass_read_only_user.id, "no-such-user"):
-        with pytest.raises(Unauthorized):
-            await _read(hass, entry.entry_id, context=Context(user_id=user_id))
+    with pytest.raises(Unauthorized) as refused:
+        await _read(hass, entry.entry_id, context=Context(user_id=hass_read_only_user.id))
+    assert not isinstance(refused.value, UnknownUser)
+    with pytest.raises(UnknownUser):
+        await _read(hass, entry.entry_id, context=Context(user_id="no-such-user"))
 
 
 @pytest.mark.usefixtures("aula_without_children")
@@ -129,18 +131,38 @@ async def test_aula_sending_what_is_not_known_asks_for_the_diagnostics_a_kind_an
     assert issues.async_get_issue(DOMAIN, unknown) is None
 
 
-async def test_an_issue_outlives_an_unload_so_ignoring_it_holds_and_goes_with_the_entry(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, aula: FakeAula
-) -> None:
+async def _ignored_issue_after_a_reload(hass: HomeAssistant, freezer: FrozenDateTimeFactory, aula: FakeAula) -> str:
     await set_up(hass, freezer)
     [entry] = hass.config_entries.async_entries(DOMAIN)
-    aula.found = [Anomaly(AnomalyKind.UNREADABLE_RESPONSE, "notifications", dt_util.utcnow())]
+    aula.found = [Anomaly(AnomalyKind.UNREADABLE_RESPONSE, "weekly plans", dt_util.utcnow())]
     await entry.runtime_data.data_coordinator.async_refresh()
     issue = f"unreadable_response_{entry.entry_id}"
-    assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is not None
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is not None
+    ir.async_ignore_issue(hass, DOMAIN, issue, True)
+    aula.found = []
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    await entry.runtime_data.data_coordinator.async_refresh()
+    return issue
+
+
+async def test_an_ignored_issue_stays_ignored_through_a_reload_and_goes_with_the_entry(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, aula: FakeAula
+) -> None:
+    issue = await _ignored_issue_after_a_reload(hass, freezer, aula)
+    found = ir.async_get(hass).async_get_issue(DOMAIN, issue)
+    assert found is not None and found.dismissed_version is not None
+    [entry] = hass.config_entries.async_entries(DOMAIN)
     assert await hass.config_entries.async_remove(entry.entry_id)
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is None
+
+
+async def test_an_issue_from_before_a_reload_goes_once_a_whole_window_passed_without_it(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, aula: FakeAula
+) -> None:
+    issue = await _ignored_issue_after_a_reload(hass, freezer, aula)
+    [entry] = hass.config_entries.async_entries(DOMAIN)
+    freezer.tick(timedelta(days=1))
+    await entry.runtime_data.data_coordinator.async_refresh()
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is None
 
 

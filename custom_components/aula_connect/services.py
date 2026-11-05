@@ -8,9 +8,9 @@ from typing import Any, Protocol
 import probatio
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
-from homeassistant.helpers import config_validation as cv
 from aula_connect.api.aula_errors import MethodRefusedError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized, UnknownUser
+from homeassistant.helpers import config_validation as cv
 
 from .aula_data import AulaConfigEntry
 from .const import DOMAIN
@@ -47,9 +47,11 @@ def async_register_services(hass: HomeAssistant) -> None:
     """Register the action that reads one method of Aula's API, for administrators only."""
 
     async def read(call: ServiceCall) -> ServiceResponse:
-        if call.context.user_id is not None:
+        if call.context.user_id:
             user = await hass.auth.async_get_user(call.context.user_id)
-            if user is None or not user.is_admin:
+            if user is None:
+                raise UnknownUser(context=call.context, user_id=call.context.user_id)
+            if not user.is_admin:
                 raise Unauthorized(context=call.context)
         entry: AulaConfigEntry | None = hass.config_entries.async_get_entry(call.data["config_entry_id"])
         if entry is None or entry.domain != DOMAIN or entry.state is not ConfigEntryState.LOADED:

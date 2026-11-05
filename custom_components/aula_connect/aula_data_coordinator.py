@@ -74,6 +74,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         self._partly_unreadable = False
         self.device_id = device_id
         self._entry_id = config_entry.entry_id
+        self._watching_since = dt_util.utcnow()
         self.aula_version = client.aula_version
 
         _LOGGER.debug(f"Coordinator {device_id} initialized")
@@ -111,16 +112,21 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
     def _report_anomalies(self) -> None:
         """Ask for the diagnostics, one issue a kind, while Aula sends what is not known.
 
-        An issue goes once nothing of its kind was met within the window.
+        An issue goes once nothing of its kind was met within the window; an issue left from
+        before the client was made stays until the client has watched a whole window, as deleting
+        it would forget that the user ignored it.
         """
+        now = dt_util.utcnow()
         found: dict[AnomalyKind, list[str]] = {}
-        for anomaly in self._client.anomalies(since=dt_util.utcnow() - ANOMALY_WINDOW):
+        for anomaly in self._client.anomalies(since=now - ANOMALY_WINDOW):
             found.setdefault(anomaly.kind, []).append(anomaly.detail)
+        watched_a_window = now - self._watching_since >= ANOMALY_WINDOW
         for kind in AnomalyKind:
             issue = anomaly_issue_id(kind, self._entry_id)
             details = found.get(kind)
             if details is None:
-                ir.async_delete_issue(self.hass, DOMAIN, issue)
+                if watched_a_window:
+                    ir.async_delete_issue(self.hass, DOMAIN, issue)
                 continue
             ir.async_create_issue(
                 self.hass,

@@ -10,6 +10,7 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
+from homeassistant.util.hass_dict import HassKey
 from homeassistant.util import dt as dt_util
 
 from .aula_data import AulaConfigEntry
@@ -20,10 +21,14 @@ READ_DAYS = 21
 """The days from the start of this week that the answers cover: three weeks, as the cards show."""
 
 
+_KEY_LOCK: HassKey[asyncio.Lock] = HassKey(f"{DOMAIN}.pseudonym_key_lock")
+
+
 async def pseudonym_key(hass: HomeAssistant) -> bytes:
     """The secret that replaces each value in Aula's answers by the same one, made once and kept."""
-    lock: asyncio.Lock = hass.data.setdefault(f"{DOMAIN}.pseudonym_key_lock", asyncio.Lock())
-    async with lock:
+    if _KEY_LOCK not in hass.data:
+        hass.data[_KEY_LOCK] = asyncio.Lock()
+    async with hass.data[_KEY_LOCK]:
         store: Store[dict[str, str]] = Store(hass, 1, f"{DOMAIN}.pseudonym_key", private=True)
         saved = await store.async_load()
         if saved is None or "key" not in saved:
