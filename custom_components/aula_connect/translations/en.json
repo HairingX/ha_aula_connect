@@ -288,9 +288,17 @@
     }
   },
   "issues": {
-    "aula_changed": {
-      "title": "Aula sends something Aula Connect does not know",
-      "description": "Aula sent something Aula Connect could not read or does not know yet:\n\n{surprises}\n\nDownload the diagnostics from the integration's entry and share them with the developer, so that Aula Connect can learn it. The download replaces every name, id and contact detail; read it through before sharing it."
+    "unknown_notification_area": {
+      "title": "Aula sends notifications Aula Connect does not know",
+      "description": "Aula sent notifications of a kind Aula Connect does not know yet: {details}. Download the diagnostics from the integration's entry and share them with the developer, so that Aula Connect can learn them. The download replaces every name, id and contact detail; read it through before sharing it."
+    },
+    "unreadable_response": {
+      "title": "Aula Connect could not read an answer from Aula",
+      "description": "Aula Connect could not read Aula's answer to: {details}. Aula may have changed it. Download the diagnostics from the integration's entry and share them with the developer. The download replaces every name, id and contact detail; read it through before sharing it."
+    },
+    "api_version_changed": {
+      "title": "Aula's API has a new version",
+      "description": "Aula's API is at version {details}, which Aula Connect was not made for. It may work as before; if anything is missing, download the diagnostics from the integration's entry and share them with the developer."
     }
   },
   "services": {

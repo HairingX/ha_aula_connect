@@ -5,12 +5,14 @@ from datetime import timedelta
 from typing import List
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from aula_connect import AnomalyKind
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .redact import error_text
-from .const import DOMAIN
+from .const import ANOMALY_WINDOW, DOMAIN, anomaly_issue_id
 import asyncio
 import logging
 
@@ -94,23 +96,28 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 translation_domain=DOMAIN, translation_key="cannot_connect", translation_placeholders={"error": error_text(err)}
             ) from None
 
-    def _report_surprises(self) -> None:
-        """Ask for the diagnostics while Aula sends what the integration does not know."""
-        surprises = self._client.surprises
-        issue = f"aula_changed_{self.device_id}"
-        if surprises:
+    def _report_anomalies(self) -> None:
+        """Ask for the diagnostics, one issue a kind, while Aula sends what the integration does
+        not know; an issue goes once nothing of its kind was met within the window."""
+        found: dict[AnomalyKind, list[str]] = {}
+        for anomaly in self._client.anomalies(since=dt_util.utcnow() - ANOMALY_WINDOW):
+            found.setdefault(anomaly.kind, []).append(anomaly.detail)
+        for kind in AnomalyKind:
+            issue = anomaly_issue_id(kind, self.device_id)
+            details = found.get(kind)
+            if details is None:
+                ir.async_delete_issue(self.hass, DOMAIN, issue)
+                continue
             ir.async_create_issue(
                 self.hass,
                 DOMAIN,
                 issue,
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
-                translation_key="aula_changed",
-                translation_placeholders={"surprises": "\n".join(f"- {item}" for item in surprises)},
+                translation_key=kind.value,
+                translation_placeholders={"details": ", ".join(sorted(details))},
                 learn_more_url="https://github.com/HairingX/ha_aula_connect#troubleshooting",
             )
-        else:
-            ir.async_delete_issue(self.hass, DOMAIN, issue)
 
     def weekly_plans_supported(self) -> bool:
         """Whether the login's institutions offer weekly plans."""
@@ -189,7 +196,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 _LOGGER.info("Aula can be read in full again")
             self._consecutive_failures = 0
 
-        self._report_surprises()
+        self._report_anomalies()
         return AulaDataCoordinatorData(
             aula_version=self.aula_version,
             children=children,

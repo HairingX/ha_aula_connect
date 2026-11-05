@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from aula_connect import Anomaly
 from datetime import datetime
 from typing import Any
 
@@ -51,7 +52,7 @@ class FakeAula:
     def __init__(self, parent: AulaProfile) -> None:
         self.parent = parent
         self.aula_version = 23
-        self.surprises: list[str] = []
+        self.found: list[Anomaly] = []
         self.widgets: set[str] = {"0001", "0004", "0029"}
         self.birthdays: list[AulaBirthdayEvent] = []
         self.events: dict[int, list[AulaCalendarEvent]] = {}
@@ -61,6 +62,9 @@ class FakeAula:
         self.daily_overviews: list[AulaDailyOverview] = []
         self.message_threads: list[AulaMessageThread] = []
         self.notifications: list[AULA_NOTIFICATION_TYPES] = []
+
+    def anomalies(self, since: datetime | None = None) -> tuple[Anomaly, ...]:
+        return tuple(anomaly for anomaly in self.found if since is None or anomaly.last_seen >= since)
 
     async def connection_check(self) -> None:
         return None

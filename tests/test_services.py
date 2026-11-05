@@ -3,13 +3,16 @@ when Aula sends what the integration does not know."""
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 
 import pytest
+from aula_connect import Anomaly, AnomalyKind
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.aula_connect.const import DOMAIN
@@ -72,17 +75,40 @@ async def test_the_action_says_why_aula_could_not_be_read_without_its_token(hass
     assert failed.value.translation_placeholders == {"error": "url: /api?access_token=REDACTED"}
 
 
-async def test_aula_sending_what_is_not_known_asks_for_the_diagnostics_until_it_stops(
+async def test_aula_sending_what_is_not_known_asks_for_the_diagnostics_a_kind_an_issue_until_it_stops(
     hass: HomeAssistant, freezer: FrozenDateTimeFactory, aula: FakeAula
 ) -> None:
-    aula.surprises = ["notification area 'Homework' is unknown"]
     await set_up(hass, freezer)
     [entry] = hass.config_entries.async_entries(DOMAIN)
     coordinator = entry.runtime_data.data_coordinator
-    issue = ir.async_get(hass).async_get_issue(DOMAIN, f"aula_changed_{coordinator.device_id}")
-    assert issue is not None and issue.translation_key == "aula_changed"
-    assert issue.translation_placeholders == {"surprises": "- notification area 'Homework' is unknown"}
-
-    aula.surprises = []
+    issues = ir.async_get(hass)
+    unknown = f"unknown_notification_area_{coordinator.device_id}"
+    version = f"api_version_changed_{coordinator.device_id}"
+    seen = dt_util.utcnow()
+    aula.found = [
+        Anomaly(AnomalyKind.UNKNOWN_NOTIFICATION_AREA, "Homework", seen),
+        Anomaly(AnomalyKind.UNKNOWN_NOTIFICATION_AREA, "Absence", seen),
+        Anomaly(AnomalyKind.API_VERSION_CHANGED, "24", seen - timedelta(days=2)),
+    ]
     await coordinator.async_refresh()
-    assert ir.async_get(hass).async_get_issue(DOMAIN, f"aula_changed_{coordinator.device_id}") is None
+    issue = issues.async_get_issue(DOMAIN, unknown)
+    assert issue is not None and issue.translation_key == "unknown_notification_area"
+    assert issue.translation_placeholders == {"details": "Absence, Homework"}
+    assert issues.async_get_issue(DOMAIN, version) is None
+
+    freezer.tick(timedelta(days=1, seconds=1))
+    await coordinator.async_refresh()
+    assert issues.async_get_issue(DOMAIN, unknown) is None
+
+
+async def test_unloading_an_entry_takes_its_issues_away(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, aula: FakeAula
+) -> None:
+    await set_up(hass, freezer)
+    [entry] = hass.config_entries.async_entries(DOMAIN)
+    aula.found = [Anomaly(AnomalyKind.UNREADABLE_RESPONSE, "notifications", dt_util.utcnow())]
+    await entry.runtime_data.data_coordinator.async_refresh()
+    issue = f"unreadable_response_{entry.runtime_data.data_coordinator.device_id}"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is not None
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue) is None
