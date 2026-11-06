@@ -14,3 +14,7 @@ read:
       example: '{"portalrole": "guardian"}'
       selector:
         object:
+    reveal:
+      example: '["widgetCategory"]'
+      selector:
+        object:

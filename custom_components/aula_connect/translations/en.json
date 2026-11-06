@@ -290,21 +290,21 @@
   "issues": {
     "unknown_notification_area": {
       "title": "Aula sends notifications Aula Connect does not know",
-      "description": "Aula sent notifications of a kind Aula Connect does not know yet: {details}. Download the diagnostics from the integration's entry and share them with the developer, so that Aula Connect can learn them. The download replaces the names, ids and contact details it knows, but a name inside a text can remain; read it through before sharing it."
+      "description": "Aula sent notifications of a kind Aula Connect does not know yet: {details}. Download the diagnostics from the integration's entry and share them with the developer, so that Aula Connect can learn them. The download replaces all Aula says but how it is built; read it through before sharing it all the same."
     },
     "unreadable_response": {
       "title": "Aula Connect could not read an answer from Aula",
-      "description": "Aula Connect could not read Aula's answer to: {details}. Aula may have changed it. Download the diagnostics from the integration's entry and share them with the developer. The download replaces the names, ids and contact details it knows, but a name inside a text can remain; read it through before sharing it."
+      "description": "Aula Connect could not read Aula's answer to: {details}. Aula may have changed it. Download the diagnostics from the integration's entry and share them with the developer. The download replaces all Aula says but how it is built; read it through before sharing it all the same."
     },
     "api_version_changed": {
       "title": "Aula's API has a new version",
-      "description": "Aula's API is at version {details}, which Aula Connect was not made for. It may work as before; if anything is missing, download the diagnostics from the integration's entry and share them with the developer. The download replaces the names, ids and contact details it knows, but a name inside a text can remain; read it through before sharing it."
+      "description": "Aula's API is at version {details}, which Aula Connect was not made for. It may work as before; if anything is missing, download the diagnostics from the integration's entry and share them with the developer. The download replaces all Aula says but how it is built; read it through before sharing it all the same."
     }
   },
   "services": {
     "read": {
       "name": "Read from Aula",
-      "description": "Reads one method of Aula's API that only gets, and answers with who someone is replaced, as the diagnostics do. Only an administrator may use it.",
+      "description": "Reads one method of Aula's API that only gets, and answers with who someone is replaced, as the diagnostics do. Only an administrator may use it. What is revealed with Reveal is no longer anonymous.",
       "fields": {
         "config_entry_id": {
           "name": "Aula account",
@@ -317,6 +317,10 @@
         "params": {
           "name": "Parameters",
           "description": "The method's parameters, by name."
+        },
+        "reveal": {
+          "name": "Reveal",
+          "description": "The keys whose values are kept as Aula sent them, such as [\"widgetCategory\"], or true for the whole answer. What is revealed is no longer anonymous: share it only in private. The MitID username and every token stay hidden."
         }
       }
     }
