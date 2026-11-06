@@ -229,8 +229,8 @@ response_variable: answer
   itself once Aula has not sent it again for a day, a restart or a reload counted in. A notice
   ignored stays ignored.
 - **Something looks wrong.** Download the diagnostics from the integration's entry. They read
-  Aula once more, from the start of this week and three weeks on, and hold what it answers - the
-  messages of every thread too, except those marked sensitive - with each answer's headers and when
+  Aula once more, from the start of this week and three weeks on, the birthdays for a year on,
+  and hold what it answers - the messages of every thread too, except those marked sensitive - with each answer's headers and when
   it came, and the newest failure of each request, an error such as a timeout among them, even
   where it later succeeded. The MitID user ID and every token are hidden wherever they stand. Every id, name, e-mail address, phone number, address and link
   in the answers is replaced by another of the same length - "Alma" by "Pyny", the same each
