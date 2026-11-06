@@ -1,0 +1,69 @@
+name: Aula sends something new
+description: A repair notice from Aula Connect says Aula sent something it does not know.
+title: "[Aula changed] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Many users meet the same change on the same day, so search the
+        [open issues](https://github.com/HairingX/ha_aula_connect/issues?q=is%3Aissue+is%3Aopen)
+        for what the notice names first. If it is there, add a thumbs-up instead. Danish is fine.
+  - type: checkboxes
+    attributes:
+      label: Searched
+      options:
+        - label: I searched the open issues, and none is about what my notice names.
+          required: true
+  - type: dropdown
+    id: notice
+    attributes:
+      label: The notice
+      options:
+        - Aula's API has a new version
+        - Aula sends notifications Aula Connect does not know
+        - Aula Connect could not read an answer from Aula
+    validations:
+      required: true
+  - type: input
+    id: details
+    attributes:
+      label: What the notice names
+      description: The version, the area or what could not be read, as the notice says it.
+      placeholder: "25"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version of Aula Connect
+      description: Settings > Devices & services > Aula Connect.
+      placeholder: "0.0.8"
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        **The diagnostics.** In Home Assistant, go to Settings > Devices & services > Aula Connect,
+        open the menu (⋮) of the entry and choose **Download diagnostics**. Names, ids and
+        contact details Aula Connect knows are replaced, but a name inside a text can remain, and
+        this issue is public: read the file through before you attach it.
+        [More about the diagnostics](https://github.com/HairingX/ha_aula_connect/blob/main/CONTRIBUTING.md#downloading-the-diagnostics).
+  - type: checkboxes
+    attributes:
+      label: Read through
+      options:
+        - label: I have read the diagnostics through, and they hold nothing I do not want to share.
+          required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Drag the file here, or tap the field and choose it.
+    validations:
+      required: true
+  - type: textarea
+    id: missing
+    attributes:
+      label: What is missing or wrong in Home Assistant
+      description: Optional - if you see something missing or wrong since the notice came.

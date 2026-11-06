@@ -11,7 +11,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .redact import error_text
-from .const import ANOMALY_WINDOW, DOMAIN, anomaly_issue_id
+from .const import ANOMALY_HELP, ANOMALY_WINDOW, DOMAIN, anomaly_issue_id
 import asyncio
 import logging
 
@@ -136,7 +136,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 severity=ir.IssueSeverity.WARNING,
                 translation_key=kind.value,
                 translation_placeholders={"details": _listed(sorted(details))},
-                learn_more_url="https://github.com/HairingX/ha_aula_connect#troubleshooting",
+                learn_more_url=ANOMALY_HELP[kind],
             )
 
     def weekly_plans_supported(self) -> bool:

@@ -225,7 +225,8 @@ response_variable: answer
   again by itself.
 - **Aula sends something Aula Connect does not know.** A notice under Settings > System >
   Repairs names what - a notification of an unknown kind, an answer that could not be read, a new
-  version of Aula's API, one notice for each - and asks for the diagnostics. A notice goes away by
+  version of Aula's API, one notice for each - and asks for the diagnostics; its **Learn more**
+  leads to [how to report it](CONTRIBUTING.md). A notice goes away by
   itself once Aula has not sent it again for a day, a restart or a reload counted in. A notice
   ignored stays ignored.
 - **Something looks wrong.** Download the diagnostics from the integration's entry. They read

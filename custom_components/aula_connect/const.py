@@ -3,6 +3,8 @@
 from datetime import timedelta
 import hashlib
 
+from aula_connect import AnomalyKind
+
 MANUFACTURER = "Aula"
 DOMAIN = "aula_connect"
 
@@ -28,3 +30,14 @@ ANOMALY_WINDOW = timedelta(days=1)
 def anomaly_issue_id(kind: str, entry_id: str) -> str:
     """The id of the repair issue for one kind of anomaly of an entry."""
     return f"{kind}_{entry_id}"
+
+
+CONTRIBUTING_URL = "https://github.com/HairingX/ha_aula_connect/blob/main/CONTRIBUTING.md"
+"""How to report a problem: search first, then the form that fits."""
+
+ANOMALY_HELP: dict[AnomalyKind, str] = {
+    AnomalyKind.API_VERSION_CHANGED: f"{CONTRIBUTING_URL}#aulas-api-has-a-new-version",
+    AnomalyKind.UNKNOWN_NOTIFICATION_AREA: f"{CONTRIBUTING_URL}#aula-sends-notifications-aula-connect-does-not-know",
+    AnomalyKind.UNREADABLE_RESPONSE: f"{CONTRIBUTING_URL}#aula-connect-could-not-read-an-answer-from-aula",
+}
+"""Where each kind of repair issue tells what to do."""
