@@ -74,7 +74,7 @@ first name and `<institution>` the institution's name, as Aula has them.
 | `sensor.aula_present_duration_<child>_<institution>` | Minutes the child has been checked in today. | `check_in_time`, `check_out_time`, `main_group` |
 | `calendar.aula_events_<child>_<institution>` | The institution's calendar: lessons with teachers and substitutes, events, holidays and booked meetings. | |
 | `calendar.aula_weekly_plans_<child>_<institution>` | The weekly plan's tasks and comments, one all-day event each. | |
-| `calendar.aula_birthdays_<child>_<institution>` | The class's birthdays, with the age each turns. | |
+| `calendar.aula_birthdays_<child>_<institution>` | The birthdays Aula ties to the child, such as its class's, with the age each turns. | |
 | `calendar.aula_easyiq_weekly_plans_<child>_<institution>` | The EasyIQ weekly plan. | |
 | `calendar.aula_newsletter_<child>_<institution>` | The MinUddannelse newsletters, one for each week, with their HTML as the description. | |
 
