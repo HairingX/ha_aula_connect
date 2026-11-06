@@ -8,7 +8,9 @@ from pathlib import Path
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 
-from .fake_aula import FakeAula
+from aula_connect.api.models.module import AulaDailyOverview
+
+from .fake_aula import SCHOOL, FakeAula
 from .test_calendars import set_up
 
 README = Path(__file__).parent.parent / "README.md"
@@ -26,6 +28,7 @@ def _documented() -> dict[str, set[str]]:
 async def test_the_readme_lists_every_entity_with_its_attributes(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
+    aula.daily_overviews = [AulaDailyOverview(id=1, institution_profile=SCHOOL, status=3)]
     await set_up(hass, freezer)
     actual = {
         state.entity_id.replace("alma_school", "<child>_<institution>").replace(
