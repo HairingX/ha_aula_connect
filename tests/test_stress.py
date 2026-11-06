@@ -18,7 +18,7 @@ from aula_connect.testing import SimulatedAulaApi
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from mitid_connect.testing import Network
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
+from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.aula_connect.const import DOMAIN
 

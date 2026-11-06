@@ -1,7 +1,7 @@
 {
   "name": "Aula Connect",
   "country": "DK",
-  "homeassistant": "2026.10.4",
+  "homeassistant": "2026.11.0",
   "zip_release": true,
   "filename": "aula_connect.zip"
 }
