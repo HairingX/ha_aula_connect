@@ -27,8 +27,8 @@ from aula_connect.api.models.module import (
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
-from pytest_homeassistant_custom_component.typing import MockHAClientWebSocket, WebSocketGenerator
+from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
+from pytest_homeassistant.typing import MockHAClientWebSocket, WebSocketGenerator
 
 from custom_components.aula_connect.const import DOMAIN
 from custom_components.aula_connect.websocket_api import all_day_dates

@@ -16,7 +16,7 @@ from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.network import NoURLAvailableError
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
+from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.aula_connect.auth_session import auth_session, mitid_status
 from custom_components.aula_connect.config_flow import LOGIN_KEPT_FOR
