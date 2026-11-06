@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Read this first
+    url: https://github.com/HairingX/ha_aula_connect/blob/main/CONTRIBUTING.md
+    about: How to report a problem - search the existing issues first, then pick the form that fits.

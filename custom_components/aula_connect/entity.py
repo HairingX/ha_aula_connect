@@ -38,6 +38,8 @@ class AulaEntityBase(Entity, Generic[CONTEXT_TYPE]):
 
     _attr_has_entity_name = True
     _attr_should_poll = False
+    _reads: str | None = None
+    """The part of the coordinator's data the entity shows; it is unavailable while that is unreadable."""
 
     def __init__(self, coordinator: AulaDataCoordinator, name: str, context: CONTEXT_TYPE) -> None:
         self.coordinator = coordinator
@@ -65,7 +67,11 @@ class AulaEntityBase(Entity, Generic[CONTEXT_TYPE]):
 
     def _init_data(self) -> None:
         self._set_values(self.coordinator.data, self.coordinator_context)
-        self._attr_available = self.coordinator.last_update_success
+        self._attr_available = self.coordinator.last_update_success and self._readable(self.coordinator.data)
+
+    def _readable(self, data: AulaDataCoordinatorData) -> bool:
+        """Whether the data the coordinator read holds what the entity shows."""
+        return self._reads not in data.unreadable
 
     def _set_values(self, data: AulaDataCoordinatorData, context: CONTEXT_TYPE) -> None:
         """Set the entity's values from the data the coordinator read."""
@@ -76,13 +82,19 @@ class AulaCalendarEntityBase(Entity):
 
     _attr_has_entity_name = True
     _attr_should_poll = False
+    _reads: str
+    """The kind of calendar the entity shows; it is unavailable while that is unreadable."""
 
     def __init__(self, coordinator: AulaCalendarCoordinator, name: str) -> None:
         self.coordinator = coordinator
         self._attr_translation_key = name
         self._attr_unique_id = unique_id(coordinator, name)
         self._attr_device_info = device_info(coordinator)
-        self._attr_available = coordinator.last_update_success
+        self._attr_available = self._available()
+
+    def _available(self) -> bool:
+        data = self.coordinator.data
+        return self.coordinator.last_update_success and self._reads not in data.unreadable
 
     async def async_added_to_hass(self) -> None:
         """Follow the coordinator's updates while the entity is in Home Assistant."""
@@ -97,7 +109,7 @@ class AulaCalendarEntityBase(Entity):
     def _handle_coordinator_update(self) -> None:
         """Show what the coordinator read, if it changed anything for the entity."""
         changed = self._handle_data_updated(self.coordinator.data)
-        available = self.coordinator.last_update_success
+        available = self._available()
         if changed or available != self._attr_available:
             self._attr_available = available
             self.async_write_ha_state()

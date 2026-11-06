@@ -3,7 +3,10 @@ when Aula sends what the integration does not know."""
 
 from __future__ import annotations
 
+import json
+import re
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -17,7 +20,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUser
 
-from custom_components.aula_connect.const import DOMAIN
+from custom_components.aula_connect.const import ANOMALY_HELP, CONTRIBUTING_URL, DOMAIN
 
 from .fake_aula import FakeAula
 from .test_calendars import set_up
@@ -139,6 +142,7 @@ async def test_aula_sending_what_is_not_known_asks_for_the_diagnostics_a_kind_an
     issue = issues.async_get_issue(DOMAIN, unknown)
     assert issue is not None and issue.translation_key == "unknown_notification_area"
     assert issue.translation_placeholders == {"details": "Absence, Homework"}
+    assert issue.learn_more_url == ANOMALY_HELP[AnomalyKind.UNKNOWN_NOTIFICATION_AREA]
     assert issues.async_get_issue(DOMAIN, version) is None
 
     freezer.tick(timedelta(days=1, seconds=1))
@@ -203,3 +207,16 @@ async def test_what_aula_sent_is_reported_when_the_login_fails_too(
     await entry.runtime_data.data_coordinator.async_refresh()
     assert not entry.runtime_data.data_coordinator.last_update_success
     assert ir.async_get(hass).async_get_issue(DOMAIN, f"unreadable_response_{entry.entry_id}") is not None
+
+
+def _anchor(heading: str) -> str:
+    return re.sub(r"[^a-z0-9 -]", "", heading.lower()).replace(" ", "-")
+
+
+def test_every_issue_learns_more_at_the_section_of_its_own_title() -> None:
+    root = Path(__file__).parent.parent
+    sections = {_anchor(line.lstrip("#").strip()) for line in (root / "CONTRIBUTING.md").read_text().splitlines() if line.startswith("#")}
+    titles = json.loads((root / "custom_components/aula_connect/translations/en.json").read_text())["issues"]
+    for kind in AnomalyKind:
+        anchor = _anchor(titles[kind.value]["title"])
+        assert ANOMALY_HELP[kind] == f"{CONTRIBUTING_URL}#{anchor}" and anchor in sections

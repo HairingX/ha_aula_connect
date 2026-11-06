@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .redact import error_text
 from .const import DOMAIN
+from .retry import read_twice
 import asyncio
 import logging
 
@@ -43,8 +44,14 @@ NEWSLETTER_UPDATE_INTERVAL = timedelta(hours=2)
 SYNC_EVENT_MAX_TIME = timedelta(weeks=2)
 """How far ahead the calendars are read."""
 
-MAX_CONSECUTIVE_FAILURES = 3
-"""How many reads in a row may fail in part before the coordinator reports a failure."""
+UPDATE_TIMEOUT = timedelta(minutes=4)
+"""How long one refresh may take, each kind read twice at the most."""
+
+BIRTHDAYS = "birthdays"
+EVENTS = "events"
+WEEKLY_PLANS = "weekly plans"
+EASYIQ_WEEKPLANS = "EasyIQ weekplans"
+NEWSLETTERS = "newsletters"
 
 @dataclass
 class AulaCalendarCoordinatorData:
@@ -55,6 +62,8 @@ class AulaCalendarCoordinatorData:
     updated_weekly_plans_for_listener_keys: List[int]
     updated_easyiq_weekplans_for_listener_keys: List[int]
     updated_newsletters_for_listener_keys: List[int]
+    unreadable: frozenset[str] = frozenset()
+    """The kinds that failed to read twice in a row; each keeps what was read of it before."""
 
 T = TypeVar("T", AulaInstitutionProfile, AulaChildProfile)
 class AulaCalendarCoordinatorMeta[T]:
@@ -99,7 +108,6 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         self._weekly_plan_listeners = dict()
         self._easyiq_weekplan_listeners = dict()
         self._newsletter_listeners = dict()
-        self._consecutive_failures = 0
         self._partly_unreadable = False
         self._client = client
         self.device_id = device_id
@@ -122,7 +130,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
     async def _async_update_data(self) -> AulaCalendarCoordinatorData:
         """Read the followed calendars that are due, keeping the others as they were read."""
         try:
-            async with asyncio.timeout(120):
+            async with asyncio.timeout(UPDATE_TIMEOUT.total_seconds()):
                 data = await self._fetch_data(self._birthday_listeners, self._event_listeners, self._weekly_plan_listeners, self._easyiq_weekplan_listeners, self._newsletter_listeners)
                 if isinstance(data, Exception):
                     raise data
@@ -137,7 +145,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
     async def _fetch_data(self, birthdaylisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], eventlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaInstitutionProfile]], weekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], easyiqweekplanlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]], newsletterlisteners: Dict[int, AulaCalendarCoordinatorMeta[AulaChildProfile]]) -> AulaCalendarCoordinatorData|Exception:
         try:
-            logindata = await self._client.login()
+            logindata = await read_twice("the login", self._client.login)
             self.aula_version = logindata.api_version
         except AulaCredentialError:
             raise
@@ -145,73 +153,64 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             return ex
 
         # Each kind is read on its own, so that one failing keeps none of the others from updating.
-        had_failure = False
-        failures = list[str]()
+        failures = dict[str, str]()
 
         new_birtyday_keys = list[int]()
         try:
-            new_birthdaymap, new_birtyday_keys = await self._fetch_birthdays(birthdaylisteners)
+            new_birthdaymap, new_birtyday_keys = await read_twice(BIRTHDAYS, lambda: self._fetch_birthdays(birthdaylisteners))
             self._birthdaymap = new_birthdaymap
         except AulaCredentialError:
             raise
         except Exception as ex:
-            had_failure = True
-            failures.append(f"birthdays: {error_text(ex)}")
+            failures[BIRTHDAYS] = error_text(ex)
 
         new_event_keys = list[int]()
         try:
-            new_eventmap, new_event_keys = await self._fetch_events(eventlisteners)
+            new_eventmap, new_event_keys = await read_twice(EVENTS, lambda: self._fetch_events(eventlisteners))
             self._eventmap = new_eventmap
         except AulaCredentialError:
             raise
         except Exception as ex:
-            had_failure = True
-            failures.append(f"events: {error_text(ex)}")
+            failures[EVENTS] = error_text(ex)
 
         new_weeklyplan_keys = list[int]()
         try:
-            new_weeklyplanmap, new_weeklyplan_keys = await self._fetch_weekly_plans(weekplanlisteners)
+            new_weeklyplanmap, new_weeklyplan_keys = await read_twice(WEEKLY_PLANS, lambda: self._fetch_weekly_plans(weekplanlisteners))
             self._weeklyplanmap = new_weeklyplanmap
         except AulaCredentialError:
             raise
         except Exception as ex:
-            had_failure = True
-            failures.append(f"weekly plans: {error_text(ex)}")
+            failures[WEEKLY_PLANS] = error_text(ex)
 
         new_easyiq_keys = list[int]()
         try:
-            new_easyiqweekplanmap, new_easyiq_keys = await self._fetch_easyiq_weekly_plans(easyiqweekplanlisteners)
+            new_easyiqweekplanmap, new_easyiq_keys = await read_twice(EASYIQ_WEEKPLANS, lambda: self._fetch_easyiq_weekly_plans(easyiqweekplanlisteners))
             self._easyiqweekplanmap = new_easyiqweekplanmap
         except AulaCredentialError:
             raise
         except Exception as ex:
-            had_failure = True
-            failures.append(f"EasyIQ weekplans: {error_text(ex)}")
+            failures[EASYIQ_WEEKPLANS] = error_text(ex)
 
         new_newsletter_keys = list[int]()
         try:
-            new_newslettermap, new_newsletter_keys = await self._fetch_newsletters(newsletterlisteners)
+            new_newslettermap, new_newsletter_keys = await read_twice(NEWSLETTERS, lambda: self._fetch_newsletters(newsletterlisteners))
             self._newslettermap = new_newslettermap
         except AulaCredentialError:
             raise
         except Exception as ex:
-            had_failure = True
-            failures.append(f"newsletters: {error_text(ex)}")
+            failures[NEWSLETTERS] = error_text(ex)
 
-        if had_failure:
+        if failures:
             # Logged once when Aula's calendars can be read only in part, and once when in full.
             if not self._partly_unreadable:
                 self._partly_unreadable = True
-                _LOGGER.warning("Aula's calendars could be read only in part, using cached data: %s", "; ".join(failures))
-            self._consecutive_failures += 1
-            if self._consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
-                self._consecutive_failures = 0
-                return Exception(f"Aula API failed {MAX_CONSECUTIVE_FAILURES} consecutive times")
-        else:
-            if self._partly_unreadable:
-                self._partly_unreadable = False
-                _LOGGER.info("Aula's calendars can be read in full again")
-            self._consecutive_failures = 0
+                _LOGGER.warning(
+                    "Aula's calendars could be read only in part, twice in a row: %s",
+                    "; ".join(f"{what}: {error}" for what, error in failures.items()),
+                )
+        elif self._partly_unreadable:
+            self._partly_unreadable = False
+            _LOGGER.info("Aula's calendars can be read in full again")
 
         for key in new_birtyday_keys:
             meta = birthdaylisteners.get(key)
@@ -239,6 +238,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
             updated_weekly_plans_for_listener_keys=new_weeklyplan_keys,
             updated_easyiq_weekplans_for_listener_keys=new_easyiq_keys,
             updated_newsletters_for_listener_keys=new_newsletter_keys,
+            unreadable=frozenset(failures),
         )
 
 

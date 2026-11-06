@@ -35,7 +35,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 
 from custom_components.aula_connect.const import DOMAIN
 
-from .fake_aula import CHILD, PARENT_AT_SCHOOL, SCHOOL, FakeAula
+from .fake_aula import CHILD, PARENT_AT_SCHOOL, SCHOOL, FakeAula, failing_once
 from .test_init import DATA
 
 TZ = ZoneInfo("Europe/Copenhagen")
@@ -418,43 +418,47 @@ async def test_calendars_whose_login_aula_no_longer_accepts_ask_to_log_in_again(
     assert [flow.get("context", {}).get("source") for flow in flows] == ["reauth"]
 
 
-@pytest.mark.parametrize(
-    "method",
-    ["get_birthday_events", "get_calendar_events", "get_weekly_plans", "get_easyiq_weekly_plans", "get_newsletters"],
-)
-async def test_a_calendar_aula_cannot_read_keeps_what_it_had_and_says_so_once(
-    hass: HomeAssistant,
-    aula: FakeAula,
-    freezer: FrozenDateTimeFactory,
-    caplog: pytest.LogCaptureFixture,
-    method: str,
+CALENDARS = {
+    "get_birthday_events": "calendar.aula_birthdays_alma_school",
+    "get_calendar_events": "calendar.aula_events_alma_school",
+    "get_weekly_plans": "calendar.aula_weekly_plans_alma_school",
+    "get_easyiq_weekly_plans": "calendar.aula_easyiq_weekly_plans_alma_school",
+    "get_newsletters": "calendar.aula_newsletter_alma_school",
+}
+
+
+async def _refresh_on(hass: HomeAssistant, freezer: FrozenDateTimeFactory, *days: int) -> None:
+    for day in days:
+        freezer.move_to(at(day, 10, 1))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+
+@pytest.mark.parametrize("method", CALENDARS)
+async def test_a_calendar_that_fails_once_is_read_again_and_stays_available(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, caplog: pytest.LogCaptureFixture, method: str
+) -> None:
+    await set_up(hass, freezer)
+    with patch.object(aula, method, side_effect=failing_once(getattr(aula, method))):
+        await _refresh_on(hass, freezer, 29)
+    assert all(state.state != "unavailable" for state in hass.states.async_all("calendar"))
+    assert "Aula's calendars could be read only in part" not in caplog.text
+
+
+@pytest.mark.parametrize("method", CALENDARS)
+async def test_a_calendar_that_fails_twice_in_a_row_alone_becomes_unavailable_says_so_once_and_comes_back(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, caplog: pytest.LogCaptureFixture, method: str
 ) -> None:
     await set_up(hass, freezer)
     with patch.object(aula, method, side_effect=ConnectionError("down")):
-        for day in (29, 30):
-            freezer.move_to(at(day, 10, 1))
-            async_fire_time_changed(hass)
-            await hass.async_block_till_done(wait_background_tasks=True)
-    assert caplog.text.count("Aula's calendars could be read only in part") == 1
+        await _refresh_on(hass, freezer, 29, 30)
+    assert caplog.text.count("Aula's calendars could be read only in part, twice in a row") == 1
+    unavailable = [state.entity_id for state in hass.states.async_all("calendar") if state.state == "unavailable"]
+    kind = CALENDARS[method].removesuffix("_alma_school")
+    assert CALENDARS[method] in unavailable and all(entity_id.startswith(f"{kind}_") for entity_id in unavailable)
+    await _refresh_on(hass, freezer, 31)
     assert all(state.state != "unavailable" for state in hass.states.async_all("calendar"))
-    freezer.move_to(at(31, 10, 2))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
     assert caplog.text.count("Aula's calendars can be read in full again") == 1
-
-
-async def test_calendars_aula_cannot_read_three_times_running_become_unavailable(
-    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
-) -> None:
-    await set_up(hass, freezer)
-    with patch.object(aula, "get_calendar_events", side_effect=ConnectionError("down")):
-        for hours in (3, 6, 9):
-            freezer.move_to(at(28, 10 + hours, 1))
-            async_fire_time_changed(hass)
-            await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("calendar.aula_events_alma_school")
-    assert state is not None
-    assert state.state == "unavailable"
 
 
 async def test_calendars_whose_login_fails_later_become_unavailable(

@@ -110,10 +110,12 @@ Aula Connect asks Aula; Aula does not tell it when something changes.
   newsletters are read again every 2 hours, birthdays once a day, two weeks ahead.
 - Looking further ahead or back in a calendar asks Aula for that period there and then.
 
-When Aula cannot be read at all, the entities become unavailable until it answers again. When
-only part of it can be read, the entities keep what they had, and become unavailable only when
-that happens three times in a row. The log says once that Aula could be read only in part, and
-once that it can be read in full again.
+A single read that fails does not change anything: Aula Connect waits 10 seconds and reads that
+part once more - the login, presence, messages, notifications, or one kind of calendar, such as
+the birthdays. Only when that fails too do the entities that show it become unavailable, and the
+others stay as they are; the same holds for a child Aula gives no presence for. The log says once
+that Aula could be read only in part, and once that it can be read in full again; the
+unavailable entities show it for as long as it lasts.
 
 ## Examples
 
@@ -228,12 +230,13 @@ response_variable: answer
   again by itself.
 - **Aula sends something Aula Connect does not know.** A notice under Settings > System >
   Repairs names what - a notification of an unknown kind, an answer that could not be read, a new
-  version of Aula's API, one notice for each - and asks for the diagnostics. A notice goes away by
+  version of Aula's API, one notice for each - and asks for the diagnostics; its **Learn more**
+  leads to [how to report it](CONTRIBUTING.md). A notice goes away by
   itself once Aula has not sent it again for a day, a restart or a reload counted in. A notice
   ignored stays ignored.
 - **Something looks wrong.** Download the diagnostics from the integration's entry. They read
-  Aula once more, from the start of this week and three weeks on, and hold what it answers - the
-  messages of every thread too, except those marked sensitive - with each answer's headers and when
+  Aula once more, from the start of this week and three weeks on, the birthdays for a year on,
+  and hold what it answers - the messages of every thread too, except those marked sensitive - with each answer's headers and when
   it came, and the newest failure of each request, an error such as a timeout among them, even
   where it later succeeded. The MitID user ID and every token are hidden wherever they stand. All
   the answers say is replaced, but how they are built: every word of every text, every id, code,

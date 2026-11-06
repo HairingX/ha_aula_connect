@@ -11,8 +11,10 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .redact import error_text
-from .const import ANOMALY_WINDOW, DOMAIN, anomaly_issue_id
+from .const import ANOMALY_HELP, ANOMALY_WINDOW, DOMAIN, anomaly_issue_id
+from .retry import read_twice
 import asyncio
+from collections.abc import Awaitable, Callable
 import logging
 
 from aula_connect.api.models.constants import AulaWidgetId
@@ -31,8 +33,12 @@ _LOGGER = logging.getLogger(__name__)
 
 DATA_COORDINATOR_POLL_INTERVAL = timedelta(minutes=5)
 
-MAX_CONSECUTIVE_FAILURES = 3
-"""How many reads in a row may fail in part before the coordinator reports a failure."""
+UPDATE_TIMEOUT = timedelta(minutes=4)
+"""How long one refresh may take, each part read twice at the most."""
+
+DAILY_OVERVIEWS = "daily overviews"
+MESSAGE_THREADS = "message threads"
+NOTIFICATIONS = "notifications"
 
 @dataclass
 class AulaDataCoordinatorData:
@@ -45,6 +51,8 @@ class AulaDataCoordinatorData:
     daily_overviews: List[AulaDailyOverview]
     message_threads: List[AulaMessageThread]
     notifications: List[AULA_NOTIFICATION_TYPES]
+    unreadable: frozenset[str] = frozenset()
+    """The parts that failed to read twice in a row; each keeps what was read of it before."""
 
 MAX_DETAILS = 10
 """How many details a repair issue names before it says how many more there are."""
@@ -70,7 +78,6 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             always_update=True,
         )
         self._client = client
-        self._consecutive_failures = 0
         self._partly_unreadable = False
         self.device_id = device_id
         self._entry_id = config_entry.entry_id
@@ -94,7 +101,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
     async def _async_update_data(self) -> AulaDataCoordinatorData:
         """Read the login's data from Aula, a part it cannot read left empty."""
         try:
-            async with asyncio.timeout(120):
+            async with asyncio.timeout(UPDATE_TIMEOUT.total_seconds()):
                 data = await self._fetch_data()
                 if isinstance(data, Exception):
                     raise data
@@ -136,7 +143,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 severity=ir.IssueSeverity.WARNING,
                 translation_key=kind.value,
                 translation_placeholders={"details": _listed(sorted(details))},
-                learn_more_url="https://github.com/HairingX/ha_aula_connect#troubleshooting",
+                learn_more_url=ANOMALY_HELP[kind],
             )
 
     def weekly_plans_supported(self) -> bool:
@@ -161,8 +168,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
 
     async def _fetch_data(self) -> AulaDataCoordinatorData|Exception:
         try:
-
-            logindata = await self._client.login()
+            logindata = await read_twice("the login", self._client.login)
             profiles = logindata.profiles
             self.aula_version = logindata.api_version
         except AulaCredentialError:
@@ -171,50 +177,38 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             return ex
 
         children = [child for profile in profiles for child in profile.children]
-        had_failure = False
-        failures = list[str]()
+        before = self.data
+        failures = dict[str, str]()
 
-        daily_overviews = list[AulaDailyOverview]()
-        try:
-            daily_overviews = await self._client.get_daily_overviews(profiles)
-        except AulaCredentialError:
-            raise
-        except Exception as ex:
-            had_failure = True
-            failures.append(f"daily overviews: {error_text(ex)}")
+        async def part[T](what: str, read: Callable[[], Awaitable[List[T]]], kept: List[T], complete: Callable[[List[T]], bool] = lambda _: True) -> List[T]:
+            try:
+                return await read_twice(what, read, complete)
+            except AulaCredentialError:
+                raise
+            except Exception as ex:
+                failures[what] = error_text(ex)
+                return kept
 
-        message_threads = list[AulaMessageThread]()
-        try:
-            message_threads = await self._client.get_message_threads()
-        except AulaCredentialError:
-            raise
-        except Exception as ex:
-            had_failure = True
-            failures.append(f"message threads: {error_text(ex)}")
+        def every_child(overviews: List[AulaDailyOverview]) -> bool:
+            present = {overview.institution_profile.id for overview in overviews}
+            return all(child.id in present for child in children)
 
-        notifications = list[AULA_NOTIFICATION_TYPES]()
-        try:
-            notifications = await self._client.get_notifications(children)
-        except AulaCredentialError:
-            raise
-        except Exception as ex:
-            had_failure = True
-            failures.append(f"notifications: {error_text(ex)}")
+        daily_overviews = await part(
+            DAILY_OVERVIEWS, lambda: self._client.get_daily_overviews(profiles), before.daily_overviews if before else [], every_child
+        )
+        message_threads = await part(MESSAGE_THREADS, self._client.get_message_threads, before.message_threads if before else [])
+        notifications = await part(
+            NOTIFICATIONS, lambda: self._client.get_notifications(children), before.notifications if before else []
+        )
 
-        if had_failure:
+        if failures:
             # Logged once when Aula can be read only in part, and once when it can be read in full.
             if not self._partly_unreadable:
                 self._partly_unreadable = True
-                _LOGGER.warning("Aula could be read only in part: %s", "; ".join(failures))
-            self._consecutive_failures += 1
-            if self._consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
-                self._consecutive_failures = 0
-                return Exception(f"Aula API failed {MAX_CONSECUTIVE_FAILURES} consecutive times")
-        else:
-            if self._partly_unreadable:
-                self._partly_unreadable = False
-                _LOGGER.info("Aula can be read in full again")
-            self._consecutive_failures = 0
+                _LOGGER.warning("Aula could be read only in part, twice in a row: %s", "; ".join(f"{what}: {error}" for what, error in failures.items()))
+        elif self._partly_unreadable:
+            self._partly_unreadable = False
+            _LOGGER.info("Aula can be read in full again")
 
         return AulaDataCoordinatorData(
             aula_version=self.aula_version,
@@ -223,5 +217,6 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             device_id=self.device_id,
             message_threads=message_threads,
             notifications=notifications,
+            unreadable=frozenset(failures),
             profiles=profiles,
         )
