@@ -45,9 +45,9 @@ body:
     attributes:
       value: |
         **The diagnostics.** In Home Assistant, go to Settings > Devices & services > Aula Connect,
-        open the menu (⋮) of the entry and choose **Download diagnostics**. Names, ids and
-        contact details Aula Connect knows are replaced, but a name inside a text can remain, and
-        this issue is public: read the file through before you attach it.
+        open the menu (⋮) of the entry and choose **Download diagnostics**. All Aula says is
+        replaced but how it is built; this issue is public all the same, so read the file through
+        before you attach it.
         [More about the diagnostics](https://github.com/HairingX/ha_aula_connect/blob/main/CONTRIBUTING.md#downloading-the-diagnostics).
   - type: checkboxes
     attributes:

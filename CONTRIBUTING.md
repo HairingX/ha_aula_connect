@@ -47,12 +47,21 @@ the diagnostics attached.
 4. Attach the file to the issue: drag it into the field the form names, or tap the field and
    choose the file.
 
-The diagnostics read Aula once more and hold what it answers. The MitID user ID and every token
-are hidden. Every id, name, e-mail address, phone number, address and link Aula Connect knows is
-replaced by another of the same length, the same each time, so that what belongs together still
-does. A name Aula writes inside a text without saying it is a name can remain, such as another
-child's name in a message. An issue is public: read the file through, and do not share it if it
-holds what you do not want to share.
+The diagnostics read Aula once more and hold what it answers, with all it says replaced but how
+it is built. The MitID user ID and every token are hidden. Every word of every text, every id,
+code, e-mail address, phone number, address and link gets another of the same length, the same
+each time, so that what belongs together still does. Kept are the keys, the kinds Aula names, such
+as a message's type or a notification's area, HTML's tags, dates, times and numbers that are no
+ids. An issue is public: read the file through all the same, and do not share it if it holds what
+you do not want to share.
+
+### When more is needed
+
+To implement something new, a single field Aula sends may be needed as it is. In that case the
+issue asks you to read one method of Aula's API with the action **Read from Aula**, revealing only
+that field: the answer then holds that field as Aula sent it, and the rest anonymised as above.
+Read it through, and add it to the issue if it holds nothing you do not want to share. Reveal the
+whole answer only if asked to, and never share that in public.
 
 ## Any other problem
 
