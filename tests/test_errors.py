@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -20,7 +21,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from custom_components.aula_connect.aula_data_coordinator import AulaDataCoordinator
 from custom_components.aula_connect.const import DOMAIN
 
-from .fake_aula import SCHOOL, FakeAula
+from .fake_aula import SCHOOL, FakeAula, failing_once
 from .test_calendars import at, events, set_up
 from .test_init import DATA
 
@@ -82,7 +83,8 @@ async def test_a_partial_failure_is_logged_once_and_the_recovery_once(
     client = AsyncMock()
     client.anomalies = MagicMock(return_value=())
     client.login.return_value = MagicMock(profiles=[], api_version=23)
-    client.get_message_threads.side_effect = [ConnectionError("down"), ConnectionError("down"), []]
+    down = ConnectionError("down")
+    client.get_message_threads.side_effect = [down, down, down, down, []]
     coordinator = AulaDataCoordinator("Aula", hass, client, entry)
     for _ in range(3):
         await coordinator.async_refresh()
@@ -128,44 +130,83 @@ async def test_a_read_whose_login_aula_no_longer_accepts_asks_to_log_in_again(
     assert [flow.get("context", {}).get("source") for flow in flows] == ["reauth"]
 
 
-@pytest.mark.parametrize(
-    ("method", "part"),
-    [
-        ("get_daily_overviews", "daily overviews"),
-        ("get_message_threads", "message threads"),
-        ("get_notifications", "notifications"),
-    ],
-)
-async def test_a_part_aula_cannot_read_keeps_what_the_entities_had(
+PARTS = [
+    ("get_daily_overviews", "daily overviews", "sensor.aula_presence_alma_school", "binary_sensor.aula_unread_message"),
+    ("get_message_threads", "message threads", "binary_sensor.aula_unread_message", "sensor.aula_presence_alma_school"),
+    ("get_notifications", "notifications", "binary_sensor.aula_unread_post", "sensor.aula_presence_alma_school"),
+]
+
+
+async def _refresh(hass: HomeAssistant, freezer: FrozenDateTimeFactory, *minutes: int) -> None:
+    for minute in minutes:
+        freezer.move_to(at(28, 10, minute))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+
+@pytest.mark.parametrize(("method", "part", "entity", "other"), PARTS)
+async def test_a_part_that_fails_once_is_read_again_and_nothing_becomes_unavailable(
     hass: HomeAssistant,
     aula: FakeAula,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
     method: str,
     part: str,
+    entity: str,
+    other: str,
+) -> None:
+    aula.daily_overviews = [AulaDailyOverview(id=1, institution_profile=SCHOOL, status=3)]
+    await set_up(hass, freezer)
+    with patch.object(aula, method, side_effect=failing_once(getattr(aula, method))):
+        await _refresh(hass, freezer, 6)
+    for entity_id in (entity, other):
+        state = hass.states.get(entity_id)
+        assert state is not None and state.state != "unavailable"
+    assert "Aula could be read only in part" not in caplog.text
+
+
+@pytest.mark.parametrize(("method", "part", "entity", "other"), PARTS)
+async def test_a_part_that_fails_twice_in_a_row_makes_only_its_entities_unavailable_and_says_so_once(
+    hass: HomeAssistant,
+    aula: FakeAula,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+    method: str,
+    part: str,
+    entity: str,
+    other: str,
 ) -> None:
     aula.daily_overviews = [AulaDailyOverview(id=1, institution_profile=SCHOOL, status=3)]
     await set_up(hass, freezer)
     with patch.object(aula, method, side_effect=ConnectionError("down")):
-        for minutes in (6, 11):
-            freezer.move_to(at(28, 10, minutes))
-            async_fire_time_changed(hass)
-            await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("sensor.aula_presence_alma_school")
-    assert state is not None and state.state != "unavailable"
-    assert f"Aula could be read only in part: {part}: down" in caplog.text
+        await _refresh(hass, freezer, 6, 11)
+    unreadable, readable = hass.states.get(entity), hass.states.get(other)
+    assert unreadable is not None and unreadable.state == "unavailable"
+    assert readable is not None and readable.state != "unavailable"
+    assert f"Aula could be read only in part, twice in a row: {part}: down" in caplog.text
     assert caplog.text.count("Aula could be read only in part") == 1
+    await _refresh(hass, freezer, 16)
+    back = hass.states.get(entity)
+    assert back is not None and back.state != "unavailable"
+    assert "Aula can be read in full again" in caplog.text
 
 
-async def test_entities_aula_cannot_read_three_times_running_become_unavailable(
+async def test_a_login_that_fails_once_is_tried_again_and_nothing_becomes_unavailable(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
     await set_up(hass, freezer)
-    with patch.object(aula, "get_notifications", side_effect=ConnectionError("down")):
-        for minutes in (6, 11, 16):
-            freezer.move_to(at(28, 10, minutes))
-            async_fire_time_changed(hass)
-            await hass.async_block_till_done(wait_background_tasks=True)
+    with patch.object(aula, "login", side_effect=failing_once(aula.login)):
+        await _refresh(hass, freezer, 6)
+    state = hass.states.get("binary_sensor.aula_unread_post")
+    assert state is not None and state.state != "unavailable"
+
+
+async def test_a_login_that_fails_twice_in_a_row_makes_the_entities_unavailable(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
+) -> None:
+    await set_up(hass, freezer)
+    with patch.object(aula, "login", side_effect=ConnectionError("down")):
+        await _refresh(hass, freezer, 6)
     state = hass.states.get("binary_sensor.aula_unread_post")
     assert state is not None and state.state == "unavailable"
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
 
@@ -104,3 +105,16 @@ class FakeAula:
     async def get_newsletters(self, profiles: Any, start: datetime, end: datetime) -> list[AulaWeeklyNewsletter]:
         return list(self.newsletters)
 
+
+def failing_once(read: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    """`read`, failing the first time it is called."""
+    calls = 0
+
+    async def once(*args: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise ConnectionError("down")
+        return await read(*args)
+
+    return once
