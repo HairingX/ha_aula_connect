@@ -24,6 +24,7 @@ READ_SCHEMA = probatio.Schema(
         probatio.Required("config_entry_id"): cv.string,
         probatio.Required("method"): cv.string,
         probatio.Optional("params", default={}): {cv.string: cv.string},
+        probatio.Optional("reveal", default=False): probatio.Any(cv.boolean, [cv.string]),
     }
 )
 
@@ -59,7 +60,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         method: str = call.data["method"]
         try:
             answer: dict[str, Any] = await entry.runtime_data.client.read(
-                method, dict(call.data["params"]), await pseudonym_key(hass)
+                method, dict(call.data["params"]), await pseudonym_key(hass), call.data["reveal"]
             )
         except MethodRefusedError:
             raise ServiceValidationError(

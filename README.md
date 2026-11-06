@@ -204,7 +204,10 @@ entities:
 diagnostics do: every id, name, contact detail and link replaced by another of the same length,
 and no token. It reads only a method that gets, named `<area>.get<What>`, never a thread's
 messages nor a secure document, and only an administrator may use it. Use it to see what Aula
-sends where the integration does not read it yet:
+sends where the integration does not read it yet. `reveal` keeps the values under the keys it
+names as Aula sent them, such as `["widgetCategory"]` for a field of a module not known yet, or the
+whole answer with `true`; what is revealed is no longer anonymous, so share it only in private.
+The MitID user ID and every token stay hidden:
 
 ```yaml
 action: aula_connect.read
@@ -232,12 +235,13 @@ response_variable: answer
   Aula once more, from the start of this week and three weeks on, and hold what it answers - the
   messages of every thread too, except those marked sensitive - with each answer's headers and when
   it came, and the newest failure of each request, an error such as a timeout among them, even
-  where it later succeeded. The MitID user ID and every token are hidden wherever they stand. Every id, name, e-mail address, phone number, address and link
-  in the answers is replaced by another of the same length - "Alma" by "Pyny", the same each
-  time - so that what belongs together still does, and the text fills as much as on the screen.
-  Dates, times and the rest of the texts are kept; a name Aula writes into a text without saying
-  it is one, such as a classmate's in a message, stays, so read the file through before sharing
-  it, and share it only with who needs it. A thread marked sensitive is never read. The secret
+  where it later succeeded. The MitID user ID and every token are hidden wherever they stand. All
+  the answers say is replaced, but how they are built: every word of every text, every id, code,
+  e-mail address, phone number, address and link gets another of the same length - "Alma" by
+  "Pyny", the same each time - so that what belongs together still does, and the text fills as
+  much as on the screen. Kept are the keys, the kinds Aula names, such as a message's type or a
+  notification's area, HTML's tags, dates, times and numbers that are no ids. Read the file through
+  before sharing it all the same. A thread marked sensitive is never read. The secret
   that picks the replacements is kept in Home Assistant only. To see more, turn on debug logging
   under the integration's entry. A debug log can hold your children's data: read it through
   before sharing it.

@@ -290,21 +290,21 @@
   "issues": {
     "unknown_notification_area": {
       "title": "Aula sender notifikationer, Aula Connect ikke kender",
-      "description": "Aula sendte notifikationer af en slags, Aula Connect endnu ikke kender: {details}. Hent diagnostikken fra integrationens post og del den med udvikleren, så Aula Connect kan lære dem. Hentningen erstatter de navne, id'er og kontaktoplysninger, den kender, men et navn inde i en tekst kan blive stående; læs den igennem, før du deler den."
+      "description": "Aula sendte notifikationer af en slags, Aula Connect endnu ikke kender: {details}. Hent diagnostikken fra integrationens post og del den med udvikleren, så Aula Connect kan lære dem. Hentningen erstatter alt, hvad Aula siger, men ikke hvordan det er bygget op; læs den alligevel igennem, før du deler den."
     },
     "unreadable_response": {
       "title": "Aula Connect kunne ikke læse et svar fra Aula",
-      "description": "Aula Connect kunne ikke læse Aulas svar på: {details}. Aula kan have ændret det. Hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter de navne, id'er og kontaktoplysninger, den kender, men et navn inde i en tekst kan blive stående; læs den igennem, før du deler den."
+      "description": "Aula Connect kunne ikke læse Aulas svar på: {details}. Aula kan have ændret det. Hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter alt, hvad Aula siger, men ikke hvordan det er bygget op; læs den alligevel igennem, før du deler den."
     },
     "api_version_changed": {
       "title": "Aulas API har en ny version",
-      "description": "Aulas API er i version {details}, som Aula Connect ikke er lavet til. Det kan virke som før; mangler der noget, så hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter de navne, id'er og kontaktoplysninger, den kender, men et navn inde i en tekst kan blive stående; læs den igennem, før du deler den."
+      "description": "Aulas API er i version {details}, som Aula Connect ikke er lavet til. Det kan virke som før; mangler der noget, så hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter alt, hvad Aula siger, men ikke hvordan det er bygget op; læs den alligevel igennem, før du deler den."
     }
   },
   "services": {
     "read": {
       "name": "Læs fra Aula",
-      "description": "Læser én metode i Aulas API, der kun henter, og svarer med navne og id'er erstattet, som diagnostikken gør. Kun en administrator kan bruge den.",
+      "description": "Læser én metode i Aulas API, der kun henter, og svarer med navne og id'er erstattet, som diagnostikken gør. Kun en administrator kan bruge den. Det, der vises med Vis, er ikke længere anonymt.",
       "fields": {
         "config_entry_id": {
           "name": "Aula-konto",
@@ -317,6 +317,10 @@
         "params": {
           "name": "Parametre",
           "description": "Metodens parametre, efter navn."
+        },
+        "reveal": {
+          "name": "Vis",
+          "description": "Nøglerne hvis værdier beholdes som Aula sendte dem, fx [\"widgetCategory\"], eller true for hele svaret. Det viste er ikke længere anonymt: del det kun privat. MitID-brugernavnet og alle tokens forbliver skjulte."
         }
       }
     }

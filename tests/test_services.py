@@ -53,8 +53,23 @@ async def test_the_action_reads_a_method_and_answers_as_the_diagnostics_do(hass:
     client: Any = entry.runtime_data.client
 
     assert await _read(hass, entry.entry_id) == {"endpoint": "profiles.getProfileContext"}
-    method, params, key = client.read.call_args.args
-    assert (method, params, len(key)) == ("profiles.getProfileContext", {"portalrole": "guardian"}, 32)
+    method, params, key, reveal = client.read.call_args.args
+    assert (method, params, len(key), reveal) == ("profiles.getProfileContext", {"portalrole": "guardian"}, 32, False)
+
+
+@pytest.mark.usefixtures("aula_without_children")
+@pytest.mark.parametrize("reveal", [True, ["widgetCategory"]])
+async def test_the_action_reveals_the_keys_asked_for_or_the_whole_answer(hass: HomeAssistant, reveal: Any) -> None:
+    entry = await _entry(hass)
+    client: Any = entry.runtime_data.client
+    await hass.services.async_call(
+        DOMAIN,
+        "read",
+        {"config_entry_id": entry.entry_id, "method": "profiles.getProfileContext", "reveal": reveal},
+        blocking=True,
+        return_response=True,
+    )
+    assert client.read.call_args.args[3] == reveal
 
 
 @pytest.mark.usefixtures("aula_without_children")
