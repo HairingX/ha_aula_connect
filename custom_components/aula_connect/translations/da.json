@@ -288,15 +288,23 @@
     }
   },
   "issues": {
-    "aula_changed": {
-      "title": "Aula sender noget, Aula Connect ikke kender",
-      "description": "Aula sendte noget, Aula Connect ikke kunne læse eller endnu ikke kender:\n\n{surprises}\n\nHent diagnostikken fra integrationens post og del den med udvikleren, så Aula Connect kan lære det. Hentningen erstatter alle navne, id'er og kontaktoplysninger; læs den igennem, før du deler den."
+    "unknown_notification_area": {
+      "title": "Aula sender notifikationer, Aula Connect ikke kender",
+      "description": "Aula sendte notifikationer af en slags, Aula Connect endnu ikke kender: {details}. Hent diagnostikken fra integrationens post og del den med udvikleren, så Aula Connect kan lære dem. Hentningen erstatter de navne, id'er og kontaktoplysninger, den kender, men et navn inde i en tekst kan blive stående; læs den igennem, før du deler den."
+    },
+    "unreadable_response": {
+      "title": "Aula Connect kunne ikke læse et svar fra Aula",
+      "description": "Aula Connect kunne ikke læse Aulas svar på: {details}. Aula kan have ændret det. Hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter de navne, id'er og kontaktoplysninger, den kender, men et navn inde i en tekst kan blive stående; læs den igennem, før du deler den."
+    },
+    "api_version_changed": {
+      "title": "Aulas API har en ny version",
+      "description": "Aulas API er i version {details}, som Aula Connect ikke er lavet til. Det kan virke som før; mangler der noget, så hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter de navne, id'er og kontaktoplysninger, den kender, men et navn inde i en tekst kan blive stående; læs den igennem, før du deler den."
     }
   },
   "services": {
     "read": {
       "name": "Læs fra Aula",
-      "description": "Læser én metode i Aulas API, der kun henter, og svarer med navne og id'er erstattet, som diagnostikken gør.",
+      "description": "Læser én metode i Aulas API, der kun henter, og svarer med navne og id'er erstattet, som diagnostikken gør. Kun en administrator kan bruge den.",
       "fields": {
         "config_entry_id": {
           "name": "Aula-konto",

@@ -179,7 +179,6 @@ class AulaPresenceDurationSensor(AulaEntityBase[AulaChildProfile], SensorEntity)
                 outdatetime = datetime.datetime.today() + datetime.timedelta(hours=outtime.hour, minutes=outtime.minute, seconds=outtime.second)
                 timervalue = (outdatetime - indatetime).total_seconds() / 60
                 timervalue = round(timervalue)
-            _LOGGER.debug(f"Presence duration calculated: {timervalue} (check_in_time={intime}, check_out_time={outtime}{"" if nowtime is None else f"(calculated from current time: '{nowtime}')"})")
             self._attr_native_value = timervalue
         self._attr_extra_state_attributes = attributes
 

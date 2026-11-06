@@ -202,8 +202,9 @@ entities:
 
 **Read from Aula** (`aula_connect.read`) reads one method of Aula's API and answers as the
 diagnostics do: every id, name, contact detail and link replaced by another of the same length,
-and no token. It reads only a method that gets, named `<area>.get<What>`, and never a thread's
-messages. Use it to see what Aula sends where the integration does not read it yet:
+and no token. It reads only a method that gets, named `<area>.get<What>`, never a thread's
+messages nor a secure document, and only an administrator may use it. Use it to see what Aula
+sends where the integration does not read it yet:
 
 ```yaml
 action: aula_connect.read
@@ -224,8 +225,9 @@ response_variable: answer
   again by itself.
 - **Aula sends something Aula Connect does not know.** A notice under Settings > System >
   Repairs names what - a notification of an unknown kind, an answer that could not be read, a new
-  version of Aula's API - and asks for the diagnostics; it goes away by itself once all is known
-  again.
+  version of Aula's API, one notice for each - and asks for the diagnostics. A notice goes away by
+  itself once Aula has not sent it again for a day, a restart or a reload counted in. A notice
+  ignored stays ignored.
 - **Something looks wrong.** Download the diagnostics from the integration's entry. They read
   Aula once more, from the start of this week and three weeks on, and hold what it answers - the
   messages of every thread too, except those marked sensitive - with each answer's headers and when

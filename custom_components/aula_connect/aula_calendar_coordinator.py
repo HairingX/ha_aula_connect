@@ -330,7 +330,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         for profile in request_data_profiles:
             # Aula's answer for several profiles cannot be split between them, so each is read alone.
             birthdays = await self._client.get_birthday_events([profile], now(), now() + SYNC_EVENT_MAX_TIME)
-            _LOGGER.debug(f"Fetching birthdays for id: {profile.id}, got {len(birthdays)} birthdays")
+            _LOGGER.debug("Fetched %s birthdays", len(birthdays))
             new_birthdaymap[profile.id] = birthdays
 
         return (new_birthdaymap, [inst.id for inst in request_data_profiles])
@@ -374,7 +374,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         for institution in request_data_institutions:
             # Aula's answer for several profiles cannot be split between them, so each is read alone.
             events = await self._client.get_calendar_events([institution], now(), now() + SYNC_EVENT_MAX_TIME)
-            _LOGGER.debug(f"Fetching events for id: {institution.id}, got {len(events)} events")
+            _LOGGER.debug("Fetched %s events", len(events))
             new_eventmap[institution.id] = events
         return (new_eventmap, [inst.id for inst in request_data_institutions])
 
@@ -418,7 +418,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         for institution in request_data_institutions:
             # Aula's answer for several profiles cannot be split between them, so each is read alone.
             weekly_plans = await self._client.get_weekly_plans([institution], now(), now() + SYNC_EVENT_MAX_TIME)
-            _LOGGER.debug(f"Fetching weekly_plans for id: {institution.id}, got {len(weekly_plans)} weekly_plans")
+            _LOGGER.debug("Fetched %s weekly_plans", len(weekly_plans))
             new_weeklyplanmap[institution.id] = weekly_plans
 
         return (new_weeklyplanmap, [inst.id for inst in request_data_institutions])
@@ -462,7 +462,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         for profile in request_data_profiles:
             plans = await self._client.get_easyiq_weekly_plans([profile], now(), now() + SYNC_EVENT_MAX_TIME)
-            _LOGGER.debug(f"Fetching easyiq weekplans for id: {profile.id}, got {len(plans)} plans")
+            _LOGGER.debug("Fetched %s EasyIQ weekly plans", len(plans))
             new_easyiqmap[profile.id] = plans
 
         return (new_easyiqmap, [p.id for p in request_data_profiles])
@@ -506,7 +506,7 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
 
         for profile in request_data_profiles:
             newsletters = await self._client.get_newsletters([profile], now(), now() + SYNC_EVENT_MAX_TIME)
-            _LOGGER.debug(f"Fetching newsletters for id: {profile.id}, got {len(newsletters)} newsletters")
+            _LOGGER.debug("Fetched %s newsletters", len(newsletters))
             new_newslettermap[profile.id] = newsletters
 
         return (new_newslettermap, [p.id for p in request_data_profiles])

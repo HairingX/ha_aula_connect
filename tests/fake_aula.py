@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from aula_connect import Anomaly
 from aula_connect.api.models.module import (
     AULA_NOTIFICATION_TYPES,
     AulaBirthdayEvent,
@@ -51,7 +52,8 @@ class FakeAula:
     def __init__(self, parent: AulaProfile) -> None:
         self.parent = parent
         self.aula_version = 23
-        self.surprises: list[str] = []
+        self.found: list[Anomaly] = []
+        self.login_error: Exception | None = None
         self.widgets: set[str] = {"0001", "0004", "0029"}
         self.birthdays: list[AulaBirthdayEvent] = []
         self.events: dict[int, list[AulaCalendarEvent]] = {}
@@ -62,10 +64,15 @@ class FakeAula:
         self.message_threads: list[AulaMessageThread] = []
         self.notifications: list[AULA_NOTIFICATION_TYPES] = []
 
+    def anomalies(self, since: datetime | None = None) -> tuple[Anomaly, ...]:
+        return tuple(anomaly for anomaly in self.found if since is None or anomaly.last_seen >= since)
+
     async def connection_check(self) -> None:
         return None
 
     async def login(self) -> AulaLoginData:
+        if self.login_error is not None:
+            raise self.login_error
         return AulaLoginData(api_version=23, profiles=[self.parent], widgets=[])
 
     def has_widget(self, widget_id: str) -> bool:

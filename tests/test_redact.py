@@ -76,10 +76,12 @@ async def test_aula_out_of_reach_at_start_logs_no_token(hass: HomeAssistant, cap
 async def test_a_partial_failure_logs_no_token(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> None:
     entry = _entry(hass)
     client = AsyncMock()
+    client.anomalies = MagicMock(return_value=())
     client.login.return_value = MagicMock(profiles=[], api_version=23)
     client.get_message_threads.side_effect = _unreachable()
     coordinator = AulaDataCoordinator("Aula", hass, client, entry)
     await coordinator.async_refresh()
+    assert coordinator.last_update_success
     assert "Aula could be read only in part" in caplog.text
     assert SECRET not in caplog.text
 
