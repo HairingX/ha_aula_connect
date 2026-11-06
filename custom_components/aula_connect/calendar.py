@@ -9,7 +9,7 @@ from homeassistant.util.dt import now
 from typing import Any, List
 import logging
 
-from .aula_calendar_coordinator import AulaCalendarCoordinator, AulaCalendarCoordinatorData
+from .aula_calendar_coordinator import BIRTHDAYS, EASYIQ_WEEKPLANS, EVENTS, NEWSLETTERS, WEEKLY_PLANS, AulaCalendarCoordinator, AulaCalendarCoordinatorData
 from .aula_data import AulaConfigEntry
 from .aula_data_coordinator import AulaDataCoordinator
 from aula_connect.api.models.constants import (
@@ -128,6 +128,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
 
 class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
     """The birthdays at a child's institution."""
+
+    _reads = BIRTHDAYS
     _event: CalendarEvent | None = None
     _profile: AulaChildProfile
     _institution: AulaInstitutionProfile
@@ -201,6 +203,8 @@ class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
 
 class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
     """The events of a profile or a child at one institution."""
+
+    _reads = EVENTS
     _event: CalendarEvent | None = None
     _profile: AulaChildProfile|AulaProfile
     _institution: AulaInstitutionProfile
@@ -313,6 +317,8 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
 
 class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
     """The tasks of a child's weekly plans, each on its day."""
+
+    _reads = WEEKLY_PLANS
     _event: CalendarEvent | None = None
     _profile: AulaChildProfile
     _institution: AulaInstitutionProfile
@@ -420,6 +426,8 @@ class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
 
 class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
     """The events of a child's EasyIQ weekly plans."""
+
+    _reads = EASYIQ_WEEKPLANS
     _profile: AulaChildProfile
     _institution: AulaInstitutionProfile
     _data_coordinator: AulaDataCoordinator
@@ -500,6 +508,8 @@ class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
 
 class AulaNewsletterCalendar(AulaCalendarEntityBase, CalendarEntity):
     """A child's MinUddannelse newsletters, each over the days of its week with its HTML as description."""
+
+    _reads = NEWSLETTERS
     _profile: AulaChildProfile
     _institution: AulaInstitutionProfile
     _data_coordinator: AulaDataCoordinator

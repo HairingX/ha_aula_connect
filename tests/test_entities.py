@@ -6,6 +6,7 @@ import json
 from datetime import time
 from pathlib import Path
 from typing import Any, TypeVar
+from unittest.mock import patch
 
 import pytest
 from aula_connect.api.models.module import (
@@ -131,7 +132,7 @@ async def test_the_presence_duration_counts_the_minutes_since_check_in(
     assert state.attributes["check_out_time"] == check_out
 
 
-async def test_the_presence_duration_is_unknown_once_the_daily_overview_is_gone(
+async def test_the_presence_duration_is_unavailable_once_aula_gives_no_daily_overview_twice_in_a_row(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
     aula.daily_overviews = [
@@ -146,7 +147,23 @@ async def test_the_presence_duration_is_unknown_once_the_daily_overview_is_gone(
     await hass.async_block_till_done()
     state = hass.states.get("sensor.aula_present_duration_alma_school")
     assert state is not None
-    assert state.state == "unknown"
+    assert state.state == "unavailable"
+
+
+async def test_a_daily_overview_missing_from_one_read_is_read_again_and_the_presence_stays(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
+) -> None:
+    overview = AulaDailyOverview(id=1, institution_profile=SCHOOL, status=3)
+    aula.daily_overviews = [overview]
+    await set_up(hass, freezer)
+    with patch.object(aula, "get_daily_overviews", side_effect=[[], [overview]]):
+        await async_setup_component(hass, "homeassistant", {})
+        await hass.services.async_call(
+            "homeassistant", "update_entity", {"entity_id": "sensor.aula_presence_alma_school"}, blocking=True
+        )
+        await hass.async_block_till_done()
+    state = hass.states.get("sensor.aula_presence_alma_school")
+    assert state is not None and state.state != "unavailable"
 
 
 def thread(subject: str, **fields: Any) -> AulaMessageThread:

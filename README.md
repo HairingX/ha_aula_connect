@@ -110,10 +110,12 @@ Aula Connect asks Aula; Aula does not tell it when something changes.
   newsletters are read again every 2 hours, birthdays once a day, two weeks ahead.
 - Looking further ahead or back in a calendar asks Aula for that period there and then.
 
-When Aula cannot be read at all, the entities become unavailable until it answers again. When
-only part of it can be read, the entities keep what they had, and become unavailable only when
-that happens three times in a row. The log says once that Aula could be read only in part, and
-once that it can be read in full again.
+A single read that fails does not change anything: Aula Connect waits 10 seconds and reads that
+part once more - the login, presence, messages, notifications, or one kind of calendar, such as
+the birthdays. Only when that fails too do the entities that show it become unavailable, and the
+others stay as they are; the same holds for a child Aula gives no presence for. The log says once
+that Aula could be read only in part, and once that it can be read in full again; the
+unavailable entities show it for as long as it lasts.
 
 ## Examples
 

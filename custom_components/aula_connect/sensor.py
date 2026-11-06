@@ -12,7 +12,7 @@ import datetime
 import logging
 
 from .aula_data import AulaConfigEntry
-from .aula_data_coordinator import AulaDataCoordinator, AulaDataCoordinatorData
+from .aula_data_coordinator import DAILY_OVERVIEWS, AulaDataCoordinator, AulaDataCoordinatorData
 from aula_connect.api.models.aula_profile_models import AulaChildProfile, AulaDailyOverview
 from .entity import AulaEntityBase
 
@@ -33,7 +33,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
         entities.append(AulaPresenceDurationSensor(coordinator, child))
     async_add_entities(entities)
 
-class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
+class _ChildPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
+    """A sensor of a child's daily overview, unavailable while Aula gives none for the child."""
+
+    _reads = DAILY_OVERVIEWS
+
+    def _readable(self, data: AulaDataCoordinatorData) -> bool:
+        child = self.coordinator_context
+        return super()._readable(data) and any(item.institution_profile.id == child.id for item in data.daily_overviews)
+
+
+class AulaStatusSensor(_ChildPresenceSensor):
     """A child's presence status at the institution today, as Aula states it."""
 
     _attr_device_class = SensorDeviceClass.ENUM
@@ -86,7 +96,7 @@ class AulaStatusSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
                 attributes["location_icon"] = daily_overview.location.icon
         self._attr_extra_state_attributes = attributes
 
-class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
+class AulaPresenceSensor(_ChildPresenceSensor):
     """Whether a child is present at the institution now."""
 
     _attr_device_class = SensorDeviceClass.ENUM
@@ -130,7 +140,7 @@ class AulaPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
             attributes["institution_name"] = daily_overview.institution_profile.institution_name
         self._attr_extra_state_attributes = attributes
 
-class AulaPresenceDurationSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
+class AulaPresenceDurationSensor(_ChildPresenceSensor):
     """How many minutes a child has been, or was, present at the institution today."""
 
     _attr_device_class = SensorDeviceClass.DURATION

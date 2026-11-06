@@ -4,6 +4,7 @@ made-up Aula accounts."""
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import timedelta
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -18,6 +19,12 @@ from .fake_aula import PARENT, FakeAula
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> Iterator[None]:
     """Let Home Assistant load the integration from custom_components/."""
     yield
+
+
+@pytest.fixture(autouse=True)
+def no_pause_before_reading_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Read a part of Aula once more at once, so that the tests take no real pause."""
+    monkeypatch.setattr("custom_components.aula_connect.retry.RETRY_DELAY", timedelta(0))
 
 
 @pytest.fixture(autouse=True)

@@ -80,9 +80,11 @@ retries the setup:
   birthdays, two hours for the rest. A calendar is redrawn only when its own data was read.
   Periods outside the two weeks are read from Aula when the calendar asks for them.
 
-A part of Aula that cannot be read leaves the data from before in place; the log says so once,
-and once more when Aula can be read in full again. Three such reads in a row, or a login that
-fails, make the entities unavailable.
+A part of Aula that cannot be read - the login, the daily overviews, the threads, the
+notifications, or one kind of calendar - is read once more after 10 seconds, and a daily overview
+missing for a child too. Only when the second read fails as well do the entities that show that
+part become unavailable; the data from before stays in place for when it can be read again. The
+log says so once, and once more when Aula can be read in full again.
 
 Which calendars an institution has follows the widgets Aula lists for it: weekly plans and
 birthdays with the weekly plan widget, EasyIQ with EasyIQ's, newsletters with MinUddannelse's.
