@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Iterator
+from collections.abc import AsyncGenerator, Callable, Iterator
+from contextlib import asynccontextmanager
+from datetime import timedelta
 from functools import partial
 from typing import Any
 from unittest.mock import patch
@@ -18,6 +20,7 @@ from aula_connect.testing import SimulatedAulaApi, SimulatedAulaLogin
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.setup import async_setup_component
+from homeassistant.util import dt as dt_util
 
 from custom_components.aula_connect.auth_session import auth_session
 from custom_components.aula_connect.const import DOMAIN
@@ -33,12 +36,13 @@ def local_cookies() -> Iterator[None]:
         yield
 
 
-@pytest.mark.usefixtures("local_cookies", "socket_enabled")
-async def test_a_setup_logs_in_with_mitid_and_reads_aula(hass: HomeAssistant) -> None:
+@asynccontextmanager
+async def set_up(
+    hass: HomeAssistant, arrange: Callable[[SimulatedAulaApi], None]
+) -> AsyncGenerator[tuple[SimulatedAulaLogin, SimulatedAulaApi]]:
+    """Set up an entry through the MitID login against the simulated Aula that `arrange` fills."""
     async with SimulatedAulaLogin() as login, SimulatedAulaApi() as api:
-        api.daily_overviews = [
-            {"id": 1, "institutionProfile": {"id": 11, "institutionCode": "S1", "institutionName": "School"}, "status": 3}
-        ]
+        arrange(api)
 
         def login_client(session: aiohttp.ClientSession, **kwargs: Any) -> AulaLoginClient:
             return login.point(AulaLoginClient(session, **kwargs))
@@ -66,7 +70,22 @@ async def test_a_setup_logs_in_with_mitid_and_reads_aula(hass: HomeAssistant) ->
             assert session.error is None
             assert (await run_flow(hass, flow_id))["type"] is FlowResultType.CREATE_ENTRY
             await hass.async_block_till_done()
+        try:
+            yield login, api
+        finally:
+            [entry] = hass.config_entries.async_entries(DOMAIN)
+            assert await hass.config_entries.async_unload(entry.entry_id)
+            a_minute_later(hass)
 
+
+@pytest.mark.usefixtures("local_cookies", "socket_enabled")
+async def test_a_setup_logs_in_with_mitid_and_reads_aula(hass: HomeAssistant) -> None:
+    def arrange(api: SimulatedAulaApi) -> None:
+        api.daily_overviews = [
+            {"id": 1, "institutionProfile": {"id": 11, "institutionCode": "S1", "institutionName": "School"}, "status": 3}
+        ]
+
+    async with set_up(hass, arrange) as (login, api):
         [entry] = hass.config_entries.async_entries(DOMAIN)
         assert entry.data["access_token"] in login.refresh_tokens.values()
         presence = hass.states.get("sensor.aula_presence_alma_school")
@@ -84,5 +103,32 @@ async def test_a_setup_logs_in_with_mitid_and_reads_aula(hass: HomeAssistant) ->
         secrets = (entry.data["mitid_username"], entry.data["access_token"], entry.data["refresh_token"])
         for value in ("Alma", "Example", "School", '"alma"', '"pat"', *secrets):
             assert value not in text, value
-        assert await hass.config_entries.async_unload(entry.entry_id)
-        a_minute_later(hass)
+
+
+@pytest.mark.usefixtures("local_cookies", "socket_enabled")
+async def test_a_childs_birthday_calendar_holds_only_the_birthdays_aula_ties_to_it(hass: HomeAssistant) -> None:
+    def arrange(api: SimulatedAulaApi) -> None:
+        birthday = {"institutionProfileId": 31, "birthday": "2017-12-03", "institutionCode": "S1", "mainGroupName": "3A"}
+        api.birthdays = [
+            {**birthday, "name": "Bo", "relatedChildrenIds": [11]},
+            {**birthday, "institutionProfileId": 32, "name": "Liv", "mainGroupName": "0P", "relatedChildrenIds": [12]},
+        ]
+
+    async with set_up(hass, arrange):
+        start = dt_util.now()
+        response: Any = await hass.services.async_call(
+            "calendar",
+            "get_events",
+            {
+                "entity_id": "calendar.aula_birthdays_alma_school",
+                "start_date_time": start.isoformat(),
+                "end_date_time": (start + timedelta(days=366)).isoformat(),
+            },
+            blocking=True,
+            return_response=True,
+        )
+        summaries = [event["summary"] for event in response["calendar.aula_birthdays_alma_school"]["events"]]
+        assert [summary for summary in summaries if "Bo" in summary or "Liv" in summary] == [
+            summary for summary in summaries if "Bo" in summary
+        ]
+        assert any("Bo" in summary for summary in summaries)
