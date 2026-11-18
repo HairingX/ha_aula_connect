@@ -304,7 +304,7 @@
   "services": {
     "read": {
       "name": "Læs fra Aula",
-      "description": "Læser én metode i Aulas API, der kun henter, og svarer med navne og id'er erstattet, som diagnostikken gør. Kun en administrator kan bruge den. Det, der vises med Vis, er ikke længere anonymt.",
+      "description": "Læser én metode i Aulas API, der kun henter, med GET eller med indhold via POST, og svarer med navne og id'er erstattet, som diagnostikken gør. Kun en administrator kan bruge den. Det, der vises med Vis, er ikke længere anonymt.",
       "fields": {
         "config_entry_id": {
           "name": "Aula-konto",
@@ -321,6 +321,10 @@
         "reveal": {
           "name": "Vis",
           "description": "Nøglerne hvis værdier beholdes som Aula sendte dem, fx [\"widgetCategory\"], eller true for hele svaret. Det viste er ikke længere anonymt: del det kun privat. MitID-brugernavnet og alle tokens forbliver skjulte."
+        },
+        "body": {
+          "name": "Indhold",
+          "description": "Sendes som JSON med POST, til en metode Aula spørges sådan, fx calendar.getEventsByProfileIdsAndResourceIds. Udeladt spørges metoden med GET."
         }
       }
     }

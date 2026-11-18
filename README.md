@@ -209,7 +209,9 @@ messages nor a secure document, and only an administrator may use it. Use it to 
 sends where the integration does not read it yet. `reveal` keeps the values under the keys it
 names as Aula sent them, such as `["widgetCategory"]` for a field of a module not known yet, or the
 whole answer with `true`; what is revealed is no longer anonymous, so share it only in private.
-The MitID user ID and every token stay hidden:
+The MitID user ID and every token stay hidden. The method is asked with GET; with `body`, it is
+asked with POST and the body as JSON, as Aula asks some of the methods that get, such as the
+calendar's events:
 
 ```yaml
 action: aula_connect.read
@@ -218,6 +220,20 @@ data:
   method: profiles.getProfileContext
   params:
     portalrole: guardian
+response_variable: answer
+```
+
+```yaml
+action: aula_connect.read
+data:
+  config_entry_id: <the Aula Connect entry>
+  method: calendar.getEventsByProfileIdsAndResourceIds
+  body:
+    instProfileIds: [1234567]
+    resourceIds: []
+    start: "2026-11-16 00:00:00.0000+01:00"
+    end: "2026-11-23 00:00:00.0000+01:00"
+  reveal: ["id"]
 response_variable: answer
 ```
 

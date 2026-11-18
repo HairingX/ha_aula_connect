@@ -56,8 +56,23 @@ async def test_the_action_reads_a_method_and_answers_as_the_diagnostics_do(hass:
     client: Any = entry.runtime_data.client
 
     assert await _read(hass, entry.entry_id) == {"endpoint": "profiles.getProfileContext"}
-    method, params, key, reveal = client.read.call_args.args
-    assert (method, params, len(key), reveal) == ("profiles.getProfileContext", {"portalrole": "guardian"}, 32, False)
+    method, params, key, reveal, body = client.read.call_args.args
+    assert (method, params, len(key), reveal, body) == ("profiles.getProfileContext", {"portalrole": "guardian"}, 32, False, None)
+
+
+@pytest.mark.usefixtures("aula_without_children")
+async def test_the_action_posts_a_body_for_a_method_aula_asks_by_post(hass: HomeAssistant) -> None:
+    entry = await _entry(hass)
+    client: Any = entry.runtime_data.client
+    body = {"instProfileIds": [1234567], "resourceIds": [], "start": "2026-11-16 00:00:00.0000+01:00"}
+    await hass.services.async_call(
+        DOMAIN,
+        "read",
+        {"config_entry_id": entry.entry_id, "method": "calendar.getEventsByProfileIdsAndResourceIds", "body": body},
+        blocking=True,
+        return_response=True,
+    )
+    assert client.read.call_args.args[4] == body
 
 
 @pytest.mark.usefixtures("aula_without_children")
