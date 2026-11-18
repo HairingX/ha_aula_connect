@@ -209,7 +209,7 @@ integration does not read it yet. The method is chosen from those known to exist
 parameters in the library's [catalog of Aula's methods](https://github.com/HairingX/aula_connect/blob/main/docs/aula-methods.md),
 or typed as Aula spells it; an unlisted one is read where its name starts with `get` or `find`
 after its area. It never reads a method that changes Aula or hands out a token, nor the text of
-messages or a secure document, and refuses a name Aula has no method by, saying the one meant. `reveal` keeps the values under the keys it
+messages or a secure document. `reveal` keeps the values under the keys it
 names as Aula sent them, such as `["widgetCategory"]` for a field of a module not known yet, or the
 whole answer with `true`; what is revealed is no longer anonymous, so share it only in private.
 The MitID user ID and every token stay hidden. The method is asked with GET; with `body`, it is
