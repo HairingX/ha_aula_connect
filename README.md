@@ -204,14 +204,17 @@ entities:
 
 **Read from Aula** (`aula_connect.read`) reads one method of Aula's API and answers as the
 diagnostics do: every id, name, contact detail and link replaced by another of the same length,
-and no token. It reads only a method that gets, named `<area>.get<What>`, never a thread's
-messages nor a secure document, and only an administrator may use it. Use it to see what Aula
-sends where the integration does not read it yet. `reveal` keeps the values under the keys it
+and no token. Only an administrator may use it. Use it to see what Aula sends where the
+integration does not read it yet. The method is chosen from those known to exist, listed with their
+parameters in the library's [catalog of Aula's methods](https://github.com/HairingX/aula_connect/blob/main/docs/aula-methods.md),
+or typed as Aula spells it; an unlisted one is read where its name starts with `get` or `find`
+after its area. It never reads a method that changes Aula or hands out a token, nor the text of
+messages or a secure document, and refuses a name Aula has no method by, saying the one meant. `reveal` keeps the values under the keys it
 names as Aula sent them, such as `["widgetCategory"]` for a field of a module not known yet, or the
 whole answer with `true`; what is revealed is no longer anonymous, so share it only in private.
 The MitID user ID and every token stay hidden. The method is asked with GET; with `body`, it is
 asked with POST and the body as JSON, as Aula asks some of the methods that get, such as the
-calendar's events:
+calendar's events. A known method asked by POST needs a body:
 
 ```yaml
 action: aula_connect.read

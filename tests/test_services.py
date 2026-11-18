@@ -10,8 +10,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 from aula_connect import Anomaly, AnomalyKind
 from aula_connect.api.aula_errors import MethodRefusedError, ParseError
+from aula_connect.methods import METHODS
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import Context, HomeAssistant
@@ -103,7 +105,7 @@ async def test_the_action_refuses_an_entry_not_loaded_and_a_method_that_does_not
     client.read.side_effect = MethodRefusedError("not a get")
     with pytest.raises(ServiceValidationError) as refused:
         await _read(hass, entry.entry_id, "messaging.deleteThread")
-    assert refused.value.translation_placeholders == {"method": "messaging.deleteThread"}
+    assert refused.value.translation_placeholders == {"method": "messaging.deleteThread", "reason": "not a get"}
     assert refused.value.__cause__ is None and refused.value.__suppress_context__
     assert await hass.config_entries.async_unload(entry.entry_id)
     with pytest.raises(ServiceValidationError) as unloaded:
@@ -235,3 +237,11 @@ def test_every_issue_learns_more_at_the_section_of_its_own_title() -> None:
     for kind in AnomalyKind:
         anchor = _anchor(titles[kind.value]["title"])
         assert ANOMALY_HELP[kind] == f"{CONTRIBUTING_URL}#{anchor}" and anchor in sections
+
+
+def test_the_action_offers_every_method_known_to_exist_that_it_reads() -> None:
+    services = yaml.safe_load((Path(__file__).parent.parent / "custom_components" / DOMAIN / "services.yaml").read_text(encoding="utf-8"))
+    selector = services["read"]["fields"]["method"]["selector"]["select"]
+    readable = [method.name for method in METHODS.values() if method.readable]
+    assert selector["custom_value"] is True
+    assert selector["options"] == sorted(readable, key=str.lower)

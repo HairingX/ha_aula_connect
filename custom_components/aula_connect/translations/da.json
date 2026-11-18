@@ -284,7 +284,7 @@
       "message": "Aula Connect-posten er ikke indlæst."
     },
     "method_not_read_only": {
-      "message": "{method} er ikke en metode i Aulas API, der kun henter."
+      "message": "{method} læses ikke: {reason}"
     }
   },
   "issues": {
@@ -312,7 +312,7 @@
         },
         "method": {
           "name": "Metode",
-          "description": "Metoden i Aulas API, hvis navn begynder med get efter området, fx profiles.getProfileContext."
+          "description": "En metode i Aulas API, som vides at findes, eller en anden hvis navn begynder med get eller find efter området, stavet som Aula staver den. En metode Aula spørges med POST, kræver indhold."
         },
         "params": {
           "name": "Parametre",

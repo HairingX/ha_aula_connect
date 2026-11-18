@@ -67,11 +67,11 @@ def async_register_services(hass: HomeAssistant) -> None:
                 call.data["reveal"],
                 call.data.get("body"),
             )
-        except MethodRefusedError:
+        except MethodRefusedError as err:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="method_not_read_only",
-                translation_placeholders={"method": method},
+                translation_placeholders={"method": method, "reason": str(err)},
             ) from None
         except Exception as err:
             raise HomeAssistantError(
