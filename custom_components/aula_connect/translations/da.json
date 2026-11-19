@@ -296,6 +296,10 @@
       "title": "Aula Connect kunne ikke læse et svar fra Aula",
       "description": "Aula Connect kunne ikke læse Aulas svar på: {details}. Aula kan have ændret det. Hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter alt, hvad Aula siger, men ikke hvordan det er bygget op; læs den alligevel igennem, før du deler den."
     },
+    "unknown_shape": {
+      "title": "Aula sender svar i en ny form",
+      "description": "Aula sendte felter eller typer, Aula Connect ikke har set før: {details}. Det kan virke som før; for at holde Aula Connect opdateret, så hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter alt, hvad Aula siger, men ikke hvordan det er bygget op; læs den alligevel igennem, før du deler den."
+    },
     "api_version_changed": {
       "title": "Aulas API har en ny version",
       "description": "Aulas API er i version {details}, som Aula Connect ikke er lavet til. Det kan virke som før; mangler der noget, så hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter alt, hvad Aula siger, men ikke hvordan det er bygget op; læs den alligevel igennem, før du deler den."

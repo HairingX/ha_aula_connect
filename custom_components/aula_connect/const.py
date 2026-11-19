@@ -39,5 +39,6 @@ ANOMALY_HELP: dict[AnomalyKind, str] = {
     AnomalyKind.API_VERSION_CHANGED: f"{CONTRIBUTING_URL}#aulas-api-has-a-new-version",
     AnomalyKind.UNKNOWN_NOTIFICATION_AREA: f"{CONTRIBUTING_URL}#aula-sends-notifications-aula-connect-does-not-know",
     AnomalyKind.UNREADABLE_RESPONSE: f"{CONTRIBUTING_URL}#aula-connect-could-not-read-an-answer-from-aula",
+    AnomalyKind.UNKNOWN_SHAPE: f"{CONTRIBUTING_URL}#aula-sends-answers-in-a-new-shape",
 }
 """Where each kind of repair issue tells what to do."""
