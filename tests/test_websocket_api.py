@@ -22,6 +22,9 @@ from aula_connect.api.models.module import (
     AulaCalendarEventTimeSlotEntryIndex,
     AulaDailyPlan,
     AulaDailyPlanTask,
+    AulaEventBooking,
+    AulaEventDetail,
+    AulaEventInvitation,
     AulaWeeklyPlan,
 )
 from freezegun.api import FrozenDateTimeFactory
@@ -33,7 +36,7 @@ from pytest_homeassistant.typing import MockHAClientWebSocket, WebSocketGenerato
 from custom_components.aula_connect.const import DOMAIN
 from custom_components.aula_connect.websocket_api import all_day_dates
 
-from .fake_aula import CHILD, PARENT, SCHOOL, FakeAula
+from .fake_aula import CHILD, PARENT, PARENT_AT_SCHOOL, SCHOOL, FakeAula
 from .test_calendars import at, event, set_up
 from .test_init import DATA
 
@@ -597,3 +600,112 @@ async def test_an_all_day_event_covers_whole_local_days(
 ) -> None:
     await hass.config.async_set_time_zone("Europe/Copenhagen")
     assert all_day_dates(start, end) == days
+
+
+def _detail(**fields: Any) -> AulaEventDetail:
+    values: dict[str, Any] = {
+        "id": 3,
+        "title": "Meeting",
+        "type": "school_home_meeting",
+        "all_day": False,
+        "start_datetime": at(29, 8),
+        "end_datetime": at(30, 16),
+        "description_html": "<p>Bring the <b>book</b></p>",
+        "institution_name": "School",
+        "location": None,
+        "creator_name": "Jane Doe",
+        "creator_role": "teacher",
+        "co_organizer_names": ["John Roe"],
+        "invited_group_names": ["3A"],
+        "invitations": [
+            AulaEventInvitation(PARENT_AT_SCHOOL.id, "accepted", at(20, 10)),
+            AulaEventInvitation(99, "waiting", None),
+            AulaEventInvitation(98, "declined", at(21, 9)),
+        ],
+        "response_required": True,
+        "response_deadline": at(25, 23),
+        "deadline_exceeded": True,
+        "attachment_count": 2,
+        "private": False,
+        "deleted": False,
+        "bookings": [
+            AulaEventBooking(77, 98, AulaCalendarEventTimeSlotEntryIndex(start_datetime=at(29, 14), end_datetime=at(29, 14, 15)), "Room 1"),
+            AulaEventBooking(CHILD.id, PARENT_AT_SCHOOL.id, AulaCalendarEventTimeSlotEntryIndex(start_datetime=at(29, 14, 15), end_datetime=at(29, 14, 30)), "Room 4"),
+        ],
+    }
+    values.update(fields)
+    return AulaEventDetail(**values)
+
+
+async def _event(client: MockHAClientWebSocket, entry_id: str, event_id: int = 3, child_id: int = CHILD.id) -> dict[str, Any]:
+    await client.send_json_auto_id({"type": "aula_connect/event", "entry_id": entry_id, "child_id": child_id, "event_id": event_id})
+    return await client.receive_json()
+
+
+async def test_an_event_tells_its_details_the_guardian_s_answer_and_the_child_s_time_but_no_one_else_s(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
+) -> None:
+    aula.event_details[3] = _detail()
+    await set_up(hass, freezer)
+    result = await _event(client, _entry_id(hass))
+    assert result["success"], result
+    assert result["result"] == {
+        "id": "3",
+        "title": "Meeting",
+        "type": "school_home_meeting",
+        "all_day": False,
+        "start": at(29, 8).isoformat(),
+        "end": at(30, 16).isoformat(),
+        "description": "<p>Bring the <b>book</b></p>",
+        "location": None,
+        "institution_name": "School",
+        "creator": {"name": "Jane Doe", "role": "teacher"},
+        "co_organizers": ["John Roe"],
+        "invited_groups": ["3A"],
+        "invited": 3,
+        "answered": 2,
+        "response_required": True,
+        "response_deadline": at(25, 23).isoformat(),
+        "deadline_passed": True,
+        "answer": "accepted",
+        "answered_at": at(20, 10).isoformat(),
+        "booked": {"start": at(29, 14, 15).isoformat(), "end": at(29, 14, 30).isoformat(), "location": "Room 4"},
+        "attachments": 2,
+        "private": False,
+        "deleted": False,
+    }
+    assert "Room 1" not in json.dumps(result)
+
+
+async def test_an_all_day_event_without_a_creator_answer_or_time_tells_its_days(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
+) -> None:
+    aula.event_details[3] = _detail(
+        all_day=True, start_datetime=at(30, 0), end_datetime=at(31, 0), creator_name="", invitations=[], bookings=[], response_deadline=None
+    )
+    await set_up(hass, freezer)
+    result = (await _event(client, _entry_id(hass)))["result"]
+    first, after = all_day_dates(at(30, 0), at(31, 0))
+    assert (result["start"], result["end"]) == (first.isoformat(), after.isoformat())
+    assert (result["creator"], result["answer"], result["answered_at"], result["booked"], result["response_deadline"]) == (None, None, None, None, None)
+    assert (result["invited"], result["answered"]) == (0, 0)
+
+
+async def test_an_event_of_an_unknown_child_or_entry_or_one_aula_does_not_have_is_not_found(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
+) -> None:
+    await set_up(hass, freezer)
+    for entry_id, child_id in ((_entry_id(hass), 999), ("no-such-entry", CHILD.id)):
+        result = await _event(client, entry_id, child_id=child_id)
+        assert result["error"]["code"] == "not_found"
+    assert (await _event(client, _entry_id(hass), event_id=404))["error"]["code"] == "not_found"
+
+
+async def test_an_event_aula_cannot_be_read_for_says_so_without_a_token(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
+) -> None:
+    aula.event_error = ConnectionError("down at https://www.aula.dk/api/v25?access_token=secret-token")
+    await set_up(hass, freezer)
+    result = await _event(client, _entry_id(hass))
+    assert result["error"]["code"] == "home_assistant_error"
+    assert "secret-token" not in result["error"]["message"]

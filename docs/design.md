@@ -107,7 +107,7 @@ placeholders. A few calendar details are Aula's rather than Home Assistant's:
 
 ## The card's API
 
-A dashboard card shows each child's weeks through two websocket commands. They only read: they
+A dashboard card shows each child's weeks through three websocket commands. They only read: they
 mark nothing read and write nothing to Aula. Any user may call them, as a dashboard's viewers
 need not be administrators; they send no token, no MitID user ID and no UNI-login.
 
@@ -118,6 +118,15 @@ need not be administrators; they send no token, no MitID user ID and no UNI-logi
   included, `end` not), answers, and then sends the period's lessons, other events, Meebook
   tasks and birthdays, each sorted by time. A malformed period is refused as `invalid_format`, an
   entry or child not loaded as `not_found`.
+- `aula_connect/event` takes an entry, a child and an event's id, reads what Aula tells of the
+  event alone (`calendar.getEventById`), and answers with it as it concerns the child and its
+  guardian: the description as Aula has it, HTML included; the place; who created it, with their
+  role, and who organises it too; the groups invited; how many were invited and how many
+  answered, never who; the guardian's own answer and when it was given; the deadline and whether
+  it passed; the time booked for the child and where; how many attachments; and whether it is
+  private or deleted. An entry, child or event not found is `not_found`; an event Aula cannot be
+  read for is `home_assistant_error`, with no token in its message. It is read when it is asked
+  for, not polled.
 
 The days are chosen as the child's calendars choose them: lessons and events as the child's
 events calendar (a meeting without the child left out, a booked meeting at its booked time),

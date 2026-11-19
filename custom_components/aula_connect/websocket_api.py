@@ -1,4 +1,5 @@
-"""A read-only websocket API of the entries' children and their days: lessons, events, weekly plan tasks and birthdays."""
+"""A read-only websocket API of the entries' children and their days: lessons, events, weekly plan tasks and
+birthdays, and what Aula tells of one event alone."""
 
 from __future__ import annotations
 
@@ -9,10 +10,10 @@ from typing import Any, cast
 
 import probatio
 from aula_connect.api.models.constants import AulaCalendarEventType
-from aula_connect.api.models.module import AulaCalendarEvent, AulaChildProfile
+from aula_connect.api.models.module import AulaCalendarEvent, AulaChildProfile, AulaEventDetail
 from homeassistant.components import websocket_api
 from homeassistant.components.websocket_api.connection import ActiveConnection
-from homeassistant.components.websocket_api.const import ERR_INVALID_FORMAT, ERR_NOT_FOUND, WebSocketCommandHandler
+from homeassistant.components.websocket_api.const import ERR_HOME_ASSISTANT_ERROR, ERR_INVALID_FORMAT, ERR_NOT_FOUND, WebSocketCommandHandler
 from homeassistant.components.websocket_api.messages import event_message
 from homeassistant.config_entries import SIGNAL_CONFIG_ENTRY_CHANGED, ConfigEntry, ConfigEntryChange, ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
@@ -25,6 +26,7 @@ from homeassistant.util import dt as dt_util
 from .aula_data import AulaConfigEntry
 from .calendar import booked_time_slot, celebrated_on, is_meeting, shown_for
 from .const import DOMAIN
+from .redact import error_text
 
 MAX_DAYS = 21
 """The most days one subscription covers."""
@@ -40,6 +42,9 @@ _websocket_command: Callable[[VolDictType], Callable[[WebSocketCommandHandler], 
 _async_register_command: Callable[[HomeAssistant, WebSocketCommandHandler], None] = getattr(
     websocket_api, "async_register_command"
 )
+_async_response: Callable[
+    [Callable[[HomeAssistant, ActiveConnection, dict[str, Any]], Awaitable[None]]], WebSocketCommandHandler
+] = getattr(websocket_api, "async_response")
 
 
 @callback
@@ -47,6 +52,7 @@ def async_register(hass: HomeAssistant) -> None:
     """Register the API's commands."""
     _async_register_command(hass, ws_children)
     _async_register_command(hass, ws_subscribe_week)
+    _async_register_command(hass, ws_event)
 
 
 def _loaded_entries(hass: HomeAssistant) -> list[AulaConfigEntry]:
@@ -60,6 +66,13 @@ WEEK_SCHEMA: VolDictType = {
     probatio.Required("child_id"): int,
     probatio.Required("start"): cv.date,
     probatio.Required("end"): cv.date,
+}
+
+EVENT_SCHEMA: VolDictType = {
+    probatio.Required("type"): "aula_connect/event",
+    probatio.Required("entry_id"): str,
+    probatio.Required("child_id"): int,
+    probatio.Required("event_id"): int,
 }
 
 
@@ -104,6 +117,67 @@ def ws_subscribe_week(hass: HomeAssistant, connection: ActiveConnection, msg: di
     connection.subscriptions[msg["id"]] = subscription.async_unsubscribe
     connection.send_result(msg["id"])
     subscription.async_send()
+
+
+@_websocket_command(EVENT_SCHEMA)
+@_async_response
+async def ws_event(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Answer with what Aula tells of one event alone, as it concerns the child and its guardian.
+
+    Of those invited, only how many there are and how many answered are told, not who.
+    """
+    entry = next((entry for entry in _loaded_entries(hass) if entry.entry_id == msg["entry_id"]), None)
+    data = None if entry is None else entry.runtime_data.data_coordinator.data
+    child = None if data is None else next((child for child in data.children if child.id == msg["child_id"]), None)
+    if entry is None or data is None or child is None:
+        connection.send_error(msg["id"], ERR_NOT_FOUND, "No such child")
+        return
+    try:
+        detail = await entry.runtime_data.client.get_event(msg["event_id"])
+    except Exception as err:
+        connection.send_error(msg["id"], ERR_HOME_ASSISTANT_ERROR, f"The event could not be read: {error_text(err)}")
+        return
+    if detail is None:
+        connection.send_error(msg["id"], ERR_NOT_FOUND, "No such event")
+        return
+    own = [institution.id for profile in data.profiles for institution in profile.institution_profiles]
+    connection.send_result(msg["id"], event_details(detail, child, own))
+
+
+def event_details(detail: AulaEventDetail, child: AulaChildProfile, own: list[int]) -> dict[str, Any]:
+    """What the event tells, as it concerns the child and the guardian's institution profiles `own`."""
+    first, after = all_day_dates(detail.start_datetime, detail.end_datetime) if detail.all_day else (detail.start_datetime, detail.end_datetime)
+    invitation = detail.invitation_of(own)
+    booking = detail.booking_for(child.id)
+    return {
+        "id": str(detail.id),
+        "title": detail.title,
+        "type": detail.type,
+        "all_day": detail.all_day,
+        "start": first.isoformat(),
+        "end": after.isoformat(),
+        "description": detail.description_html,
+        "location": detail.location,
+        "institution_name": detail.institution_name,
+        "creator": {"name": detail.creator_name, "role": detail.creator_role} if detail.creator_name else None,
+        "co_organizers": detail.co_organizer_names,
+        "invited_groups": detail.invited_group_names,
+        "invited": len(detail.invitations),
+        "answered": sum(1 for invitation in detail.invitations if invitation.response != "waiting"),
+        "response_required": detail.response_required,
+        "response_deadline": detail.response_deadline.isoformat() if detail.response_deadline else None,
+        "deadline_passed": detail.deadline_exceeded,
+        "answer": invitation.response if invitation else None,
+        "answered_at": invitation.answered_at.isoformat() if invitation and invitation.answered_at else None,
+        "booked": {
+            "start": booking.time.start_datetime.isoformat(),
+            "end": booking.time.end_datetime.isoformat(),
+            "location": booking.location,
+        } if booking else None,
+        "attachments": detail.attachment_count,
+        "private": detail.private,
+        "deleted": detail.deleted,
+    }
 
 
 class _WeekSubscription:
