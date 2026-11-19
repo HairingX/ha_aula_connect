@@ -1,8 +1,11 @@
-"""A read-only websocket API of the entries' children and their days: lessons, events, weekly plan tasks and
-birthdays, and what Aula tells of one event alone."""
+"""The websocket API of the entries' children: their days - lessons, events, weekly plan tasks and
+birthdays - and what Aula tells of one event alone; their day today; and what a guardian does in
+Aula for them, each on the user's explicit action: report sick, register a vacation, answer a
+vacation request, and reply in a thread."""
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import date, datetime, time, timedelta
@@ -10,22 +13,32 @@ from typing import Any, cast
 
 import probatio
 from aula_connect.api.models.constants import AulaCalendarEventType
-from aula_connect.api.models.module import AulaCalendarEvent, AulaChildProfile, AulaEventDetail
+from aula_connect.api.models.module import AulaCalendarEvent, AulaChildProfile, AulaEventDetail, AulaVacationDay
 from homeassistant.components import websocket_api
 from homeassistant.components.websocket_api.connection import ActiveConnection
-from homeassistant.components.websocket_api.const import ERR_HOME_ASSISTANT_ERROR, ERR_INVALID_FORMAT, ERR_NOT_FOUND, WebSocketCommandHandler
+from homeassistant.components.websocket_api.const import (
+    ERR_HOME_ASSISTANT_ERROR,
+    ERR_INVALID_FORMAT,
+    ERR_NOT_FOUND,
+    ERR_NOT_SUPPORTED,
+    WebSocketCommandHandler,
+)
 from homeassistant.components.websocket_api.messages import event_message
 from homeassistant.config_entries import SIGNAL_CONFIG_ENTRY_CHANGED, ConfigEntry, ConfigEntryChange, ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.typing import VolDictType
 from homeassistant.util import dt as dt_util
 
+from . import family_actions
 from .aula_data import AulaConfigEntry
 from .calendar import booked_time_slot, celebrated_on, is_meeting, shown_for
 from .const import DOMAIN
+from .entity import child_unique_id
+from .family_actions import AulaError, FamilyActionError, InvalidError, NotFoundError, NotSupportedError
 from .redact import error_text
 
 MAX_DAYS = 21
@@ -53,6 +66,16 @@ def async_register(hass: HomeAssistant) -> None:
     _async_register_command(hass, ws_children)
     _async_register_command(hass, ws_subscribe_week)
     _async_register_command(hass, ws_event)
+    _async_register_command(hass, ws_subscribe_today)
+    _async_register_command(hass, ws_report_sick)
+    _async_register_command(hass, ws_undo_sick)
+    _async_register_command(hass, ws_threads)
+    _async_register_command(hass, ws_reply)
+    _async_register_command(hass, ws_vacations)
+    _async_register_command(hass, ws_add_vacation)
+    _async_register_command(hass, ws_delete_vacation)
+    _async_register_command(hass, ws_vacation_requests)
+    _async_register_command(hass, ws_answer_vacation_request)
 
 
 def _loaded_entries(hass: HomeAssistant) -> list[AulaConfigEntry]:
@@ -76,22 +99,224 @@ EVENT_SCHEMA: VolDictType = {
 }
 
 
+def _child_schema(command: str, **fields: Any) -> VolDictType:
+    """The schema of a command about one child of an entry, with its further fields."""
+    return {
+        probatio.Required("type"): command,
+        probatio.Required("entry_id"): str,
+        probatio.Required("child_id"): int,
+        **{probatio.Required(name): value for name, value in fields.items()},
+    }
+
+
+TODAY_SCHEMA = _child_schema("aula_connect/today/subscribe")
+REPORT_SICK_SCHEMA = _child_schema("aula_connect/sick/report")
+UNDO_SICK_SCHEMA = _child_schema("aula_connect/sick/undo")
+THREADS_SCHEMA = _child_schema("aula_connect/threads")
+REPLY_SCHEMA = _child_schema("aula_connect/message/reply", thread_id=int, text=str)
+VACATIONS_SCHEMA = _child_schema("aula_connect/vacations")
+ADD_VACATION_SCHEMA: VolDictType = {
+    probatio.Required("type"): "aula_connect/vacation/add",
+    probatio.Required("entry_id"): str,
+    probatio.Required("child_ids"): [int],
+    probatio.Required("start"): cv.date,
+    probatio.Required("end"): cv.date,
+    probatio.Optional("comment", default=""): str,
+}
+# A command's own "id" is the message's, so the vacation and the request are named apart.
+DELETE_VACATION_SCHEMA: VolDictType = {
+    probatio.Required("type"): "aula_connect/vacation/delete",
+    probatio.Required("entry_id"): str,
+    probatio.Required("vacation_id"): int,
+}
+VACATION_REQUESTS_SCHEMA = _child_schema("aula_connect/vacation_requests")
+DAY_SCHEMA: VolDictType = {
+    probatio.Required("date"): cv.date,
+    probatio.Required("is_coming"): bool,
+    probatio.Optional("entry_time"): probatio.Any(None, cv.time),
+    probatio.Optional("exit_time"): probatio.Any(None, cv.time),
+}
+ANSWER_VACATION_REQUEST_SCHEMA: VolDictType = {
+    **_child_schema("aula_connect/vacation_request/answer", request_id=int, days=[DAY_SCHEMA]),
+    probatio.Optional("comment", default=""): str,
+}
+
+
+def vacation_days(days: list[dict[str, Any]]) -> list[AulaVacationDay]:
+    """The days of an answer to a vacation request, as validated by DAY_SCHEMA."""
+    return [AulaVacationDay(day["date"], day["is_coming"], day.get("entry_time"), day.get("exit_time")) for day in days]
+
+
 @_websocket_command(CHILDREN_SCHEMA)
 @callback
 def ws_children(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
-    """Answer with the children of every loaded entry, entry by entry."""
-    children = [
-        {
-            "entry_id": entry.entry_id,
-            "child_id": child.id,
-            "first_name": child.first_name,
-            "name": child.name,
-            "institution_name": child.institution_profile.institution_name,
-        }
-        for entry in _loaded_entries(hass)
-        for child in entry.runtime_data.data_coordinator.data.children
-    ]
+    """Answer with the children of every loaded entry, entry by entry, with their picture and the entry's guardian."""
+    registry = er.async_get(hass)
+    children = list[dict[str, Any]]()
+    for entry in _loaded_entries(hass):
+        coordinator = entry.runtime_data.data_coordinator
+        data = coordinator.data
+        guardian = data.profiles[0].name if data.profiles else entry.title
+        for child in data.children:
+            children.append({
+                "entry_id": entry.entry_id,
+                "child_id": child.id,
+                "first_name": child.first_name,
+                "name": child.name,
+                "institution_name": child.institution_profile.institution_name,
+                "picture_entity": registry.async_get_entity_id("image", DOMAIN, child_unique_id(coordinator, "picture", child)),
+                "guardian": guardian,
+            })
     connection.send_result(msg["id"], {"children": children})
+
+
+async def _respond(connection: ActiveConnection, msg: dict[str, Any], work: Callable[[], Awaitable[dict[str, Any]]]) -> None:
+    """Answer with what `work` gives, or with the error that tells why it could not be done."""
+    try:
+        result = await work()
+    except NotFoundError as err:
+        connection.send_error(msg["id"], ERR_NOT_FOUND, str(err))
+    except InvalidError as err:
+        connection.send_error(msg["id"], ERR_INVALID_FORMAT, str(err))
+    except NotSupportedError as err:
+        connection.send_error(msg["id"], ERR_NOT_SUPPORTED, str(err))
+    except AulaError as err:
+        connection.send_error(msg["id"], ERR_HOME_ASSISTANT_ERROR, str(err))
+    else:
+        connection.send_result(msg["id"], result)
+
+
+def _entry_and_child(hass: HomeAssistant, msg: dict[str, Any]) -> tuple[AulaConfigEntry, AulaChildProfile]:
+    entry = family_actions.loaded_entry(hass, msg["entry_id"])
+    return entry, family_actions.entry_child(entry, msg["child_id"])
+
+
+@_websocket_command(REPORT_SICK_SCHEMA)
+@_async_response
+async def ws_report_sick(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Report the child sick today, the way Aula offers for it."""
+
+    async def work() -> dict[str, Any]:
+        entry, child = _entry_and_child(hass, msg)
+        return {"route": await family_actions.report_sick(hass, entry, child)}
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(UNDO_SICK_SCHEMA)
+@_async_response
+async def ws_undo_sick(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Take back today's report that the child is sick."""
+
+    async def work() -> dict[str, Any]:
+        entry, child = _entry_and_child(hass, msg)
+        return {"route": await family_actions.undo_sick(hass, entry, child)}
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(THREADS_SCHEMA)
+@_async_response
+async def ws_threads(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Answer with the threads about the child, and the one remembered for it."""
+
+    async def work() -> dict[str, Any]:
+        entry, child = _entry_and_child(hass, msg)
+        return await family_actions.threads(hass, entry, child)
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(REPLY_SCHEMA)
+@_async_response
+async def ws_reply(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Reply in a thread about the child, and remember the thread for it."""
+
+    async def work() -> dict[str, Any]:
+        entry, child = _entry_and_child(hass, msg)
+        await family_actions.reply(hass, entry, child, msg["thread_id"], msg["text"])
+        return {}
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(VACATIONS_SCHEMA)
+@_async_response
+async def ws_vacations(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Answer with the vacations registered for the child."""
+
+    async def work() -> dict[str, Any]:
+        entry, child = _entry_and_child(hass, msg)
+        return await family_actions.vacations(hass, entry, child)
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(ADD_VACATION_SCHEMA)
+@_async_response
+async def ws_add_vacation(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Register a vacation for children of one entry."""
+
+    async def work() -> dict[str, Any]:
+        entry = family_actions.loaded_entry(hass, msg["entry_id"])
+        children = [family_actions.entry_child(entry, child_id) for child_id in msg["child_ids"]]
+        await family_actions.add_vacation(hass, entry, children, msg["start"], msg["end"], msg["comment"])
+        return {}
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(DELETE_VACATION_SCHEMA)
+@_async_response
+async def ws_delete_vacation(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Delete a vacation of one of an entry's children."""
+
+    async def work() -> dict[str, Any]:
+        entry = family_actions.loaded_entry(hass, msg["entry_id"])
+        await family_actions.delete_vacation(hass, entry, msg["vacation_id"])
+        return {}
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(VACATION_REQUESTS_SCHEMA)
+@_async_response
+async def ws_vacation_requests(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Answer with the child's vacation requests, day by day."""
+
+    async def work() -> dict[str, Any]:
+        entry, child = _entry_and_child(hass, msg)
+        return await family_actions.vacation_requests(hass, entry, child)
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(ANSWER_VACATION_REQUEST_SCHEMA)
+@_async_response
+async def ws_answer_vacation_request(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Answer one of the child's vacation requests, day by day."""
+
+    async def work() -> dict[str, Any]:
+        entry, child = _entry_and_child(hass, msg)
+        await family_actions.answer_vacation_request(hass, entry, child, msg["request_id"], vacation_days(msg["days"]), msg["comment"])
+        return {}
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(TODAY_SCHEMA)
+@callback
+def ws_subscribe_today(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send the child's day today, and again each time the entry's data is read anew."""
+    try:
+        entry, child = _entry_and_child(hass, msg)
+    except FamilyActionError:
+        connection.send_error(msg["id"], ERR_NOT_FOUND, "No such child")
+        return
+    subscription = _TodaySubscription(hass, connection, msg["id"], entry, child)
+    connection.subscriptions[msg["id"]] = subscription.async_unsubscribe
+    connection.send_result(msg["id"])
+    subscription.async_send()
 
 
 @_websocket_command(WEEK_SCHEMA)
@@ -180,11 +405,10 @@ def event_details(detail: AulaEventDetail, child: AulaChildProfile, own: list[in
     }
 
 
-class _WeekSubscription:
-    """Sends a child's days to a connection, each time Aula is read anew for the child.
+class _ChildSubscription(ABC):
+    """Sends what concerns a child to a connection, until the entry is no longer loaded or the child is gone from it.
 
-    When the entry is no longer loaded, or the child is gone from it, it sends `{"ended": true}` once
-    and stops.
+    Then it sends `{"ended": true}` once and stops.
     """
 
     def __init__(
@@ -194,25 +418,22 @@ class _WeekSubscription:
         msg_id: int,
         entry: AulaConfigEntry,
         child: AulaChildProfile,
-        days: Days,
     ) -> None:
         self._hass = hass
         self._connection = connection
         self._msg_id = msg_id
         self._entry = entry
         self._child = child
-        self._days = days
         self._task: asyncio.Task[None] | None = None
         self._ended = False
         self._remove_listeners = [
-            entry.runtime_data.calendar_coordinator.async_add_listener(self._async_updated),
             entry.runtime_data.data_coordinator.async_add_listener(self._async_children_updated),
             async_dispatcher_connect(hass, SIGNAL_CONFIG_ENTRY_CHANGED, self._async_entry_changed),
         ]
 
     @callback
     def async_send(self) -> None:
-        """Send the days as they are now, in place of a sending still under way."""
+        """Send what concerns the child now, in place of a sending still under way."""
         if self._task is not None:
             self._task.cancel()
         self._task = self._hass.async_create_task(self._send())
@@ -246,10 +467,51 @@ class _WeekSubscription:
         coordinator = self._entry.runtime_data.data_coordinator
         if coordinator.last_update_success and all(child.id != self._child.id for child in coordinator.data.children):
             self._async_end()
+        else:
+            self._async_data_updated()
+
+    @callback
+    def _async_data_updated(self) -> None:
+        """Take in a read of the entry's data coordinator."""
 
     async def _send(self) -> None:
-        payload = await async_child_days(self._entry, self._child, self._days)
-        self._connection.send_message(event_message(self._msg_id, payload))
+        self._connection.send_message(event_message(self._msg_id, await self._payload()))
+
+    @abstractmethod
+    async def _payload(self) -> dict[str, Any]:
+        """What is sent of the child."""
+
+
+class _TodaySubscription(_ChildSubscription):
+    """Sends a child's day today each time the entry's data is read anew."""
+
+    @callback
+    def _async_data_updated(self) -> None:
+        if self._entry.runtime_data.data_coordinator.last_update_success:
+            self.async_send()
+
+    async def _payload(self) -> dict[str, Any]:
+        return family_actions.today(self._entry, self._child)
+
+
+class _WeekSubscription(_ChildSubscription):
+    """Sends a child's days each time Aula is read anew for the child."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        connection: ActiveConnection,
+        msg_id: int,
+        entry: AulaConfigEntry,
+        child: AulaChildProfile,
+        days: Days,
+    ) -> None:
+        super().__init__(hass, connection, msg_id, entry, child)
+        self._days = days
+        self._remove_listeners.append(entry.runtime_data.calendar_coordinator.async_add_listener(self._async_updated))
+
+    async def _payload(self) -> dict[str, Any]:
+        return await async_child_days(self._entry, self._child, self._days)
 
     @callback
     def _async_updated(self) -> None:

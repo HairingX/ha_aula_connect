@@ -1,15 +1,21 @@
-"""The binary sensors of an Aula login: unread messages, media, calendar events, posts and presence."""
+"""The binary sensors of an Aula login: unread messages, media, calendar events, posts and presence,
+and for each child whether it has school today and tomorrow, and a vacation request to answer."""
+
+from datetime import timedelta
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 from typing import Any, List
 import logging
 
-from .entity import AulaEntityBase
-from .aula_data_coordinator import MESSAGE_THREADS, NOTIFICATIONS, AulaDataCoordinator, AulaDataCoordinatorData
+from .entity import AulaChildEventsEntity, AulaEntityBase, child_unique_id
+from .aula_calendar_coordinator import AulaCalendarCoordinator
+from .aula_data_coordinator import MESSAGE_THREADS, NOTIFICATIONS, VACATION_REQUESTS, AulaDataCoordinator, AulaDataCoordinatorData, pending_vacation_requests
 from .aula_data import AulaConfigEntry
-from aula_connect.api.module import AulaMessageThread, AulaAlbumNotification, AulaCalendarEventNotification, AulaGalleryNotification, AulaPostNotification, AulaPresenceNotification, NotificationType
+from .school_day import school_day
+from aula_connect.api.module import AulaChildProfile, AulaMessageThread, AulaAlbumNotification, AulaCalendarEventNotification, AulaGalleryNotification, AulaPostNotification, AulaPresenceNotification, NotificationType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,7 +32,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
     entities.append(AulaUnreadCalendarEventBinarySensor(coordinator))
     entities.append(AulaUnreadPostBinarySensor(coordinator))
     entities.append(AulaUnreadPresenceBinarySensor(coordinator))
+    for child in coordinator.data.children:
+        entities.append(AulaSchoolDayBinarySensor(entry.runtime_data.calendar_coordinator, child, days_ahead=0))
+        entities.append(AulaSchoolDayBinarySensor(entry.runtime_data.calendar_coordinator, child, days_ahead=1))
+        entities.append(AulaVacationRequestBinarySensor(coordinator, child))
     async_add_entities(entities)
+
+
+class AulaSchoolDayBinarySensor(AulaChildEventsEntity, BinarySensorEntity):
+    """Whether a child has lessons today, or tomorrow, and when they start and end; a holiday counts as none."""
+
+    def __init__(self, coordinator: AulaCalendarCoordinator, child: AulaChildProfile, days_ahead: int) -> None:
+        super().__init__(coordinator, "school_tomorrow" if days_ahead else "school_today", child)
+        self._days_ahead = days_ahead
+
+    def _set_values(self) -> None:
+        day = school_day(self.coordinator, self._child, dt_util.now().date() + timedelta(days=self._days_ahead))
+        self._attr_is_on = None if day is None else day.is_school_day
+        self._attr_extra_state_attributes = {
+            "start": None if day is None else day.start,
+            "end": None if day is None else day.end,
+        }
+
+
+class AulaVacationRequestBinarySensor(AulaEntityBase[AulaChildProfile], BinarySensorEntity):
+    """Whether a child's institution waits for an answer to a vacation request, with how many and the first deadline."""
+
+    _reads = VACATION_REQUESTS
+
+    def __init__(self, coordinator: AulaDataCoordinator, child: AulaChildProfile) -> None:
+        super().__init__(coordinator, name="vacation_request", context=child)
+        self._attr_unique_id = child_unique_id(coordinator, "vacation_request", child)
+        self._attr_translation_placeholders = {"name": child.first_name, "institution": child.institution_profile.institution_name}
+        self._init_data()
+
+    def _set_values(self, data: AulaDataCoordinatorData, context: AulaChildProfile) -> None:
+        pending = pending_vacation_requests(data, context)
+        deadlines = [request.response_deadline for request in pending if request.response_deadline is not None]
+        self._attr_is_on = bool(pending)
+        self._attr_extra_state_attributes = {
+            "count": len(pending),
+            "deadline": min(deadlines) if deadlines else None,
+        }
 
 
 class AulaUnreadGalleryBinarySensor(AulaEntityBase[None], BinarySensorEntity):

@@ -344,13 +344,15 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         return self._eventmap.get(profile.id, [])
 
     async def async_add_event_key(self, profile: AulaInstitutionProfile) -> None:
-        """Follow the institution profile's events, and read what is due now."""
+        """Follow the institution profile's events, and read them now where they were not read yet."""
         id = profile.id
         meta = self._event_listeners.setdefault(id, AulaCalendarCoordinatorMeta[AulaInstitutionProfile]())
         _LOGGER.debug(f"async_add_event_key {id}")
         meta.keys.append(profile)
         self._eventmap.setdefault(id, [])
-        await self.async_refresh()
+        # Another entity may follow the profile already; its events are then read when due.
+        if meta.last_updated is None:
+            await self.async_refresh()
 
     async def async_remove_event_key(self, profile: AulaInstitutionProfile) -> None:
         """Stop following the profile's events for one calendar; forget them when none follows them."""
@@ -387,13 +389,15 @@ class AulaCalendarCoordinator(DataUpdateCoordinator[AulaCalendarCoordinatorData]
         return self._weeklyplanmap.get(profile.id, [])
 
     async def async_add_weekly_plan_key(self, profile: AulaChildProfile) -> None:
-        """Follow the child's weekly plans, and read what is due now."""
+        """Follow the child's weekly plans, and read them now where they were not read yet."""
         id = profile.id
         meta = self._weekly_plan_listeners.setdefault(id, AulaCalendarCoordinatorMeta[AulaChildProfile]())
         _LOGGER.debug(f"async_add_weekly_plan_key {id}")
         meta.keys.append(profile)
         self._weeklyplanmap.setdefault(id, [])
-        await self.async_refresh()
+        # Another entity may follow the child already; its plans are then read when due.
+        if meta.last_updated is None:
+            await self.async_refresh()
 
     async def async_remove_weekly_plan_key(self, profile: AulaChildProfile) -> None:
         """Stop following the child's weekly plans for one calendar; forget them when none follows them."""

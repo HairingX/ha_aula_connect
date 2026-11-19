@@ -1,11 +1,17 @@
 rules:
   # Bronze
-  action-setup: done
+  action-setup:
+    status: done
+    comment: >-
+      The actions are registered in async_setup, and each checks that its entry is loaded. Those
+      that change Aula are sent once, on the call only.
   appropriate-polling:
     status: done
     comment: >-
-      The data coordinator polls every 5 minutes; the calendar coordinator every 10 minutes,
-      fetching birthdays daily and events, weekly plans and newsletters every 2 hours.
+      The data coordinator polls every 5 minutes, reading the way each child is reported sick
+      once an hour; the calendar coordinator every 10 minutes, fetching birthdays daily and
+      events, weekly plans and newsletters every 2 hours. A write to Aula is never sent from a
+      poll, and never retried.
   brands:
     status: done
     comment: Its own icon and logo, shipped in brand/, which Home Assistant serves for custom integrations.
@@ -33,8 +39,8 @@ rules:
   entity-event-setup:
     status: done
     comment: >-
-      Calendars register with their coordinator in async_added_to_hass and unregister in
-      async_will_remove_from_hass.
+      Calendars, the school day entities and the homework lists register with their coordinator
+      in async_added_to_hass and unregister in async_will_remove_from_hass.
   entity-unique-id: done
   has-entity-name: done
   runtime-data: done
@@ -98,8 +104,9 @@ rules:
   entity-device-class:
     status: done
     comment: >-
-      Sensors use the enum and duration device classes; no binary sensor device class fits an
-      unread item.
+      Sensors use the enum, duration and timestamp device classes; no binary sensor device class
+      fits an unread item, a school day or a vacation request, and no event device class fits a
+      message, photo or calendar event.
   entity-disabled-by-default:
     status: todo
     comment: No entity is disabled by default, and which are rarely used has not been assessed.
@@ -107,7 +114,10 @@ rules:
   exception-translations: done
   icon-translations:
     status: todo
-    comment: The entities' icons are set in code through _attr_icon; icons.json holds only the action's.
+    comment: >-
+      The child's picture, homework, school day, vacation request and event entities and the
+      actions take their icons from icons.json; the older sensors and binary sensors still set
+      theirs in code through _attr_icon, as it follows their state.
   reconfiguration-flow: done
   repair-issues: done
   stale-devices:

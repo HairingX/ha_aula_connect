@@ -20,6 +20,7 @@ from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.aula_connect.aula_data_coordinator import AulaDataCoordinator
 from custom_components.aula_connect.const import DOMAIN
+from custom_components.aula_connect.family import FamilyMemory
 
 from .fake_aula import SCHOOL, FakeAula, failing_once
 from .test_calendars import at, events, set_up
@@ -85,7 +86,7 @@ async def test_a_partial_failure_is_logged_once_and_the_recovery_once(
     client.login.return_value = MagicMock(profiles=[], api_version=23)
     down = ConnectionError("down")
     client.get_message_threads.side_effect = [down, down, down, down, []]
-    coordinator = AulaDataCoordinator("Aula", hass, client, entry)
+    coordinator = AulaDataCoordinator("Aula", hass, client, entry, FamilyMemory(hass, entry.entry_id))
     for _ in range(3):
         await coordinator.async_refresh()
         assert coordinator.last_update_success

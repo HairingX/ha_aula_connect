@@ -69,3 +69,86 @@ read:
       example: '{"instProfileIds": [1234567], "resourceIds": [], "start": "2026-11-16 00:00:00.0000+01:00", "end": "2026-11-23 00:00:00.0000+01:00"}'
       selector:
         object:
+report_sick:
+  fields:
+    config_entry_id: &entry
+      required: true
+      selector:
+        config_entry:
+          integration: aula_connect
+    child_id: &child
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+undo_sick:
+  fields:
+    config_entry_id: *entry
+    child_id: *child
+add_vacation:
+  fields:
+    config_entry_id: *entry
+    child_ids:
+      required: true
+      example: "[1234567]"
+      selector:
+        object:
+    start:
+      required: true
+      selector:
+        date:
+    end:
+      required: true
+      selector:
+        date:
+    comment:
+      selector:
+        text:
+          multiline: true
+delete_vacation:
+  fields:
+    config_entry_id: *entry
+    vacation_id:
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+answer_vacation_request:
+  fields:
+    config_entry_id: *entry
+    child_id: *child
+    request_id:
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    days:
+      required: true
+      example: '[{"date": "2026-12-21", "is_coming": false}, {"date": "2026-12-22", "is_coming": true, "entry_time": "08:00", "exit_time": "15:00"}]'
+      selector:
+        object:
+    comment:
+      selector:
+        text:
+          multiline: true
+send_message:
+  fields:
+    config_entry_id: *entry
+    child_id: *child
+    thread_id:
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    text:
+      required: true
+      selector:
+        text:
+          multiline: true
+probe_tabulex:
+  fields:
+    config_entry_id: *entry

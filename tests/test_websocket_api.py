@@ -132,15 +132,20 @@ async def test_the_children_of_every_loaded_entry_are_listed(
 
     await client.send_json_auto_id({"type": "aula_connect/children"})
     result = await client.receive_json()
-    alma = {"child_id": 11, "first_name": "Alma", "name": "Alma Example", "institution_name": "School"}
+    alma = {"child_id": 11, "first_name": "Alma", "name": "Alma Example", "institution_name": "School", "guardian": "Pat Example"}
     assert result["result"] == {
-        "children": [{"entry_id": _entry_id(hass), **alma}, {"entry_id": second.entry_id, **alma}]
+        "children": [
+            {"entry_id": _entry_id(hass), **alma, "picture_entity": "image.aula_picture_alma_school"},
+            {"entry_id": second.entry_id, **alma, "picture_entity": "image.aula_2_picture_alma_school"},
+        ]
     }
 
     assert await hass.config_entries.async_unload(second.entry_id)
     await client.send_json_auto_id({"type": "aula_connect/children"})
     result = await client.receive_json()
-    assert result["result"] == {"children": [{"entry_id": _entry_id(hass), **alma}]}
+    assert result["result"] == {
+        "children": [{"entry_id": _entry_id(hass), **alma, "picture_entity": "image.aula_picture_alma_school"}]
+    }
 
 
 async def test_the_days_are_the_lessons_events_tasks_and_birthdays_aula_was_read_for(

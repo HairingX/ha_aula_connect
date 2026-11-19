@@ -43,7 +43,8 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: AulaCon
 
     The MitID user ID and the tokens are credentials, and are never included. Each read is made
     again first; every id, name, contact detail and link in the answers is replaced by another of
-    its length, the same one each time.
+    its length, the same one each time. The report of the latest probe of Tabulex's login, where
+    an administrator made one, is added as it is.
     """
     runtime = entry.runtime_data
     start = dt_util.start_of_local_day() - timedelta(days=dt_util.now().weekday())
@@ -85,4 +86,6 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: AulaCon
             for anomaly in runtime.client.anomalies()
         ],
         "aula": {"not_read": failed, **answers},
+        # The probe's report names steps, fields and cookies, never a value of one.
+        "tabulex_probe": None if runtime.client.tabulex_probe is None else runtime.client.tabulex_probe.as_dict(),
     }

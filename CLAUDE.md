@@ -17,6 +17,17 @@ into Home Assistant devices and entities. How and why it is built as it is: `doc
   the name the entry was set up under (`entity_prefix`) and the entity's key, and changing one is
   agreed with the user first.
 - The README names every entity and attribute, and a test holds it to them.
+- It changes things in Aula only on a user's explicit action - an action called, or a websocket
+  command the cards send after the user confirms: reporting a child sick and taking it back,
+  registering and deleting a vacation, answering a vacation request, and replying in a thread
+  about a child. Each is sent once, never from a coordinator's poll and never retried; where it
+  fails, the error says Aula may or may not have done it. Nothing is sent without an explicit
+  thread. Probing Tabulex's login is an administrator's action, and only reads.
+- What it remembers of a family - the days a child was sick, the thread written in and the days
+  written, the homework ticked - is in a private Store per entry, kept 60 days and removed with
+  the entry. Ticking homework is never told to Aula.
+- The websocket commands are the contract with `HairingX/ha_aula_connect_card`: a change to one is
+  agreed with the card first.
 - The library developed alongside it is `aula_connect`, listed in `pyproject.toml` for test
   builds and CI.
 - The code is GPL-3.0-or-later, as the Aula integration it comes from.

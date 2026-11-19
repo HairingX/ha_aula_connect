@@ -158,6 +158,39 @@
             "name": "Alarm"
           }
         }
+      },
+      "school_today": {
+        "name": "Skole I Dag {name} {institution}",
+        "state_attributes": {
+          "start": {
+            "name": "Start"
+          },
+          "end": {
+            "name": "Slut"
+          }
+        }
+      },
+      "school_tomorrow": {
+        "name": "Skole I Morgen {name} {institution}",
+        "state_attributes": {
+          "start": {
+            "name": "Start"
+          },
+          "end": {
+            "name": "Slut"
+          }
+        }
+      },
+      "vacation_request": {
+        "name": "Ferieanmodning {name} {institution}",
+        "state_attributes": {
+          "count": {
+            "name": "Antal"
+          },
+          "deadline": {
+            "name": "Svarfrist"
+          }
+        }
       }
     },
     "calendar": {
@@ -270,6 +303,92 @@
             "name": "Hovedgruppe"
           }
         }
+      },
+      "school_start": {
+        "name": "Skolestart {name} {institution}"
+      },
+      "school_end": {
+        "name": "Skoleslut {name} {institution}"
+      }
+    },
+    "image": {
+      "picture": {
+        "name": "Billede {name} {institution}",
+        "state_attributes": {
+          "child_id": {
+            "name": "Barnets id"
+          }
+        }
+      }
+    },
+    "todo": {
+      "homework": {
+        "name": "Lektier {name} {institution}"
+      }
+    },
+    "event": {
+      "new_message": {
+        "name": "Ny Besked",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_message": "Ny besked"
+            }
+          },
+          "thread_id": {
+            "name": "Tråd-id"
+          },
+          "subject": {
+            "name": "Emne"
+          },
+          "sensitive": {
+            "name": "Følsom"
+          },
+          "children": {
+            "name": "Børn"
+          }
+        }
+      },
+      "new_photo": {
+        "name": "Nyt Billede",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_photo": "Nyt billede"
+            }
+          },
+          "album_id": {
+            "name": "Album-id"
+          },
+          "count": {
+            "name": "Antal"
+          }
+        }
+      },
+      "new_event": {
+        "name": "Ny Begivenhed",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_event": "Ny begivenhed"
+            }
+          },
+          "event_id": {
+            "name": "Begivenheds-id"
+          },
+          "title": {
+            "name": "Titel"
+          },
+          "start": {
+            "name": "Start"
+          },
+          "end": {
+            "name": "Slut"
+          },
+          "all_day": {
+            "name": "Heldag"
+          }
+        }
       }
     }
   },
@@ -285,6 +404,36 @@
     },
     "method_not_read_only": {
       "message": "{method} læses ikke: {reason}"
+    },
+    "child_not_found": {
+      "message": "Aula Connect-posten har intet barn med id'et {child_id}."
+    },
+    "thread_not_found": {
+      "message": "Der kan ikke svares i nogen tråd {thread_id} om barnet. Vælg en af barnets tråde."
+    },
+    "request_not_found": {
+      "message": "Barnet har ingen ferieanmodning {request_id}."
+    },
+    "invalid_request": {
+      "message": "Intet blev sendt til Aula: {reason}"
+    },
+    "sick_route_not_supported": {
+      "message": "Barnet sygemeldes gennem {route}, som Aula Connect ikke kan endnu. Sygemeld det dér."
+    },
+    "no_sick_route": {
+      "message": "Aula giver ingen måde at sygemelde dette barn. Giv institutionen besked på anden vis."
+    },
+    "no_tabulex_widget": {
+      "message": "Login'et har ingen widget fra IST, der logger ind i Tabulex."
+    },
+    "write_failed": {
+      "message": "Aula bekræftede det ikke, og har måske gjort det, måske ikke; se efter i Aula, før du prøver igen: {error}"
+    },
+    "homework_not_found": {
+      "message": "Lektien er ikke på listen."
+    },
+    "homework_only_ticked": {
+      "message": "Lektier kommer fra ugeplanen: de kan kun krydses af, og kun derhjemme."
     }
   },
   "issues": {
@@ -329,6 +478,132 @@
         "body": {
           "name": "Indhold",
           "description": "Sendes som JSON med POST, til en metode Aula spørges sådan, fx calendar.getEventsByProfileIdsAndResourceIds. Udeladt spørges metoden med GET."
+        }
+      }
+    },
+    "report_sick": {
+      "name": "Sygemeld",
+      "description": "Sygemelder barnet i dag, på den måde Aula giver for det: i Aulas Komme/gå-modul, hvor institutionen lader forældre gøre det. Kun i dag; Aula tager det selv tilbage næste dag. Det giver personalet i dagtilbud eller SFO besked, ikke skolen: skriv til lærerne med Send besked.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Aula Connect-posten for den forælder, det gøres som."
+        },
+        "child_id": {
+          "name": "Barn",
+          "description": "Barnets id: attributten child_id på barnets billede."
+        }
+      }
+    },
+    "undo_sick": {
+      "name": "Tag sygemelding tilbage",
+      "description": "Tager dagens sygemelding af barnet tilbage, hvor Aula viser barnet som sygt i dag.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Aula Connect-posten for den forælder, det gøres som."
+        },
+        "child_id": {
+          "name": "Barn",
+          "description": "Barnets id: attributten child_id på barnets billede."
+        }
+      }
+    },
+    "add_vacation": {
+      "name": "Registrér ferie",
+      "description": "Registrerer ferie eller fri i Aula, hele dage. Start i dag eller senere, slut højst et år efter.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Aula Connect-posten for den forælder, det gøres som."
+        },
+        "child_ids": {
+          "name": "Børn",
+          "description": "Id'erne på de børn, det gælder: attributten child_id på deres billeder."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Den første dag."
+        },
+        "end": {
+          "name": "Slut",
+          "description": "Den sidste dag."
+        },
+        "comment": {
+          "name": "Kommentar",
+          "description": "Højst 250 tegn."
+        }
+      }
+    },
+    "delete_vacation": {
+      "name": "Slet ferie",
+      "description": "Sletter en ferie registreret for et af børnene, hvor Aula lader den ændre.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Aula Connect-posten for den forælder, det gøres som."
+        },
+        "vacation_id": {
+          "name": "Ferie",
+          "description": "Feriens id, som kortet viser det."
+        }
+      }
+    },
+    "answer_vacation_request": {
+      "name": "Besvar ferieanmodning",
+      "description": "Besvarer institutionens ferieanmodning: for hver hverdag fra i dag, om barnet kommer, med tider hvor anmodningen beder om dem.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Aula Connect-posten for den forælder, det gøres som."
+        },
+        "child_id": {
+          "name": "Barn",
+          "description": "Barnets id: attributten child_id på barnets billede."
+        },
+        "request_id": {
+          "name": "Anmodning",
+          "description": "Anmodningens id, som kortet viser det."
+        },
+        "days": {
+          "name": "Dage",
+          "description": "En liste af dage, hver med date, is_coming, og entry_time og exit_time hvor anmodningen beder om tider."
+        },
+        "comment": {
+          "name": "Kommentar",
+          "description": "En kommentar til institutionen."
+        }
+      }
+    },
+    "send_message": {
+      "name": "Send besked",
+      "description": "Svarer i en af barnets tråde i Aula, til alle i den. Intet sendes uden en tråd.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Aula Connect-posten for den forælder, det gøres som."
+        },
+        "child_id": {
+          "name": "Barn",
+          "description": "Barnets id: attributten child_id på barnets billede."
+        },
+        "thread_id": {
+          "name": "Tråd",
+          "description": "Trådens id, som kortet viser barnets tråde."
+        },
+        "text": {
+          "name": "Tekst",
+          "description": "Almindelig tekst, højst 6600 tegn."
+        }
+      }
+    },
+    "probe_tabulex": {
+      "name": "Undersøg Tabulex-login",
+      "description": "Følger én gang, hvordan IST's Tabulex logger forælderen ind fra Aula, og svarer med hvert trins vært, sti, navne på felter og cookies, aldrig en værdi. Kun en administrator kan bruge den.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Aula Connect-posten for den forælder, det gøres som."
         }
       }
     }

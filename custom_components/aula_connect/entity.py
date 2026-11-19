@@ -9,7 +9,9 @@ from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
-from .aula_calendar_coordinator import AulaCalendarCoordinator, AulaCalendarCoordinatorData
+from aula_connect.api.models.module import AulaChildProfile
+
+from .aula_calendar_coordinator import EVENTS, AulaCalendarCoordinator, AulaCalendarCoordinatorData
 from .aula_data_coordinator import AulaDataCoordinator, AulaDataCoordinatorData
 from .const import CONF_ENTITY_PREFIX, DOMAIN, MANUFACTURER
 
@@ -117,3 +119,60 @@ class AulaCalendarEntityBase(Entity):
     @abstractmethod
     def _handle_data_updated(self, data: AulaCalendarCoordinatorData) -> bool:
         """Take in what the coordinator read; True if it changed anything for the entity."""
+
+
+def child_unique_id(coordinator: AulaDataCoordinator | AulaCalendarCoordinator, key: str, child: AulaChildProfile) -> str:
+    """The unique id of a child's entity: the login's, the key, the child's first name and its institution's name."""
+    return f"{unique_id(coordinator, key)}_{child.first_name}_{child.institution_profile.institution_name}"
+
+
+class AulaChildEventsEntity(Entity):
+    """An entity of a child that shows what the calendar coordinator read of its institution's events.
+
+    It has the coordinator read the events while it is in Home Assistant, and takes in each read,
+    as the day it shows moves on at midnight.
+    """
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(self, coordinator: AulaCalendarCoordinator, key: str, child: AulaChildProfile) -> None:
+        self.coordinator = coordinator
+        self._child = child
+        self._attr_translation_key = key
+        self._attr_unique_id = child_unique_id(coordinator, key, child)
+        self._attr_device_info = device_info(coordinator)
+        self._attr_translation_placeholders = {
+            "name": child.first_name,
+            "institution": child.institution_profile.institution_name,
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Have the coordinator read the institution's events, and follow its reads."""
+        await super().async_added_to_hass()
+        await self.coordinator.async_add_event_key(self._child.institution_profile)
+        self.async_on_remove(self.coordinator.async_add_listener(self._handle_coordinator_update))
+        self._update()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Stop having the coordinator read the institution's events for this entity."""
+        await self.coordinator.async_remove_event_key(self._child.institution_profile)
+        await super().async_will_remove_from_hass()
+
+    async def async_update(self) -> None:
+        """Ask the coordinator to read Aula again."""
+        await self.coordinator.async_request_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._update()
+        self.async_write_ha_state()
+
+    def _update(self) -> None:
+        data = self.coordinator.data
+        self._attr_available = self.coordinator.last_update_success and EVENTS not in data.unreadable
+        self._set_values()
+
+    @abstractmethod
+    def _set_values(self) -> None:
+        """Set the entity's values from what the coordinator holds."""

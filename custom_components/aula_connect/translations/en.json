@@ -158,6 +158,39 @@
             "name": "Alert"
           }
         }
+      },
+      "school_today": {
+        "name": "School Today {name} {institution}",
+        "state_attributes": {
+          "start": {
+            "name": "Start"
+          },
+          "end": {
+            "name": "End"
+          }
+        }
+      },
+      "school_tomorrow": {
+        "name": "School Tomorrow {name} {institution}",
+        "state_attributes": {
+          "start": {
+            "name": "Start"
+          },
+          "end": {
+            "name": "End"
+          }
+        }
+      },
+      "vacation_request": {
+        "name": "Vacation Request {name} {institution}",
+        "state_attributes": {
+          "count": {
+            "name": "Count"
+          },
+          "deadline": {
+            "name": "Deadline"
+          }
+        }
       }
     },
     "calendar": {
@@ -270,6 +303,92 @@
             "name": "Main group"
           }
         }
+      },
+      "school_start": {
+        "name": "School Start {name} {institution}"
+      },
+      "school_end": {
+        "name": "School End {name} {institution}"
+      }
+    },
+    "image": {
+      "picture": {
+        "name": "Picture {name} {institution}",
+        "state_attributes": {
+          "child_id": {
+            "name": "Child ID"
+          }
+        }
+      }
+    },
+    "todo": {
+      "homework": {
+        "name": "Homework {name} {institution}"
+      }
+    },
+    "event": {
+      "new_message": {
+        "name": "New Message",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_message": "New message"
+            }
+          },
+          "thread_id": {
+            "name": "Thread ID"
+          },
+          "subject": {
+            "name": "Subject"
+          },
+          "sensitive": {
+            "name": "Sensitive"
+          },
+          "children": {
+            "name": "Children"
+          }
+        }
+      },
+      "new_photo": {
+        "name": "New Photo",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_photo": "New photo"
+            }
+          },
+          "album_id": {
+            "name": "Album ID"
+          },
+          "count": {
+            "name": "Count"
+          }
+        }
+      },
+      "new_event": {
+        "name": "New Event",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_event": "New event"
+            }
+          },
+          "event_id": {
+            "name": "Event ID"
+          },
+          "title": {
+            "name": "Title"
+          },
+          "start": {
+            "name": "Start"
+          },
+          "end": {
+            "name": "End"
+          },
+          "all_day": {
+            "name": "All Day"
+          }
+        }
       }
     }
   },
@@ -285,6 +404,36 @@
     },
     "method_not_read_only": {
       "message": "{method} is not read: {reason}"
+    },
+    "child_not_found": {
+      "message": "The Aula Connect entry has no child with the id {child_id}."
+    },
+    "thread_not_found": {
+      "message": "No thread {thread_id} about the child can be replied in. Choose one of the child's threads."
+    },
+    "request_not_found": {
+      "message": "The child has no vacation request {request_id}."
+    },
+    "invalid_request": {
+      "message": "Nothing was sent to Aula: {reason}"
+    },
+    "sick_route_not_supported": {
+      "message": "The child is reported sick through {route}, which Aula Connect cannot do yet. Report it there."
+    },
+    "no_sick_route": {
+      "message": "Aula offers no way to report this child sick. Tell the institution another way."
+    },
+    "no_tabulex_widget": {
+      "message": "The login has no widget of IST's that signs in to Tabulex."
+    },
+    "write_failed": {
+      "message": "Aula did not confirm it, and may or may not have done it; look in Aula before trying again: {error}"
+    },
+    "homework_not_found": {
+      "message": "The homework is not on the list."
+    },
+    "homework_only_ticked": {
+      "message": "Homework comes from the weekly plan: it can only be ticked, and only at home."
     }
   },
   "issues": {
@@ -329,6 +478,132 @@
         "body": {
           "name": "Body",
           "description": "Sent as JSON with POST, for a method Aula asks that way, such as calendar.getEventsByProfileIdsAndResourceIds. Left out, the method is asked with GET."
+        }
+      }
+    },
+    "report_sick": {
+      "name": "Report sick",
+      "description": "Reports the child sick today, the way Aula offers for it: in Aula's presence module, where the institution lets guardians. Only today; Aula takes it back by itself the next day. It tells the daycare or after-school staff, not the school: write to the teachers with Send message.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry of the guardian it is done as."
+        },
+        "child_id": {
+          "name": "Child",
+          "description": "The child's id: the attribute child_id of its picture entity."
+        }
+      }
+    },
+    "undo_sick": {
+      "name": "Take back sick report",
+      "description": "Takes back today's report that the child is sick, where Aula tells the child as sick today.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry of the guardian it is done as."
+        },
+        "child_id": {
+          "name": "Child",
+          "description": "The child's id: the attribute child_id of its picture entity."
+        }
+      }
+    },
+    "add_vacation": {
+      "name": "Register vacation",
+      "description": "Registers a vacation or time off in Aula, whole days. The start is today or later, the end at most a year after it.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry of the guardian it is done as."
+        },
+        "child_ids": {
+          "name": "Children",
+          "description": "The ids of the children it is for: the attribute child_id of their picture entities."
+        },
+        "start": {
+          "name": "Start",
+          "description": "The first day."
+        },
+        "end": {
+          "name": "End",
+          "description": "The last day."
+        },
+        "comment": {
+          "name": "Comment",
+          "description": "At most 250 characters."
+        }
+      }
+    },
+    "delete_vacation": {
+      "name": "Delete vacation",
+      "description": "Deletes a vacation registered for one of the children, where Aula lets it be changed.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry of the guardian it is done as."
+        },
+        "vacation_id": {
+          "name": "Vacation",
+          "description": "The vacation's id, as the card lists it."
+        }
+      }
+    },
+    "answer_vacation_request": {
+      "name": "Answer vacation request",
+      "description": "Answers the institution's vacation request: for each weekday from today, whether the child comes, with its times where the request asks for them.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry of the guardian it is done as."
+        },
+        "child_id": {
+          "name": "Child",
+          "description": "The child's id: the attribute child_id of its picture entity."
+        },
+        "request_id": {
+          "name": "Request",
+          "description": "The request's id, as the card lists it."
+        },
+        "days": {
+          "name": "Days",
+          "description": "A list of days, each with date, is_coming, and entry_time and exit_time where the request asks for times."
+        },
+        "comment": {
+          "name": "Comment",
+          "description": "A comment to the institution."
+        }
+      }
+    },
+    "send_message": {
+      "name": "Send message",
+      "description": "Replies in one of the child's threads in Aula, to everyone in it. Nothing is sent without a thread.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry of the guardian it is done as."
+        },
+        "child_id": {
+          "name": "Child",
+          "description": "The child's id: the attribute child_id of its picture entity."
+        },
+        "thread_id": {
+          "name": "Thread",
+          "description": "The thread's id, as the card lists the child's threads."
+        },
+        "text": {
+          "name": "Text",
+          "description": "Plain text, at most 6600 characters."
+        }
+      }
+    },
+    "probe_tabulex": {
+      "name": "Probe Tabulex login",
+      "description": "Follows once how IST's Tabulex logs the guardian in from Aula, and answers with each step's host, path, field and cookie names, never a value. Only an administrator may use it.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry of the guardian it is done as."
         }
       }
     }

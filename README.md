@@ -6,8 +6,15 @@ weekly plans. Aula Connect logs in to Aula with your MitID, as you do on aula.dk
 what Aula says about your children in Home Assistant:
 
 - whether each child is checked in, checked out, sick or on a trip, and since when;
-- whether there are unread messages, posts, calendar events, photos or presence requests;
-- calendars of the school's events, the weekly plans, the class's birthdays and the newsletters.
+- whether there are unread messages, posts, calendar events, photos or presence requests, and
+  an event for each new one;
+- calendars of the school's events, the weekly plans, the class's birthdays and the newsletters;
+- each child's picture, its homework as a to-do list, whether it has school today and
+  tomorrow, when its school starts and ends, and the vacation requests waiting for an answer.
+
+On a user's explicit action - an action called, or a tap in the Aula Connect cards - it can also
+change things in Aula: report a child sick, register or delete a vacation, answer a vacation
+request, and reply in a thread to the teachers. See [Changing things in Aula](#changing-things-in-aula).
 
 Aula itself, the login and the API, is reached through the library
 [aula_connect](https://github.com/HairingX/aula_connect).
@@ -22,7 +29,7 @@ Aula itself, the login and the API, is reached through the library
 ## Requirements
 
 - A parent login to Aula through MitID, with the MitID app on a phone.
-- Home Assistant 2026.10.4 or later, with HACS.
+- Home Assistant 2026.11.0 or later, with HACS.
 
 ## Installation
 
@@ -77,10 +84,20 @@ first name and `<institution>` the institution's name, as Aula has them.
 | `calendar.aula_birthdays_<child>_<institution>` | The birthdays Aula ties to the child, such as its class's, with the age each turns. | |
 | `calendar.aula_easyiq_weekly_plans_<child>_<institution>` | The EasyIQ weekly plan. | |
 | `calendar.aula_newsletter_<child>_<institution>` | The MinUddannelse newsletters, one for each week, with their HTML as the description. | |
+| `image.aula_picture_<child>_<institution>` | The child's profile picture in Aula, read anew when it is shown, as Aula's link to it expires within the hour; the time it last changed. Aula's link is never an attribute. | `child_id` |
+| `todo.aula_homework_<child>_<institution>` | The weekly plan's tasks, each due on its day: the number not ticked. Ticking one is remembered in Home Assistant only, never told to Aula; a task cannot be added, renamed or removed, as the plan is the teachers'. | |
+| `binary_sensor.aula_school_today_<child>_<institution>` | On when the child has lessons today; off on a day without, and on a holiday. | `start`, `end` |
+| `binary_sensor.aula_school_tomorrow_<child>_<institution>` | The same for tomorrow. | `start`, `end` |
+| `sensor.aula_school_start_<child>_<institution>` | When the child's first lesson today starts; unknown on a day off. | |
+| `sensor.aula_school_end_<child>_<institution>` | When the child's last lesson today ends; unknown on a day off. | |
+| `binary_sensor.aula_vacation_request_<child>_<institution>` | On while the institution waits for an answer to a vacation request that can still be answered: `count` of them, and the first `deadline`. | `count`, `deadline` |
 
-The weekly plan and birthday calendars come with an institution that has weekly plans in Aula,
-the EasyIQ calendar with one that has EasyIQ's weekly plans, and the newsletter calendar with
-one that has MinUddannelse's newsletters.
+The weekly plan and birthday calendars and the homework come with an institution that has
+weekly plans in Aula, the EasyIQ calendar with one that has EasyIQ's weekly plans, and the
+newsletter calendar with one that has MinUddannelse's newsletters.
+
+A school day is told from the lessons in the institution's calendar; a day with a holiday in it
+counts as a day off. The day moves on within 10 minutes of midnight.
 
 ### For each parent
 
@@ -97,15 +114,22 @@ one that has MinUddannelse's newsletters.
 | `binary_sensor.aula_unread_calendar` | A calendar event is unread. | `total`, `alert`, `title`, `all_day`, `start_datetime`, `end_datetime` |
 | `binary_sensor.aula_unread_gallery` | Photos or albums are unseen. | `total` |
 | `binary_sensor.aula_unread_presence` | A presence request, such as a holiday request, is unanswered. | `total`, `alert`, `title`, `text`, `start_datetime`, `end_datetime` |
+| `event.aula_new_message` | Fires for a new message in an unread thread: its thread, subject and the children it is about, never its text or sender. | `event_type`, `thread_id`, `subject`, `sensitive`, `children` |
+| `event.aula_new_photo` | Fires for new photos or videos Aula notifies, in the gallery or an album. | `event_type`, `album_id`, `count` |
+| `event.aula_new_event` | Fires for a calendar event Aula notifies, such as an invitation. | `event_type`, `event_id`, `title`, `start`, `end`, `all_day` |
 
 The attributes of the unread sensors describe the first unread item. A sensitive message shows
 no subject or text; read it in Aula.
+
+An event fires when a read of Aula finds what the read before it did not have; what is there
+when Home Assistant starts counts as known. A reply sent from Home Assistant is no new message.
 
 ## How the data is updated
 
 Aula Connect asks Aula; Aula does not tell it when something changes.
 
-- Presence, messages and notifications are read every 5 minutes.
+- Presence, messages, notifications and vacation requests are read every 5 minutes; the way each
+  child is reported sick, once an hour.
 - The calendars are looked at every 10 minutes. Events, weekly plans, EasyIQ plans and
   newsletters are read again every 2 hours, birthdays once a day, two weeks ahead.
 - Looking further ahead or back in a calendar asks Aula for that period there and then.
@@ -197,10 +221,70 @@ entities:
 - The texts Aula Connect adds to calendar events, such as "Vikar" and "fylder", are in Danish.
 - Aula reports two presence states whose meaning is not known; the status sensor then shows 9
   or 10.
-- Nothing is sent to Aula: messages cannot be answered, nor presence registered, from Home
-  Assistant.
+- What is sent to Aula is limited to the actions below. A new message cannot be started, only a
+  reply in a thread there is; pick-up times, check-in and check-out cannot be registered.
+- A child whose institution takes sick reports in IST's Tabulex cannot be reported sick from
+  Home Assistant yet.
+- Whether the family wrote to the teachers yesterday is known only of replies sent through Home
+  Assistant, and a school day there is any weekday.
+- Photos are not in Home Assistant's media browser yet.
+
+## Changing things in Aula
+
+> **None of these has been tried against the real Aula yet.** They are built from what Aula's own
+> web portal sends, and tested against a simulated Aula. Try each once, on a date you choose -
+> for example a vacation far ahead that you then delete - before relying on it.
+
+Aula Connect changes something in Aula only when a user asks for it: an action called by hand,
+by a script or an automation, or a tap in the Aula Connect cards, which ask for confirmation
+first. Nothing is sent by the regular reads. Each is sent once and never again by itself: where
+it fails, Aula may or may not have done it, and the error says to look in Aula before trying
+again. It is done as the guardian whose MitID the entry logged in with. Any user of Home
+Assistant may call them, as with Home Assistant's other actions.
+
+| Action | What it does in Aula |
+|--------|----------------------|
+| `aula_connect.report_sick` | Reports the child sick today, in Aula's presence module (Komme/gå), where the institution lets guardians do so. It tells the daycare or after-school staff, not the school, and Aula takes it back by itself the next day. Responds with the way it was reported. |
+| `aula_connect.undo_sick` | Takes back today's sick report. |
+| `aula_connect.add_vacation` | Registers a vacation or time off, whole days from `start` to `end`: the start today or later, the end at most a year after it, a comment of at most 250 characters. |
+| `aula_connect.delete_vacation` | Deletes a vacation registered for one of the children, where Aula lets it be changed. |
+| `aula_connect.answer_vacation_request` | Answers an institution's vacation request: for each weekday from today, whether the child comes, with entry and exit times where the request asks for them. |
+| `aula_connect.send_message` | Replies in one of the child's threads, to everyone in it, as plain text. Nothing is sent without a thread. |
+
+Each takes `config_entry_id`, the entry of the guardian it is done as, and the child's id,
+`child_id`, which is the attribute `child_id` of the child's picture entity. Where the
+institution takes sick reports elsewhere, as in IST's Tabulex, or not from guardians at all,
+`report_sick` says so and sends nothing.
+
+```yaml
+action: aula_connect.report_sick
+data:
+  config_entry_id: <the Aula Connect entry>
+  child_id: "{{ state_attr('image.aula_picture_alma_school', 'child_id') }}"
+```
+
+```yaml
+action: aula_connect.add_vacation
+data:
+  config_entry_id: <the Aula Connect entry>
+  child_ids: ["{{ state_attr('image.aula_picture_alma_school', 'child_id') }}"]
+  start: "2027-07-05"
+  end: "2027-07-23"
+  comment: Sommerferie
+```
+
+What a sick report needs to remember - the days each child was sick, as reported through Home
+Assistant or seen in the presence read every 5 minutes, the thread the family last wrote to the
+teachers in, and the days it wrote - is kept in Home Assistant's storage for 60 days, and
+deleted with the entry. So is the homework ticked.
 
 ## Actions
+
+**Probe Tabulex's login** (`aula_connect.probe_tabulex`) follows once how IST's Tabulex logs
+the guardian in from Aula, to learn how a child could be reported sick there, and responds with
+each step's host, path, the names of its fields and cookies, and the portal's own scripts; never
+a value of a token, cookie or field, nor any text of a page. It posts nothing but the login's own
+forms. Only an administrator may use it. The diagnostics hold its latest report.
 
 **Read from Aula** (`aula_connect.read`) reads one method of Aula's API and answers as the
 diagnostics do: every id, name, contact detail and link replaced by another of the same length,

@@ -1,4 +1,5 @@
-"""The sensors of an Aula login: each child's status, presence and time present today."""
+"""The sensors of an Aula login: each child's status, presence and time present today, and when
+its school starts and ends today."""
 
 from dataclasses import dataclass
 from homeassistant.components.sensor import SensorEntity
@@ -11,10 +12,12 @@ from typing import Any, List
 import datetime
 import logging
 
+from .aula_calendar_coordinator import AulaCalendarCoordinator
 from .aula_data import AulaConfigEntry
 from .aula_data_coordinator import DAILY_OVERVIEWS, AulaDataCoordinator, AulaDataCoordinatorData
 from aula_connect.api.models.aula_profile_models import AulaChildProfile, AulaDailyOverview
-from .entity import AulaEntityBase
+from .entity import AulaChildEventsEntity, AulaEntityBase
+from .school_day import school_day
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,15 +26,32 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback):
-    """Add the status, presence and presence duration sensors of each child."""
+    """Add the status, presence and presence duration sensors of each child, and its school's start and end today."""
     coordinator = entry.runtime_data.data_coordinator
+    calendar_coordinator = entry.runtime_data.calendar_coordinator
     entities: List[SensorEntity] = []
     children = coordinator.data.children
     for child in children:
         entities.append(AulaStatusSensor(coordinator, child))
         entities.append(AulaPresenceSensor(coordinator, child))
         entities.append(AulaPresenceDurationSensor(coordinator, child))
+        entities.append(AulaSchoolTimeSensor(calendar_coordinator, child, start=True))
+        entities.append(AulaSchoolTimeSensor(calendar_coordinator, child, start=False))
     async_add_entities(entities)
+
+
+class AulaSchoolTimeSensor(AulaChildEventsEntity, SensorEntity):
+    """When a child's first lesson today starts, or its last ends; nothing on a day off."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: AulaCalendarCoordinator, child: AulaChildProfile, start: bool) -> None:
+        super().__init__(coordinator, "school_start" if start else "school_end", child)
+        self._start = start
+
+    def _set_values(self) -> None:
+        day = school_day(self.coordinator, self._child, now().date())
+        self._attr_native_value = None if day is None else day.start if self._start else day.end
 
 class _ChildPresenceSensor(AulaEntityBase[AulaChildProfile], SensorEntity):
     """A sensor of a child's daily overview, unavailable while Aula gives none for the child."""

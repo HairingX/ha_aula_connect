@@ -19,6 +19,7 @@ from aula_connect.login import AulaLoginClient
 from .aula_data import AulaConfigEntry, AulaRuntimeData
 from .aula_data_coordinator import AulaDataCoordinator
 from .aula_calendar_coordinator import AulaCalendarCoordinator
+from .family import FamilyMemory
 from .const import (
     CONF_ACCESS_TOKEN,
     CONF_REFRESH_TOKEN,
@@ -37,6 +38,9 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.CALENDAR,
+    Platform.EVENT,
+    Platform.IMAGE,
+    Platform.TODO,
 ]
 # Home Assistant's annotation of it leaves a type unknown to a strict check, a bare `dict`; it is
 # taken by name, with the type it has.
@@ -92,13 +96,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool
         login_client=login_client,
         token_update_callback=token_update_callback,
     )
-    data_coordinator = AulaDataCoordinator(entry.title, hass, client, entry)
+    memory = FamilyMemory(hass, entry.entry_id)
+    await memory.async_load()
+    data_coordinator = AulaDataCoordinator(entry.title, hass, client, entry, memory)
     calendar_coordinator = AulaCalendarCoordinator(entry.title, hass, client, entry)
 
     await data_coordinator.async_config_entry_first_refresh()
     await calendar_coordinator.async_config_entry_first_refresh()
 
-    entry.runtime_data = AulaRuntimeData(client, data_coordinator, calendar_coordinator)
+    entry.runtime_data = AulaRuntimeData(client, data_coordinator, calendar_coordinator, memory)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -107,14 +113,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
-    """Unload the entry's platforms."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    """Unload the entry's platforms, and write what it remembers of the family."""
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unloaded:
+        await entry.runtime_data.memory.async_save()
+    return unloaded
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> None:
-    """Remove the entry's repair issues."""
+    """Remove the entry's repair issues, and forget what it remembered of the family."""
     for kind in AnomalyKind:
         ir.async_delete_issue(hass, DOMAIN, anomaly_issue_id(kind, entry.entry_id))
+    await FamilyMemory(hass, entry.entry_id).async_remove()
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:

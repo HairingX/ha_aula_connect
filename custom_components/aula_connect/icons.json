@@ -1,7 +1,70 @@
 {
+  "entity": {
+    "binary_sensor": {
+      "school_today": {
+        "default": "mdi:school"
+      },
+      "school_tomorrow": {
+        "default": "mdi:school-outline"
+      },
+      "vacation_request": {
+        "default": "mdi:calendar-question"
+      }
+    },
+    "sensor": {
+      "school_start": {
+        "default": "mdi:clock-start"
+      },
+      "school_end": {
+        "default": "mdi:clock-end"
+      }
+    },
+    "image": {
+      "picture": {
+        "default": "mdi:account-circle"
+      }
+    },
+    "todo": {
+      "homework": {
+        "default": "mdi:book-open-variant"
+      }
+    },
+    "event": {
+      "new_message": {
+        "default": "mdi:message-badge"
+      },
+      "new_photo": {
+        "default": "mdi:image-plus"
+      },
+      "new_event": {
+        "default": "mdi:calendar-plus"
+      }
+    }
+  },
   "services": {
     "read": {
       "service": "mdi:database-search-outline"
+    },
+    "report_sick": {
+      "service": "mdi:emoticon-sick-outline"
+    },
+    "undo_sick": {
+      "service": "mdi:undo"
+    },
+    "add_vacation": {
+      "service": "mdi:beach"
+    },
+    "delete_vacation": {
+      "service": "mdi:calendar-remove"
+    },
+    "answer_vacation_request": {
+      "service": "mdi:calendar-check"
+    },
+    "send_message": {
+      "service": "mdi:send"
+    },
+    "probe_tabulex": {
+      "service": "mdi:magnify-scan"
     }
   }
 }

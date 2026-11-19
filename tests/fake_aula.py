@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
-from datetime import datetime
+from collections.abc import Awaitable, Callable, Sequence
+from datetime import date, datetime
 from typing import Any
 
 from aula_connect import Anomaly
+from aula_connect.api.aula_errors import NoSickReportRouteError, SickReportRouteNotSupportedError
+from aula_connect.tabulex_probe import TabulexProbeReport
 from aula_connect.api.models.module import (
     AULA_NOTIFICATION_TYPES,
     AulaBirthdayEvent,
@@ -20,6 +22,12 @@ from aula_connect.api.models.module import (
     AulaLoginData,
     AulaMessageThread,
     AulaProfile,
+    AulaProfilePicture,
+    AulaSickReportRoute,
+    AulaVacation,
+    AulaVacationDay,
+    AulaVacationRequest,
+    AulaVacationRequestDetail,
     AulaWeeklyNewsletter,
     AulaWeeklyPlan,
 )
@@ -67,6 +75,87 @@ class FakeAula:
         self.notifications: list[AULA_NOTIFICATION_TYPES] = []
         self.event_details: dict[int, AulaEventDetail] = {}
         self.event_error: Exception | None = None
+        self.vacation_requests: list[AulaVacationRequest] = []
+        self.vacation_request_details: dict[int, AulaVacationRequestDetail] = {}
+        self.vacations: list[AulaVacation] = []
+        self.routes: dict[int, AulaSickReportRoute] = {}
+        self.threads: list[AulaMessageThread] = []
+        self.picture: AulaProfilePicture | None = None
+        self.probe: TabulexProbeReport | None = None
+        self.error: Exception | None = None
+        """What every call below raises, where it is set."""
+        self.writes: list[tuple[str, tuple[Any, ...]]] = []
+        """Each write asked for, by its method, with its arguments."""
+        self.reads: list[str] = []
+        """Each of the calls below that only reads, by its method."""
+
+    def _call(self, method: str, *args: Any, write: bool = True) -> None:
+        if write:
+            self.writes.append((method, args))
+        else:
+            self.reads.append(method)
+        if self.error is not None:
+            raise self.error
+
+    async def get_vacation_requests(self, children: list[AulaChildProfile]) -> list[AulaVacationRequest]:
+        self._call("get_vacation_requests", write=False)
+        return list(self.vacation_requests)
+
+    async def get_vacation_request(self, response_id: int) -> AulaVacationRequestDetail | None:
+        self._call("get_vacation_request", write=False)
+        return self.vacation_request_details.get(response_id)
+
+    async def answer_vacation_request(self, response_id: int, days: Sequence[AulaVacationDay], comment: str = "") -> None:
+        self._call("answer_vacation_request", response_id, list(days), comment)
+
+    async def get_sick_report_route(self, child: AulaChildProfile) -> AulaSickReportRoute:
+        self._call("get_sick_report_route", write=False)
+        return self.routes.get(child.id, AulaSickReportRoute.AULA)
+
+    async def report_sick(self, child: AulaChildProfile) -> None:
+        self._call("report_sick", child.id)
+        self._refuse_route(child)
+
+    async def undo_sick(self, child: AulaChildProfile) -> None:
+        self._call("undo_sick", child.id)
+        self._refuse_route(child)
+
+    def _refuse_route(self, child: AulaChildProfile) -> None:
+        route = self.routes.get(child.id, AulaSickReportRoute.AULA)
+        if route is AulaSickReportRoute.TABULEX:
+            raise SickReportRouteNotSupportedError("IST Tabulex")
+        if route is AulaSickReportRoute.NONE:
+            raise NoSickReportRouteError("none")
+
+    async def get_vacations(self, children: list[AulaChildProfile]) -> list[AulaVacation]:
+        self._call("get_vacations", write=False)
+        return list(self.vacations)
+
+    async def add_vacation(self, children: list[AulaChildProfile], start: date, end: date, comment: str = "") -> None:
+        self._call("add_vacation", [child.id for child in children], start, end, comment)
+
+    async def delete_vacation(self, vacation_id: int) -> None:
+        self._call("delete_vacation", vacation_id)
+
+    async def threads_about(self, child: AulaChildProfile) -> list[AulaMessageThread]:
+        self._call("threads_about", write=False)
+        return [thread for thread in self.threads if any(about.profile_id == child.profile_id for about in thread.regarding_children)]
+
+    async def reply(self, thread_id: int, text: str) -> None:
+        self._call("reply", thread_id, text)
+
+    async def get_profile_picture(self, child: AulaChildProfile) -> AulaProfilePicture | None:
+        self._call("get_profile_picture", write=False)
+        return self.picture
+
+    async def probe_tabulex(self, session: Any = None) -> TabulexProbeReport:
+        self._call("probe_tabulex", write=False)
+        assert self.probe is not None
+        return self.probe
+
+    @property
+    def tabulex_probe(self) -> TabulexProbeReport | None:
+        return self.probe
 
     def anomalies(self, since: datetime | None = None) -> tuple[Anomaly, ...]:
         return tuple(anomaly for anomaly in self.found if since is None or anomaly.last_seen >= since)

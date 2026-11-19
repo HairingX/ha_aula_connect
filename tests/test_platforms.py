@@ -31,6 +31,9 @@ async def test_an_account_without_children_has_only_its_unread_sensors(hass: Hom
 
     entities = er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
     assert sorted(entity.unique_id for entity in entities) == [
+        "Aula_new_event",
+        "Aula_new_message",
+        "Aula_new_photo",
         "Aula_unread_calendar",
         "Aula_unread_gallery",
         "Aula_unread_message",
@@ -39,7 +42,7 @@ async def test_an_account_without_children_has_only_its_unread_sensors(hass: Hom
     ]
     for entity in entities:
         state = hass.states.get(entity.entity_id)
-        assert state is not None and state.state == "off"
+        assert state is not None and state.state == ("unknown" if entity.domain == "event" else "off")
     devices = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
     assert [device.identifiers for device in devices] == [{(DOMAIN, "Aula")}]
 

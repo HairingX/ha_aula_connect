@@ -16,6 +16,7 @@ from pytest_homeassistant.common import MockConfigEntry
 from custom_components.aula_connect.aula_calendar_coordinator import AulaCalendarCoordinator
 from custom_components.aula_connect.aula_data_coordinator import AulaDataCoordinator
 from custom_components.aula_connect.const import DOMAIN
+from custom_components.aula_connect.family import FamilyMemory
 from custom_components.aula_connect.redact import error_text
 
 from .test_init import DATA
@@ -79,7 +80,7 @@ async def test_a_partial_failure_logs_no_token(hass: HomeAssistant, caplog: pyte
     client.anomalies = MagicMock(return_value=())
     client.login.return_value = MagicMock(profiles=[], api_version=23)
     client.get_message_threads.side_effect = _unreachable()
-    coordinator = AulaDataCoordinator("Aula", hass, client, entry)
+    coordinator = AulaDataCoordinator("Aula", hass, client, entry, FamilyMemory(hass, entry.entry_id))
     await coordinator.async_refresh()
     assert coordinator.last_update_success
     assert "Aula could be read only in part" in caplog.text

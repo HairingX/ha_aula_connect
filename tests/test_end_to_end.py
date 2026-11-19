@@ -7,7 +7,7 @@ import asyncio
 import json
 from collections.abc import AsyncGenerator, Callable, Iterator
 from contextlib import asynccontextmanager
-from datetime import timedelta
+from datetime import date, timedelta
 from functools import partial
 from typing import Any
 from unittest.mock import patch
@@ -132,3 +132,86 @@ async def test_a_childs_birthday_calendar_holds_only_the_birthdays_aula_ties_to_
             summary for summary in summaries if "Bo" in summary
         ]
         assert any("Bo" in summary for summary in summaries)
+
+
+def _next_monday(weeks: int) -> date:
+    today = dt_util.now().date()
+    return today + timedelta(days=7 * weeks - today.weekday())
+
+
+@pytest.mark.usefixtures("local_cookies", "socket_enabled")
+async def test_a_guardian_reports_sick_registers_a_vacation_answers_a_request_and_replies_in_aula(
+    hass: HomeAssistant,
+) -> None:
+    monday = _next_monday(2)
+
+    def arrange(api: SimulatedAulaApi) -> None:
+        school = {"id": 11, "institutionCode": "S1", "institutionName": "School"}
+        api.daily_overviews = [{"id": 1, "institutionProfile": school, "status": 0}]
+        api.vacation_requests = [
+            {
+                "responseId": 501,
+                "vacationRegistrationId": 50,
+                "childId": 11,
+                "title": "Juleferie",
+                "startDate": monday.isoformat(),
+                "endDate": (monday + timedelta(days=4)).isoformat(),
+                "responseDeadline": (monday - timedelta(days=1)).isoformat(),
+                "noteToGuardian": "Sig til",
+                "isEditable": True,
+                "isPresenceTimesRequired": True,
+            }
+        ]
+        api.threads = [
+            {
+                "id": 7,
+                "creator": {"answerDirectlyName": "Lærer", "fullName": "Lærer", "metadata": "Skole"},
+                "subject": "Klassen",
+                "regardingChildren": [{"displayName": "Alma", "profileId": 101, "shortName": "AE"}],
+                "recipients": [],
+                "latestMessage": {"id": "m7", "sendDateTime": "2026-11-02T08:00:00+00:00", "text": {"html": "<p>Hej</p>"}},
+            }
+        ]
+
+    async with set_up(hass, arrange) as (_, api):
+        [entry] = hass.config_entries.async_entries(DOMAIN)
+        state = hass.states.get("binary_sensor.aula_vacation_request_alma_school")
+        assert state is not None and state.state == "on" and state.attributes["count"] == 1
+        child = {"config_entry_id": entry.entry_id, "child_id": 11}
+
+        assert await hass.services.async_call(DOMAIN, "report_sick", child, blocking=True, return_response=True) == {"route": "aula"}
+        assert api.presence_statuses == {11: 1}
+        status = hass.states.get("sensor.aula_status_alma_school")
+        assert status is not None and status.state == "1"
+        await hass.services.async_call(DOMAIN, "undo_sick", child, blocking=True)
+        assert api.presence_statuses == {11: 0}
+
+        start, end = _next_monday(6), _next_monday(6) + timedelta(days=2)
+        await hass.services.async_call(
+            DOMAIN, "add_vacation", {"config_entry_id": entry.entry_id, "child_ids": [11], "start": start.isoformat(), "end": end.isoformat(), "comment": "Fri"}, blocking=True
+        )
+        [vacation] = api.vacations
+        assert (vacation["startDate"], vacation["endDate"], vacation["description"]) == (start.isoformat(), end.isoformat(), "Fri")
+        await hass.services.async_call(DOMAIN, "delete_vacation", {"config_entry_id": entry.entry_id, "vacation_id": vacation["vacationId"]}, blocking=True)
+        assert api.vacations == []
+
+        days = [
+            {"date": monday.isoformat(), "is_coming": True, "entry_time": "08:00", "exit_time": "15:30"},
+            {"date": (monday + timedelta(days=1)).isoformat(), "is_coming": False},
+        ]
+        await hass.services.async_call(DOMAIN, "answer_vacation_request", {**child, "request_id": 501, "days": days}, blocking=True)
+        # Reading again after a write waits out the coordinator's cooldown; this test does not.
+        await entry.runtime_data.data_coordinator.async_refresh()
+        assert api.vacation_answers[501]["days"] == [
+            {"date": monday.isoformat(), "isComing": True, "entryTime": "08:00", "exitTime": "15:30"},
+            {"date": (monday + timedelta(days=1)).isoformat(), "isComing": False, "entryTime": "", "exitTime": ""},
+        ]
+        state = hass.states.get("binary_sensor.aula_vacation_request_alma_school")
+        assert state is not None and state.state == "off"
+
+        await hass.services.async_call(DOMAIN, "send_message", {**child, "thread_id": 7, "text": "Alma er syg"}, blocking=True)
+        assert api.messages[7][-1]["text"] == {"html": "<p>Alma er syg</p>"}
+        assert entry.runtime_data.memory.thread(11) is not None
+
+        diagnostics: Any = await async_get_config_entry_diagnostics(hass, entry)
+        assert "Alma er syg" not in json.dumps(diagnostics)

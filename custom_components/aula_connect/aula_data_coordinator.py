@@ -1,7 +1,7 @@
 """The coordinator that reads an Aula login's profiles, daily overviews, messages and notifications."""
 
-from dataclasses import dataclass
-from datetime import timedelta
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from typing import List
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -10,6 +10,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .family import FamilyMemory
 from .redact import error_text
 from .const import ANOMALY_HELP, ANOMALY_WINDOW, DOMAIN, anomaly_issue_id
 from .retry import read_twice
@@ -22,7 +23,10 @@ from aula_connect.api.models.module import (
     AulaChildProfile,
     AulaDailyOverview,
     AulaMessageThread,
+    AulaPresenceStatus,
     AulaProfile,
+    AulaSickReportRoute,
+    AulaVacationRequest,
     AULA_NOTIFICATION_TYPES
 )
 from aula_connect import AnomalyKind
@@ -39,6 +43,11 @@ UPDATE_TIMEOUT = timedelta(minutes=4)
 DAILY_OVERVIEWS = "daily overviews"
 MESSAGE_THREADS = "message threads"
 NOTIFICATIONS = "notifications"
+VACATION_REQUESTS = "vacation requests"
+SICK_ROUTES = "sick report routes"
+
+SICK_ROUTES_INTERVAL = timedelta(hours=1)
+"""How often the way each child is reported sick is read again; it changes only with the institution's settings."""
 
 @dataclass
 class AulaDataCoordinatorData:
@@ -53,6 +62,18 @@ class AulaDataCoordinatorData:
     notifications: List[AULA_NOTIFICATION_TYPES]
     unreadable: frozenset[str] = frozenset()
     """The parts that failed to read twice in a row; each keeps what was read of it before."""
+    vacation_requests: List[AulaVacationRequest] = field(default_factory=lambda: list[AulaVacationRequest]())
+    sick_routes: dict[int, AulaSickReportRoute] = field(default_factory=lambda: dict[int, AulaSickReportRoute]())
+    """The way each child is reported sick, by its id; a child not read yet is missing."""
+
+def pending_vacation_requests(data: AulaDataCoordinatorData, child: AulaChildProfile) -> List[AulaVacationRequest]:
+    """The child's vacation requests that wait for an answer and can still be answered today."""
+    today = dt_util.now().date()
+    return [
+        request for request in data.vacation_requests
+        if request.child_id == child.id and request.missing_answer and request.answerable(today)
+    ]
+
 
 MAX_DETAILS = 10
 """How many details a repair issue names before it says how many more there are."""
@@ -68,7 +89,9 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
 
     _client: AulaClient
 
-    def __init__(self, device_id: str, hass: HomeAssistant, client: AulaClient, config_entry: ConfigEntry):
+    def __init__(
+        self, device_id: str, hass: HomeAssistant, client: AulaClient, config_entry: ConfigEntry, memory: FamilyMemory
+    ):
         super().__init__(
             hass,
             _LOGGER,
@@ -78,7 +101,10 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             always_update=True,
         )
         self._client = client
+        self._memory = memory
         self._partly_unreadable = False
+        self._routes_read: datetime | None = None
+        self._own_replies = set[int]()
         self.device_id = device_id
         self._entry_id = config_entry.entry_id
         self._watching_since = dt_util.utcnow()
@@ -146,6 +172,17 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
                 learn_more_url=ANOMALY_HELP[kind],
             )
 
+    def note_own_reply(self, thread_id: int) -> None:
+        """Remember that Home Assistant replied in the thread, so that its reply is not taken for another's."""
+        self._own_replies.add(thread_id)
+
+    def own_reply_read(self, thread_id: int) -> bool:
+        """Whether Home Assistant replied in the thread since it was last asked; asking forgets it."""
+        if thread_id in self._own_replies:
+            self._own_replies.discard(thread_id)
+            return True
+        return False
+
     def weekly_plans_supported(self) -> bool:
         """Whether the login's institutions offer weekly plans."""
         return self._client.has_widget(AulaWidgetId.WEEKPLAN_PARENTS)
@@ -200,6 +237,15 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         notifications = await part(
             NOTIFICATIONS, lambda: self._client.get_notifications(children), before.notifications if before else []
         )
+        vacation_requests = await part(
+            VACATION_REQUESTS, lambda: self._client.get_vacation_requests(children), before.vacation_requests if before else []
+        )
+        sick_routes = await self._sick_routes(children, before.sick_routes if before else {}, failures)
+
+        today = dt_util.now().date()
+        for overview in daily_overviews:
+            if overview.status == AulaPresenceStatus.SICK and any(child.id == overview.institution_profile.id for child in children):
+                self._memory.note_sick(overview.institution_profile.id, today)
 
         if failures:
             # Logged once when Aula can be read only in part, and once when it can be read in full.
@@ -219,4 +265,29 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             notifications=notifications,
             unreadable=frozenset(failures),
             profiles=profiles,
+            vacation_requests=vacation_requests,
+            sick_routes=sick_routes,
         )
+
+    async def _sick_routes(
+        self, children: List[AulaChildProfile], kept: dict[int, AulaSickReportRoute], failures: dict[str, str]
+    ) -> dict[int, AulaSickReportRoute]:
+        """The way each child is reported sick, read again once SICK_ROUTES_INTERVAL has passed."""
+        now = dt_util.utcnow()
+        if self._routes_read is not None and now - self._routes_read < SICK_ROUTES_INTERVAL and all(
+            child.id in kept for child in children
+        ):
+            return kept
+
+        async def read() -> List[tuple[int, AulaSickReportRoute]]:
+            return [(child.id, await self._client.get_sick_report_route(child)) for child in children]
+
+        try:
+            routes = dict(await read_twice(SICK_ROUTES, read))
+        except AulaCredentialError:
+            raise
+        except Exception as ex:
+            failures[SICK_ROUTES] = error_text(ex)
+            return kept
+        self._routes_read = now
+        return routes
