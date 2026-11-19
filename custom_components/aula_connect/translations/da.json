@@ -284,7 +284,7 @@
       "message": "Aula Connect-posten er ikke indlæst."
     },
     "method_not_read_only": {
-      "message": "{method} er ikke en metode i Aulas API, der kun henter."
+      "message": "{method} læses ikke: {reason}"
     }
   },
   "issues": {
@@ -296,6 +296,10 @@
       "title": "Aula Connect kunne ikke læse et svar fra Aula",
       "description": "Aula Connect kunne ikke læse Aulas svar på: {details}. Aula kan have ændret det. Hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter alt, hvad Aula siger, men ikke hvordan det er bygget op; læs den alligevel igennem, før du deler den."
     },
+    "unknown_shape": {
+      "title": "Aula sender svar i en ny form",
+      "description": "Aula sendte felter eller typer, Aula Connect ikke har set før: {details}. Det kan virke som før; for at holde Aula Connect opdateret, så hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter alt, hvad Aula siger, men ikke hvordan det er bygget op; læs den alligevel igennem, før du deler den."
+    },
     "api_version_changed": {
       "title": "Aulas API har en ny version",
       "description": "Aulas API er i version {details}, som Aula Connect ikke er lavet til. Det kan virke som før; mangler der noget, så hent diagnostikken fra integrationens post og del den med udvikleren. Hentningen erstatter alt, hvad Aula siger, men ikke hvordan det er bygget op; læs den alligevel igennem, før du deler den."
@@ -304,7 +308,7 @@
   "services": {
     "read": {
       "name": "Læs fra Aula",
-      "description": "Læser én metode i Aulas API, der kun henter, og svarer med navne og id'er erstattet, som diagnostikken gør. Kun en administrator kan bruge den. Det, der vises med Vis, er ikke længere anonymt.",
+      "description": "Læser én metode i Aulas API, der kun henter, med GET eller med indhold via POST, og svarer med navne og id'er erstattet, som diagnostikken gør. Kun en administrator kan bruge den. Det, der vises med Vis, er ikke længere anonymt.",
       "fields": {
         "config_entry_id": {
           "name": "Aula-konto",
@@ -312,7 +316,7 @@
         },
         "method": {
           "name": "Metode",
-          "description": "Metoden i Aulas API, hvis navn begynder med get efter området, fx profiles.getProfileContext."
+          "description": "En metode i Aulas API, som vides at findes, eller en anden hvis navn begynder med get eller find efter området, stavet som Aula staver den. En metode Aula spørges med POST, kræver indhold."
         },
         "params": {
           "name": "Parametre",
@@ -321,6 +325,10 @@
         "reveal": {
           "name": "Vis",
           "description": "Nøglerne hvis værdier beholdes som Aula sendte dem, fx [\"widgetCategory\"], eller true for hele svaret. Det viste er ikke længere anonymt: del det kun privat. MitID-brugernavnet og alle tokens forbliver skjulte."
+        },
+        "body": {
+          "name": "Indhold",
+          "description": "Sendes som JSON med POST, til en metode Aula spørges sådan, fx calendar.getEventsByProfileIdsAndResourceIds. Udeladt spørges metoden med GET."
         }
       }
     }

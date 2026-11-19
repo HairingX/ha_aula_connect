@@ -39,6 +39,13 @@ as "messages". Something is most likely missing in Home Assistant until it is fi
 issues for what the notice names, and report it with the form **Aula sends something new**, with
 the diagnostics attached.
 
+### Aula sends answers in a new shape
+
+Aula sent a field, or a type of a field, Aula Connect has not seen in its answers before; the
+notice names where, such as "GET calendar.getEventById: data.newField (str)", never what Aula
+sent there. It most likely still works as before. Report it with the form **Aula sends something
+new**, with the diagnostics attached, so that what Aula sends is known when it is needed.
+
 ## Downloading the diagnostics
 
 1. In Home Assistant, go to Settings > Devices & services > Aula Connect.

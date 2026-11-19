@@ -14,6 +14,7 @@ from aula_connect.api.models.module import (
     AulaChildProfile,
     AulaDailyOverview,
     AulaEasyiqWeeklyPlan,
+    AulaEventDetail,
     AulaInstitutionGroup,
     AulaInstitutionProfile,
     AulaLoginData,
@@ -64,6 +65,8 @@ class FakeAula:
         self.daily_overviews: list[AulaDailyOverview] = []
         self.message_threads: list[AulaMessageThread] = []
         self.notifications: list[AULA_NOTIFICATION_TYPES] = []
+        self.event_details: dict[int, AulaEventDetail] = {}
+        self.event_error: Exception | None = None
 
     def anomalies(self, since: datetime | None = None) -> tuple[Anomaly, ...]:
         return tuple(anomaly for anomaly in self.found if since is None or anomaly.last_seen >= since)
@@ -95,6 +98,11 @@ class FakeAula:
         self, institutions: list[AulaInstitutionProfile], start: datetime, end: datetime
     ) -> list[AulaCalendarEvent]:
         return [item for institution in institutions for item in self.events.get(institution.id, [])]
+
+    async def get_event(self, event_id: int) -> AulaEventDetail | None:
+        if self.event_error is not None:
+            raise self.event_error
+        return self.event_details.get(event_id)
 
     async def get_weekly_plans(self, profiles: Any, start: datetime, end: datetime) -> list[AulaWeeklyPlan]:
         return list(self.weekly_plans)
