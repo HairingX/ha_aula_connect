@@ -22,7 +22,8 @@ into Home Assistant devices and entities. How and why it is built as it is: `doc
   registering and deleting a vacation, answering a vacation request, and replying in a thread
   about a child. Each is sent once, never from a coordinator's poll and never retried; where it
   fails, the error says Aula may or may not have done it. Nothing is sent without an explicit
-  thread. Probing Tabulex's login is an administrator's action, and only reads.
+  thread. Probing the services Aula's widgets log in to is an administrator's action, and only reads: it
+  never reads an address whose name tells of a change.
 - What it remembers of a family - the days a child was sick, the thread written in and the days
   written, the homework ticked - is in a private Store per entry, kept 60 days and removed with
   the entry. Ticking homework is never told to Aula.

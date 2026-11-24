@@ -63,7 +63,7 @@
     "send_message": {
       "service": "mdi:send"
     },
-    "probe_tabulex": {
+    "probe_widgets": {
       "service": "mdi:magnify-scan"
     }
   }

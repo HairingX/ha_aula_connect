@@ -9,7 +9,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aula_connect.api.aula_errors import AulaCredentialError, NoTabulexWidgetError
+from aula_connect.api.aula_errors import AulaCredentialError
 from aula_connect.api.models.aula_message_thread_models import AulaThreadRecipient
 from aula_connect.api.models.module import (
     AulaDailyOverview,
@@ -18,7 +18,7 @@ from aula_connect.api.models.module import (
     AulaVacationDay,
     AulaVacationRequestDetail,
 )
-from aula_connect.tabulex_probe import TabulexProbeReport
+from aula_connect.widget_probe import WidgetProbeReport
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import Context, HomeAssistant
@@ -366,7 +366,7 @@ async def _entry(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> str:
 
 async def _call(hass: HomeAssistant, service: str, data: dict[str, Any], context: Context | None = None) -> Any:
     return await hass.services.async_call(
-        DOMAIN, service, data, blocking=True, context=context, return_response=service in ("probe_tabulex",)
+        DOMAIN, service, data, blocking=True, context=context, return_response=service in ("probe_widgets",)
     )
 
 
@@ -419,21 +419,11 @@ async def test_an_action_that_cannot_be_done_says_why_in_the_users_language(
     assert (failed.value.translation_key, failed.value.translation_placeholders) == ("write_failed", {"error": "down"})
 
 
-def _report() -> TabulexProbeReport:
-    return TabulexProbeReport(
-        widget_id="0105",
-        hops=(),
-        ended="portal",
-        stopped_at=None,
-        portal_hops=(),
-        portal_ended="portal",
-        portal_stopped_at=None,
-        scripts=(),
-        cookies=(),
-    )
+def _report() -> WidgetProbeReport:
+    return WidgetProbeReport(widgets=())
 
 
-async def test_only_an_administrator_may_probe_tabulex_whose_report_is_in_the_diagnostics(
+async def test_only_an_administrator_may_probe_the_widgets_whose_report_is_in_the_diagnostics(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, hass_admin_user: MockUser, hass_read_only_user: MockUser
 ) -> None:
     entry_id = await _entry(hass, freezer)
@@ -441,26 +431,16 @@ async def test_only_an_administrator_may_probe_tabulex_whose_report_is_in_the_di
     with patch.object(entry.runtime_data.client, "read_everything", AsyncMock(return_value=[]), create=True), patch.object(
         entry.runtime_data.client, "responses", MagicMock(return_value={}), create=True
     ):
-        assert (await async_get_config_entry_diagnostics(hass, entry))["tabulex_probe"] is None
+        assert (await async_get_config_entry_diagnostics(hass, entry))["widget_probe"] is None
         aula.probe = _report()
         with pytest.raises(Unauthorized):
-            await _call(hass, "probe_tabulex", {"config_entry_id": entry_id}, Context(user_id=hass_read_only_user.id))
-        answer = await _call(hass, "probe_tabulex", {"config_entry_id": entry_id}, Context(user_id=hass_admin_user.id))
+            await _call(hass, "probe_widgets", {"config_entry_id": entry_id}, Context(user_id=hass_read_only_user.id))
+        answer = await _call(hass, "probe_widgets", {"config_entry_id": entry_id}, Context(user_id=hass_admin_user.id))
         assert (answer, aula.probe_reads) == (_report().as_dict(), ())
         reads = {"config_entry_id": entry_id, "reads": ["/api/children", "https://foraeldre.tabulex.net/api/fravaer"]}
-        await _call(hass, "probe_tabulex", reads, Context(user_id=hass_admin_user.id))
+        await _call(hass, "probe_widgets", reads, Context(user_id=hass_admin_user.id))
         assert aula.probe_reads == ("/api/children", "https://foraeldre.tabulex.net/api/fravaer")
-        assert (await async_get_config_entry_diagnostics(hass, entry))["tabulex_probe"] == _report().as_dict()
-
-
-async def test_probing_a_login_without_tabulex_says_so(
-    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
-) -> None:
-    entry_id = await _entry(hass, freezer)
-    aula.error = NoTabulexWidgetError("none")
-    with pytest.raises(ServiceValidationError) as none:
-        await _call(hass, "probe_tabulex", {"config_entry_id": entry_id})
-    assert none.value.translation_key == "no_tabulex_widget"
+        assert (await async_get_config_entry_diagnostics(hass, entry))["widget_probe"] == _report().as_dict()
 
 
 def test_the_school_day_before_monday_is_friday_and_the_school_year_starts_in_august() -> None:

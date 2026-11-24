@@ -280,14 +280,17 @@ deleted with the entry. So is the homework ticked.
 
 ## Actions
 
-**Probe Tabulex's login** (`aula_connect.probe_tabulex`) follows once how IST's Tabulex logs
-the guardian in from Aula, as a browser does, to learn how a child could be reported sick there.
-It responds with how each step and page is built - host, path, status, the names of its fields
-and cookies, a page's title and headings - and the text of the scripts the portal loads; never a
-value of a token, cookie or field. With `reads`, it also reads, with GET, each address given on
-IST's and Tabulex's hosts, or path on the parent portal, once logged in: a JSON answer by its
-shape and pseudonymised as the diagnostics pseudonymise Aula's. It posts nothing but the login's
-own forms. Only an administrator may use it. The diagnostics hold its latest report.
+**Probe widget services** (`aula_connect.probe_widgets`) learns, in one run, how each Aula widget
+with a login of its own - such as IST's into Tabulex - logs the guardian in, and what its service
+loads and answers, to learn how a child could be reported sick there. It follows each login as a
+browser does, but never into Aula's, MitID's or UniLogin's own logins; reads the scripts of the
+page it ends at; and reads with GET the addresses the service's own code names, but never one
+whose name tells of a change, such as delete, save, send or report. With `reads`, it also reads
+the addresses given. It responds with how each step, page and answer is built - host, path,
+status, the names of fields and cookies, a page's title and headings, the scripts' text, and
+each JSON answer by its shape and pseudonymised as the diagnostics pseudonymise Aula's - never a
+value of a token, cookie or field. It posts nothing but each login's own forms. Only an
+administrator may use it. The diagnostics hold its latest report.
 
 **Read from Aula** (`aula_connect.read`) reads one method of Aula's API and answers as the
 diagnostics do: every id, name, contact detail and link replaced by another of the same length,

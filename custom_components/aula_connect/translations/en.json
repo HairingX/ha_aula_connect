@@ -423,9 +423,6 @@
     "no_sick_route": {
       "message": "Aula offers no way to report this child sick. Tell the institution another way."
     },
-    "no_tabulex_widget": {
-      "message": "The login has no widget of IST's that signs in to Tabulex."
-    },
     "write_failed": {
       "message": "Aula did not confirm it, and may or may not have done it; look in Aula before trying again: {error}"
     },
@@ -597,17 +594,17 @@
         }
       }
     },
-    "probe_tabulex": {
-      "name": "Probe Tabulex login",
-      "description": "Follows once how IST's Tabulex logs the guardian in from Aula, as a browser does, reads the portal's scripts and the addresses given, and answers with how each step and page is built, never a value of a token, cookie or field. Only an administrator may use it.",
+    "probe_widgets": {
+      "name": "Probe widget services",
+      "description": "Follows once, as a browser does, how each Aula widget with a login of its own (such as IST's into Tabulex) logs the guardian in, reads its service's scripts and the addresses they name, and answers with how each step, page and answer is built: JSON pseudonymised, never a value of a token, cookie or field. It never reads an address that names a change. Only an administrator may use it.",
       "fields": {
         "config_entry_id": {
           "name": "Aula account",
           "description": "The Aula Connect entry of the guardian it is done as."
         },
         "reads": {
-          "name": "Addresses to read",
-          "description": "Addresses on IST's and Tabulex's hosts, or paths on the parent portal, read with GET once logged in, such as an API address found in the portal's scripts. A JSON answer is told by its shape and pseudonymised."
+          "name": "Further addresses",
+          "description": "Addresses, or paths on the page each login ends at, read with GET too."
         }
       }
     }

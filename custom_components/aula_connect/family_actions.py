@@ -14,7 +14,6 @@ from typing import Any, cast
 from aula_connect.api.aula_errors import (
     AulaCredentialError,
     NoSickReportRouteError,
-    NoTabulexWidgetError,
     SickReportRouteNotSupportedError,
 )
 from aula_connect.api.models.module import (
@@ -94,8 +93,7 @@ async def _aula[T](hass: HomeAssistant, entry: AulaConfigEntry, call: Callable[[
 
     Raises:
         InvalidError: The library refused it before sending anything.
-        NotSupportedError: The child is reported sick another way, or the login has no widget
-            into Tabulex.
+        NotSupportedError: The child is reported sick another way.
         AulaError: Aula refused it or could not be reached; a login is asked for where Aula
             refused it.
     """
@@ -107,8 +105,6 @@ async def _aula[T](hass: HomeAssistant, entry: AulaConfigEntry, call: Callable[[
         ) from None
     except NoSickReportRouteError:
         raise NotSupportedError("no_sick_route", "Aula offers no way to report the child sick") from None
-    except NoTabulexWidgetError:
-        raise NotSupportedError("no_tabulex_widget", "The login has no widget of IST's that signs in to Tabulex") from None
     except AulaCredentialError:
         entry.async_start_reauth(hass)
         raise AulaError("login_expired", "The login to Aula has expired. Log in with MitID again.") from None
@@ -321,8 +317,8 @@ async def answer_vacation_request(
     await entry.runtime_data.data_coordinator.async_request_refresh()
 
 
-async def probe_tabulex(hass: HomeAssistant, entry: AulaConfigEntry, reads: list[str]) -> dict[str, Any]:
-    """Follow how IST's Tabulex logs the guardian in, once, read `reads` with GET, and tell what was found; no value of a secret."""
-    # The library follows the chain on a session of its own, closed after it: Tabulex's cookies are not Aula's.
-    report = await _aula(hass, entry, lambda: entry.runtime_data.client.probe_tabulex(reads=reads), write=False)
+async def probe_widgets(hass: HomeAssistant, entry: AulaConfigEntry, reads: list[str]) -> dict[str, Any]:
+    """Follow once how each widget with a login of its own logs the guardian in, read what its service names and `reads`, and tell what was found; no value of a secret."""
+    # The library follows each chain on a session of its own, closed after it: a service's cookies are not Aula's.
+    report = await _aula(hass, entry, lambda: entry.runtime_data.client.probe_widgets(reads=reads), write=False)
     return report.as_dict()

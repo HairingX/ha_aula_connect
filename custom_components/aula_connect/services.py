@@ -1,6 +1,6 @@
 """The integration's actions: read one method of Aula's API, with who someone is replaced; what a
 guardian does in Aula - report a child sick, register a vacation, answer a vacation request,
-reply in a thread - each sent once, when it is called; and a probe of IST's Tabulex login."""
+reply in a thread - each sent once, when it is called; and a probe of the services Aula's widgets log in to."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ SERVICE_ADD_VACATION = "add_vacation"
 SERVICE_DELETE_VACATION = "delete_vacation"
 SERVICE_ANSWER_VACATION_REQUEST = "answer_vacation_request"
 SERVICE_SEND_MESSAGE = "send_message"
-SERVICE_PROBE_TABULEX = "probe_tabulex"
+SERVICE_PROBE_WIDGETS = "probe_widgets"
 
 READ_SCHEMA = probatio.Schema(
     {
@@ -120,7 +120,7 @@ def _raised(err: FamilyActionError) -> HomeAssistantError:
 
 
 def async_register_services(hass: HomeAssistant) -> None:
-    """Register the actions: reading Aula and probing Tabulex for administrators only, the rest for every user."""
+    """Register the actions: reading Aula and probing its widgets for administrators only, the rest for every user."""
 
     async def read(call: ServiceCall) -> ServiceResponse:
         await _require_admin(hass, call)
@@ -189,12 +189,12 @@ def async_register_services(hass: HomeAssistant) -> None:
         await family_actions.reply(hass, entry, child, call.data["thread_id"], call.data["text"])
         return None
 
-    async def probe_tabulex(call: ServiceCall, entry: AulaConfigEntry) -> ServiceResponse:
-        return await family_actions.probe_tabulex(hass, entry, call.data["reads"])
+    async def probe_widgets(call: ServiceCall, entry: AulaConfigEntry) -> ServiceResponse:
+        return await family_actions.probe_widgets(hass, entry, call.data["reads"])
 
-    async def probe_tabulex_as_admin(call: ServiceCall) -> ServiceResponse:
+    async def probe_widgets_as_admin(call: ServiceCall) -> ServiceResponse:
         await _require_admin(hass, call)
-        return await family(probe_tabulex)(call)
+        return await family(probe_widgets)(call)
 
     actions = _actions(hass)
     actions.async_register(DOMAIN, SERVICE_READ, read, READ_SCHEMA, SupportsResponse.ONLY)
@@ -206,7 +206,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         DOMAIN, SERVICE_ANSWER_VACATION_REQUEST, family(answer_vacation_request), ANSWER_VACATION_REQUEST_SCHEMA, SupportsResponse.NONE
     )
     actions.async_register(DOMAIN, SERVICE_SEND_MESSAGE, family(send_message), SEND_MESSAGE_SCHEMA, SupportsResponse.NONE)
-    actions.async_register(DOMAIN, SERVICE_PROBE_TABULEX, probe_tabulex_as_admin, PROBE_SCHEMA, SupportsResponse.ONLY)
+    actions.async_register(DOMAIN, SERVICE_PROBE_WIDGETS, probe_widgets_as_admin, PROBE_SCHEMA, SupportsResponse.ONLY)
 
 
 def _actions(hass: HomeAssistant) -> _Actions:

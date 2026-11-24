@@ -423,9 +423,6 @@
     "no_sick_route": {
       "message": "Aula giver ingen måde at sygemelde dette barn. Giv institutionen besked på anden vis."
     },
-    "no_tabulex_widget": {
-      "message": "Login'et har ingen widget fra IST, der logger ind i Tabulex."
-    },
     "write_failed": {
       "message": "Aula bekræftede det ikke, og har måske gjort det, måske ikke; se efter i Aula, før du prøver igen: {error}"
     },
@@ -597,17 +594,17 @@
         }
       }
     },
-    "probe_tabulex": {
-      "name": "Undersøg Tabulex-login",
-      "description": "Følger én gang, som en browser, hvordan IST's Tabulex logger forælderen ind fra Aula, læser portalens scripts og de givne adresser, og svarer med, hvordan hvert trin og hver side er bygget, aldrig en værdi af et token, en cookie eller et felt. Kun en administrator kan bruge den.",
+    "probe_widgets": {
+      "name": "Undersøg widgettjenester",
+      "description": "Følger én gang, som en browser, hvordan hver Aula-widget med sit eget login (fx IST's til Tabulex) logger forælderen ind, læser tjenestens scripts og de adresser, de nævner, og svarer med, hvordan hvert trin, hver side og hvert svar er bygget: JSON pseudonymiseret, aldrig en værdi af et token, en cookie eller et felt. Den læser aldrig en adresse, der nævner en ændring. Kun en administrator kan bruge den.",
       "fields": {
         "config_entry_id": {
           "name": "Aula-konto",
           "description": "Aula Connect-posten for den forælder, det gøres som."
         },
         "reads": {
-          "name": "Adresser at læse",
-          "description": "Adresser på IST's og Tabulex' værter, eller stier på forældreportalen, der læses med GET efter login, fx en API-adresse fundet i portalens scripts. Et JSON-svar fortælles ved sin form og pseudonymiseret."
+          "name": "Flere adresser",
+          "description": "Adresser, eller stier på siden, hvert login ender på, der også læses med GET."
         }
       }
     }

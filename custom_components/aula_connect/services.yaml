@@ -149,7 +149,7 @@ send_message:
       selector:
         text:
           multiline: true
-probe_tabulex:
+probe_widgets:
   fields:
     config_entry_id: *entry
     reads:

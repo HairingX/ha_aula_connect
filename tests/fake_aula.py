@@ -8,7 +8,7 @@ from typing import Any
 
 from aula_connect import Anomaly
 from aula_connect.api.aula_errors import NoSickReportRouteError, SickReportRouteNotSupportedError
-from aula_connect.tabulex_probe import TabulexProbeReport
+from aula_connect.widget_probe import WidgetProbeReport
 from aula_connect.api.models.module import (
     AULA_NOTIFICATION_TYPES,
     AulaBirthdayEvent,
@@ -81,7 +81,7 @@ class FakeAula:
         self.routes: dict[int, AulaSickReportRoute] = {}
         self.threads: list[AulaMessageThread] = []
         self.picture: AulaProfilePicture | None = None
-        self.probe: TabulexProbeReport | None = None
+        self.probe: WidgetProbeReport | None = None
         self.probe_reads: tuple[str, ...] | None = None
         """The addresses the latest probe was asked to read."""
         self.error: Exception | None = None
@@ -150,14 +150,14 @@ class FakeAula:
         self._call("get_profile_picture", write=False)
         return self.picture
 
-    async def probe_tabulex(self, session: Any = None, reads: Sequence[str] = ()) -> TabulexProbeReport:
-        self._call("probe_tabulex", write=False)
+    async def probe_widgets(self, session: Any = None, reads: Sequence[str] = ()) -> WidgetProbeReport:
+        self._call("probe_widgets", write=False)
         self.probe_reads = tuple(reads)
         assert self.probe is not None
         return self.probe
 
     @property
-    def tabulex_probe(self) -> TabulexProbeReport | None:
+    def widget_probe(self) -> WidgetProbeReport | None:
         return self.probe
 
     def anomalies(self, since: datetime | None = None) -> tuple[Anomaly, ...]:
