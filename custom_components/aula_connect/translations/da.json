@@ -599,11 +599,15 @@
     },
     "probe_tabulex": {
       "name": "Undersøg Tabulex-login",
-      "description": "Følger én gang, hvordan IST's Tabulex logger forælderen ind fra Aula, og svarer med hvert trins vært, sti, navne på felter og cookies, aldrig en værdi. Kun en administrator kan bruge den.",
+      "description": "Følger én gang, som en browser, hvordan IST's Tabulex logger forælderen ind fra Aula, læser portalens scripts og de givne adresser, og svarer med, hvordan hvert trin og hver side er bygget, aldrig en værdi af et token, en cookie eller et felt. Kun en administrator kan bruge den.",
       "fields": {
         "config_entry_id": {
           "name": "Aula-konto",
           "description": "Aula Connect-posten for den forælder, det gøres som."
+        },
+        "reads": {
+          "name": "Adresser at læse",
+          "description": "Adresser på IST's og Tabulex' værter, eller stier på forældreportalen, der læses med GET efter login, fx en API-adresse fundet i portalens scripts. Et JSON-svar fortælles ved sin form og pseudonymiseret."
         }
       }
     }

@@ -152,3 +152,8 @@ send_message:
 probe_tabulex:
   fields:
     config_entry_id: *entry
+    reads:
+      required: false
+      selector:
+        text:
+          multiple: true

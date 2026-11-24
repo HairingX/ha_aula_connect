@@ -599,11 +599,15 @@
     },
     "probe_tabulex": {
       "name": "Probe Tabulex login",
-      "description": "Follows once how IST's Tabulex logs the guardian in from Aula, and answers with each step's host, path, field and cookie names, never a value. Only an administrator may use it.",
+      "description": "Follows once how IST's Tabulex logs the guardian in from Aula, as a browser does, reads the portal's scripts and the addresses given, and answers with how each step and page is built, never a value of a token, cookie or field. Only an administrator may use it.",
       "fields": {
         "config_entry_id": {
           "name": "Aula account",
           "description": "The Aula Connect entry of the guardian it is done as."
+        },
+        "reads": {
+          "name": "Addresses to read",
+          "description": "Addresses on IST's and Tabulex's hosts, or paths on the parent portal, read with GET once logged in, such as an API address found in the portal's scripts. A JSON answer is told by its shape and pseudonymised."
         }
       }
     }

@@ -321,8 +321,8 @@ async def answer_vacation_request(
     await entry.runtime_data.data_coordinator.async_request_refresh()
 
 
-async def probe_tabulex(hass: HomeAssistant, entry: AulaConfigEntry) -> dict[str, Any]:
-    """Follow how IST's Tabulex logs the guardian in, once, and tell what was found; no value of a secret."""
+async def probe_tabulex(hass: HomeAssistant, entry: AulaConfigEntry, reads: list[str]) -> dict[str, Any]:
+    """Follow how IST's Tabulex logs the guardian in, once, read `reads` with GET, and tell what was found; no value of a secret."""
     # The library follows the chain on a session of its own, closed after it: Tabulex's cookies are not Aula's.
-    report = await _aula(hass, entry, entry.runtime_data.client.probe_tabulex, write=False)
+    report = await _aula(hass, entry, lambda: entry.runtime_data.client.probe_tabulex(reads=reads), write=False)
     return report.as_dict()

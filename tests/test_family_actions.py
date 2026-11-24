@@ -421,7 +421,15 @@ async def test_an_action_that_cannot_be_done_says_why_in_the_users_language(
 
 def _report() -> TabulexProbeReport:
     return TabulexProbeReport(
-        widget_id="0105", hops=(), ended="portal", stopped_at=None, portal_hops=(), portal_ended="portal", scripts=()
+        widget_id="0105",
+        hops=(),
+        ended="portal",
+        stopped_at=None,
+        portal_hops=(),
+        portal_ended="portal",
+        portal_stopped_at=None,
+        scripts=(),
+        cookies=(),
     )
 
 
@@ -438,7 +446,10 @@ async def test_only_an_administrator_may_probe_tabulex_whose_report_is_in_the_di
         with pytest.raises(Unauthorized):
             await _call(hass, "probe_tabulex", {"config_entry_id": entry_id}, Context(user_id=hass_read_only_user.id))
         answer = await _call(hass, "probe_tabulex", {"config_entry_id": entry_id}, Context(user_id=hass_admin_user.id))
-        assert answer == _report().as_dict()
+        assert (answer, aula.probe_reads) == (_report().as_dict(), ())
+        reads = {"config_entry_id": entry_id, "reads": ["/api/children", "https://foraeldre.tabulex.net/api/fravaer"]}
+        await _call(hass, "probe_tabulex", reads, Context(user_id=hass_admin_user.id))
+        assert aula.probe_reads == ("/api/children", "https://foraeldre.tabulex.net/api/fravaer")
         assert (await async_get_config_entry_diagnostics(hass, entry))["tabulex_probe"] == _report().as_dict()
 
 

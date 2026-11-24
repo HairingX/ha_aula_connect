@@ -82,6 +82,8 @@ class FakeAula:
         self.threads: list[AulaMessageThread] = []
         self.picture: AulaProfilePicture | None = None
         self.probe: TabulexProbeReport | None = None
+        self.probe_reads: tuple[str, ...] | None = None
+        """The addresses the latest probe was asked to read."""
         self.error: Exception | None = None
         """What every call below raises, where it is set."""
         self.writes: list[tuple[str, tuple[Any, ...]]] = []
@@ -148,8 +150,9 @@ class FakeAula:
         self._call("get_profile_picture", write=False)
         return self.picture
 
-    async def probe_tabulex(self, session: Any = None) -> TabulexProbeReport:
+    async def probe_tabulex(self, session: Any = None, reads: Sequence[str] = ()) -> TabulexProbeReport:
         self._call("probe_tabulex", write=False)
+        self.probe_reads = tuple(reads)
         assert self.probe is not None
         return self.probe
 

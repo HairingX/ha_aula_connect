@@ -80,7 +80,7 @@ SEND_MESSAGE_SCHEMA = _schema(
         probatio.Required("text"): cv.string,
     }
 )
-PROBE_SCHEMA = _schema({})
+PROBE_SCHEMA = _schema({probatio.Optional("reads", default=list): [cv.string]})
 
 
 class _Actions(Protocol):
@@ -190,7 +190,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         return None
 
     async def probe_tabulex(call: ServiceCall, entry: AulaConfigEntry) -> ServiceResponse:
-        return await family_actions.probe_tabulex(hass, entry)
+        return await family_actions.probe_tabulex(hass, entry, call.data["reads"])
 
     async def probe_tabulex_as_admin(call: ServiceCall) -> ServiceResponse:
         await _require_admin(hass, call)
