@@ -420,7 +420,9 @@ async def test_an_action_that_cannot_be_done_says_why_in_the_users_language(
 
 
 def _report() -> TabulexProbeReport:
-    return TabulexProbeReport(widget_id="0105", hops=(), ended="portal", stopped_at=None, portal=None, scripts=())
+    return TabulexProbeReport(
+        widget_id="0105", hops=(), ended="portal", stopped_at=None, portal_hops=(), portal_ended="portal", scripts=()
+    )
 
 
 async def test_only_an_administrator_may_probe_tabulex_whose_report_is_in_the_diagnostics(
