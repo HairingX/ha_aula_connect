@@ -411,12 +411,12 @@ async def test_an_action_that_cannot_be_done_says_why_in_the_users_language(
     assert await hass.services.async_call(DOMAIN, "report_sick", child, blocking=True, return_response=True) == {"route": "tabulex"}
     with pytest.raises(ServiceValidationError) as final:
         await _call(hass, "undo_sick", child)
-    assert (final.value.translation_key, final.value.translation_placeholders) == ("sick_report_final", {"route": "IST Tabulex"})
-    for write, key in ((True, "tabulex_write_failed"), (False, "tabulex_failed")):
+    assert (final.value.translation_key, final.value.translation_placeholders) == ("sick_report_final", {})
+    for write, key in ((True, "sick_report_unconfirmed"), (False, "sick_report_unprepared")):
         aula.error = TabulexError("Tabulex answered HTTP 500 for the children")
         with pytest.raises(HomeAssistantError) as tabulex:
             await _call(hass, "report_sick" if write else "probe_widgets", child if write else {"config_entry_id": entry_id})
-        assert (tabulex.value.translation_key, tabulex.value.translation_placeholders) == (key, {"error": "Tabulex answered HTTP 500 for the children"})
+        assert (tabulex.value.translation_key, tabulex.value.translation_placeholders) == (key, {})
     aula.error = None
     aula.routes = {}
     aula.error = ConnectionError("down")
@@ -575,11 +575,31 @@ async def test_vacations_and_answers_to_requests_the_options_do_not_allow_are_re
     [(AulaSickReportRoute.TABULEX, True, "PUT /x"), (AulaSickReportRoute.NONE, False, None)],
 )
 async def test_checking_a_sick_report_sends_nothing_whatever_the_options_allow(
-    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, route: AulaSickReportRoute, found: bool, sends: str | None
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket,
+    route: AulaSickReportRoute, found: bool, sends: str | None,
 ) -> None:
     aula.routes = {CHILD.id: route}
     await set_up(hass, freezer, options={})
     child = {"config_entry_id": _entry_id(hass), "child_id": CHILD.id}
     answer = await hass.services.async_call(DOMAIN, "check_sick_report", child, blocking=True, return_response=True)
-    assert answer == {"route": route.value, "child_found": found, "sick_today": False, "would_send": sends}
+    assert answer == {"route": route.value, "child_found": found, "same_institution": found or None, "sick_today": False, "would_send": sends}
     assert aula.writes == []
+    await client.send_json_auto_id({"type": "aula_connect/sick/check", "entry_id": _entry_id(hass), "child_id": CHILD.id})
+    assert (await client.receive_json())["result"] == answer
+
+
+async def test_the_diagnostics_tell_what_reporting_each_child_sick_would_do_as_yes_and_no(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
+) -> None:
+    aula.routes = {CHILD.id: AulaSickReportRoute.TABULEX}
+    entry_id = await _entry(hass, freezer)
+    entry = hass.config_entries.async_get_entry(entry_id)
+    assert entry is not None
+    with patch.object(entry.runtime_data.client, "read_everything", AsyncMock(return_value=[]), create=True), patch.object(
+        entry.runtime_data.client, "responses", MagicMock(return_value={}), create=True
+    ):
+        diagnostics = await async_get_config_entry_diagnostics(hass, entry)
+        assert diagnostics["sick_report_checks"] == [{"route": "tabulex", "child_found": True, "same_institution": True, "sick_today": False}]
+        aula.error = TabulexError("Tabulex answered HTTP 500 for the children")
+        diagnostics = await async_get_config_entry_diagnostics(hass, entry)
+        assert diagnostics["sick_report_checks"] == [{"error": "sick_report_unprepared"}]

@@ -430,13 +430,7 @@
       "message": "Lektier kommer fra ugeplanen: de kan kun krydses af, og kun derhjemme."
     },
     "sick_report_final": {
-      "message": "Barnet er meldt syg gennem {route}, der ikke kan tage en sygemelding tilbage. Giv institutionen besked på anden vis."
-    },
-    "tabulex_failed": {
-      "message": "Tabulex kunne ikke læses: {error}"
-    },
-    "tabulex_write_failed": {
-      "message": "Tabulex bekræftede det ikke, og har måske gjort det; se efter i Tabulex, før du prøver igen: {error}"
+      "message": "Sygemeldingen kan ikke fortrydes herfra."
     },
     "sick_reports_not_allowed": {
       "message": "Sygemelding er slået fra i Aula Connects indstillinger."
@@ -449,6 +443,12 @@
     },
     "messages_not_allowed": {
       "message": "Svar i tråde er slået fra i Aula Connects indstillinger."
+    },
+    "sick_report_unconfirmed": {
+      "message": "Sygemeldingen blev ikke bekræftet, og den er måske registreret. Se efter i Aula, før du prøver igen."
+    },
+    "sick_report_unprepared": {
+      "message": "Barnet kan ikke meldes syg herfra. Meld syg i Aula."
     }
   },
   "issues": {
@@ -498,7 +498,7 @@
     },
     "report_sick": {
       "name": "Sygemeld",
-      "description": "Sygemelder barnet i dag, på den måde Aula giver for det: i Aulas Komme/gå-modul, hvor institutionen lader forældre gøre det. Kun i dag; Aula tager det selv tilbage næste dag. Det giver personalet i dagtilbud eller SFO besked, ikke skolen: skriv til lærerne med Send besked.",
+      "description": "Sygemelder barnet i dag hos den institution, Aula har det hos, på den måde institutionen lader forældre gøre det, og svarer med, hvordan det blev meldt. Kun i dag. Hos nogle institutioner kan en sygemelding ikke tages tilbage. Skriv til institutionen med Send besked.",
       "fields": {
         "config_entry_id": {
           "name": "Aula-konto",
@@ -628,7 +628,7 @@
     },
     "check_sick_report": {
       "name": "Kontrollér sygemelding",
-      "description": "Fortæller, hvad en sygemelding af barnet ville gøre, og sender intet: vejen, om barnet findes der, om det allerede er meldt syg der i dag, og det kald en sygemelding ville sende. Det virker, uanset hvad indstillingerne tillader.",
+      "description": "Fortæller, om barnet kan meldes syg herfra, og hvor, og sender intet: vejen, om barnet findes der, hos den institution, Aula har det hos, om det allerede er meldt syg i dag, og det kald en sygemelding ville sende. Det virker, uanset hvad indstillingerne tillader.",
       "fields": {
         "config_entry_id": {
           "name": "Aula-konto",
@@ -653,7 +653,7 @@
           "allow_messages": "Svare i tråde"
         },
         "data_description": {
-          "allow_sick_reports": "Melde et barn sygt i dag, og tage det tilbage, hvor Aula kan. En sygemelding gennem IST's Tabulex kan ikke tages tilbage.",
+          "allow_sick_reports": "Melde et barn sygt i dag, og tage det tilbage, hvor det kan lade sig gøre. Hos nogle institutioner kan en sygemelding ikke tages tilbage.",
           "allow_vacations": "Registrere ferie for børnene, og slette den.",
           "allow_vacation_requests": "Svare på en institutions ferieanmodning, dag for dag.",
           "allow_messages": "Svare i en tråd om et barn, til alle i den. En ny tråd startes aldrig."

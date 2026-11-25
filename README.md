@@ -67,7 +67,7 @@ button for it. Reading Aula is always on.
 
 | Option | What it allows |
 |--------|----------------|
-| Report sick | Reporting a child sick today, and taking it back where Aula can. A report through IST's Tabulex cannot be taken back. |
+| Report sick | Reporting a child sick today, and taking it back where that can be done. At some institutions a sick report cannot be taken back. |
 | Register and delete vacations | Registering a vacation for the children, and deleting one. |
 | Answer vacation requests | Answering an institution's vacation request, day by day. |
 | Reply in threads | Replying in a thread about a child, to everyone in it. A new thread is never started. |
@@ -262,7 +262,7 @@ Assistant may call them, as with Home Assistant's other actions.
 
 | Action | What it does in Aula |
 |--------|----------------------|
-| `aula_connect.report_sick` | Reports the child sick today, in Aula's presence module (Komme/gå), where the institution lets guardians do so. It tells the daycare or after-school staff, not the school, and Aula takes it back by itself the next day. Responds with the way it was reported. |
+| `aula_connect.report_sick` | Reports the child sick today at the institution Aula has it at, the way that institution lets guardians: in Aula's presence module (Komme/gå), or through IST's Tabulex where its Aula widget is how the institution takes sick reports. Responds with the way it was reported. |
 | `aula_connect.undo_sick` | Takes back today's sick report. |
 | `aula_connect.check_sick_report` | Sends nothing: tells what `report_sick` would do - the route, whether the child is found there (in Tabulex, by its name), whether it is reported sick there today already, and the request it would send. It works whatever the options allow. |
 | `aula_connect.add_vacation` | Registers a vacation or time off, whole days from `start` to `end`: the start today or later, the end at most a year after it, a comment of at most 250 characters. |

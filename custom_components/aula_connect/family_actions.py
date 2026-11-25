@@ -7,6 +7,8 @@ fails, it may or may not have been done, and the error says so.
 
 from __future__ import annotations
 
+import logging
+
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, cast
@@ -41,6 +43,8 @@ from .const import (
 from .family import previous_school_day, school_year_start
 from .redact import error_text
 
+
+_LOGGER = logging.getLogger(__name__)
 
 class FamilyActionError(Exception):
     """An action that could not be done, with the translation that tells why.
@@ -128,14 +132,14 @@ async def _aula[T](hass: HomeAssistant, entry: AulaConfigEntry, call: Callable[[
     try:
         return await call()
     except SickReportFinalError as err:
-        raise NotSupportedError(
-            "sick_report_final", f"The child is reported sick through {err.route}, which takes no report back", {"route": err.route}
-        ) from None
+        raise NotSupportedError("sick_report_final", f"The child is reported sick through {err.route}, which takes no report back") from None
     except TabulexError as err:
+        # What Tabulex answered is for the log: a user knows the report only as Aula's.
         text = error_text(err)
+        _LOGGER.warning("A sick report through IST's Tabulex failed: %s", text)
         if write:
-            raise AulaError("tabulex_write_failed", f"Tabulex did not confirm it, and may or may not have done it: {text}", {"error": text}) from None
-        raise AulaError("tabulex_failed", f"Tabulex could not be read: {text}", {"error": text}) from None
+            raise AulaError("sick_report_unconfirmed", f"Tabulex did not confirm it, and may or may not have done it: {text}") from None
+        raise AulaError("sick_report_unprepared", f"Tabulex could not be read: {text}") from None
     except NoSickReportRouteError:
         raise NotSupportedError("no_sick_route", "Aula offers no way to report the child sick") from None
     except AulaCredentialError:
@@ -195,7 +199,13 @@ async def report_sick(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaCh
 async def check_sick_report(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> dict[str, Any]:
     """What reporting the child sick would do, found without sending anything, whatever the options allow."""
     check = await _aula(hass, entry, lambda: entry.runtime_data.client.check_sick_report(child), write=False)
-    return {"route": check.route.value, "child_found": check.found, "sick_today": check.sick_today, "would_send": check.request}
+    return {
+        "route": check.route.value,
+        "child_found": check.found,
+        "same_institution": check.same_institution,
+        "sick_today": check.sick_today,
+        "would_send": check.request,
+    }
 
 
 async def undo_sick(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> str:

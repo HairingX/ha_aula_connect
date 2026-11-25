@@ -72,6 +72,7 @@ def async_register(hass: HomeAssistant) -> None:
     _async_register_command(hass, ws_subscribe_today)
     _async_register_command(hass, ws_report_sick)
     _async_register_command(hass, ws_undo_sick)
+    _async_register_command(hass, ws_check_sick)
     _async_register_command(hass, ws_threads)
     _async_register_command(hass, ws_reply)
     _async_register_command(hass, ws_vacations)
@@ -115,6 +116,7 @@ def _child_schema(command: str, **fields: Any) -> VolDictType:
 TODAY_SCHEMA = _child_schema("aula_connect/today/subscribe")
 REPORT_SICK_SCHEMA = _child_schema("aula_connect/sick/report")
 UNDO_SICK_SCHEMA = _child_schema("aula_connect/sick/undo")
+CHECK_SICK_SCHEMA = _child_schema("aula_connect/sick/check")
 THREADS_SCHEMA = _child_schema("aula_connect/threads")
 REPLY_SCHEMA = _child_schema("aula_connect/message/reply", thread_id=int, text=str)
 VACATIONS_SCHEMA = _child_schema("aula_connect/vacations")
@@ -205,6 +207,18 @@ async def ws_report_sick(hass: HomeAssistant, connection: ActiveConnection, msg:
     async def work() -> dict[str, Any]:
         entry, child = _entry_and_child(hass, msg)
         return {"route": await family_actions.report_sick(hass, entry, child)}
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(CHECK_SICK_SCHEMA)
+@_async_response
+async def ws_check_sick(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Tell whether the child can be reported sick from here, and where, sending nothing."""
+
+    async def work() -> dict[str, Any]:
+        entry, child = _entry_and_child(hass, msg)
+        return await family_actions.check_sick_report(hass, entry, child)
 
     await _respond(connection, msg, work)
 

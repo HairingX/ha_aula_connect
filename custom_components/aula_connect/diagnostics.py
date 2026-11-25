@@ -8,11 +8,13 @@ import secrets
 from datetime import timedelta
 from typing import Any
 
+from aula_connect.api.models.module import AulaChildProfile
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from homeassistant.util.hass_dict import HassKey
 from homeassistant.util import dt as dt_util
 
+from . import family_actions
 from .aula_data import AulaConfigEntry
 from .const import DOMAIN
 from .redact import error_text
@@ -35,6 +37,15 @@ async def pseudonym_key(hass: HomeAssistant) -> bytes:
             saved = {"key": secrets.token_hex(32)}
             await store.async_save(saved)
     return bytes.fromhex(saved["key"])
+
+
+async def _check(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> dict[str, Any]:
+    """What reporting the child sick would do, as yes and no alone: none of the child's data."""
+    try:
+        check = await family_actions.check_sick_report(hass, entry, child)
+    except family_actions.FamilyActionError as err:
+        return {"error": err.translation_key}
+    return {key: check[key] for key in ("route", "child_found", "same_institution", "sick_today")}
 
 
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: AulaConfigEntry) -> dict[str, Any]:
@@ -86,6 +97,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: AulaCon
             for anomaly in runtime.client.anomalies()
         ],
         "aula": {"not_read": failed, **answers},
+        "sick_report_checks": [await _check(hass, entry, child) for child in (data.children if data else [])],
         # The probe's report names steps, fields and cookies, never a value of one.
         "widget_probe": None if runtime.client.widget_probe is None else runtime.client.widget_probe.as_dict(),
     }

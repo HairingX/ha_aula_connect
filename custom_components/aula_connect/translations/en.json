@@ -430,13 +430,7 @@
       "message": "Homework comes from the weekly plan: it can only be ticked, and only at home."
     },
     "sick_report_final": {
-      "message": "The child is reported sick through {route}, which takes no report back. Tell the institution another way."
-    },
-    "tabulex_failed": {
-      "message": "Tabulex could not be read: {error}"
-    },
-    "tabulex_write_failed": {
-      "message": "Tabulex did not confirm it, and may or may not have done it; look in Tabulex before trying again: {error}"
+      "message": "This sick report cannot be taken back from here."
     },
     "sick_reports_not_allowed": {
       "message": "Reporting sick is turned off in Aula Connect's options."
@@ -449,6 +443,12 @@
     },
     "messages_not_allowed": {
       "message": "Replying in threads is turned off in Aula Connect's options."
+    },
+    "sick_report_unconfirmed": {
+      "message": "The sick report was not confirmed, and may or may not have been registered. Look in Aula before trying again."
+    },
+    "sick_report_unprepared": {
+      "message": "The child cannot be reported sick from here. Report sick in Aula."
     }
   },
   "issues": {
@@ -498,7 +498,7 @@
     },
     "report_sick": {
       "name": "Report sick",
-      "description": "Reports the child sick today, the way Aula offers for it: in Aula's presence module, where the institution lets guardians. Only today; Aula takes it back by itself the next day. It tells the daycare or after-school staff, not the school: write to the teachers with Send message.",
+      "description": "Reports the child sick today at the institution Aula has it at, the way the institution lets guardians do so, and responds with the way it was reported. Only today. At some institutions a sick report cannot be taken back. To write to the institution, use Send message.",
       "fields": {
         "config_entry_id": {
           "name": "Aula account",
@@ -628,7 +628,7 @@
     },
     "check_sick_report": {
       "name": "Check sick report",
-      "description": "Tells what reporting the child sick would do, and sends nothing: the route, whether the child is found there, whether it is reported sick there today already, and the request a report would send. It works whatever the options allow.",
+      "description": "Tells whether the child can be reported sick from here, and where, and sends nothing: the route, whether the child is found there, at the institution Aula has it at, whether it is reported sick today already, and the request a report would send. It works whatever the options allow.",
       "fields": {
         "config_entry_id": {
           "name": "Aula account",
@@ -653,7 +653,7 @@
           "allow_messages": "Reply in threads"
         },
         "data_description": {
-          "allow_sick_reports": "Report a child sick today, and take it back where Aula can. A report through IST's Tabulex cannot be taken back.",
+          "allow_sick_reports": "Report a child sick today, and take it back where that can be done. At some institutions a sick report cannot be taken back.",
           "allow_vacations": "Register a vacation for the children, and delete one.",
           "allow_vacation_requests": "Answer an institution's vacation request, day by day.",
           "allow_messages": "Reply in a thread about a child, to everyone in it. A new thread is never started."

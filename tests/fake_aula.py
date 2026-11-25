@@ -122,7 +122,8 @@ class FakeAula:
     async def check_sick_report(self, child: AulaChildProfile) -> AulaSickReportCheck:
         self._call("check_sick_report", write=False)
         route = self.routes.get(child.id, AulaSickReportRoute.AULA)
-        return AulaSickReportCheck(route, route is not AulaSickReportRoute.NONE, False, None if route is AulaSickReportRoute.NONE else "PUT /x")
+        found = route is not AulaSickReportRoute.NONE
+        return AulaSickReportCheck(route, found, False, "PUT /x" if found else None, True if found else None)
 
     async def undo_sick(self, child: AulaChildProfile) -> None:
         self._call("undo_sick", child.id)
