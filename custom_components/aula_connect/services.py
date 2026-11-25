@@ -26,6 +26,7 @@ from .websocket_api import vacation_days
 SERVICE_READ = "read"
 SERVICE_REPORT_SICK = "report_sick"
 SERVICE_UNDO_SICK = "undo_sick"
+SERVICE_CHECK_SICK_REPORT = "check_sick_report"
 SERVICE_ADD_VACATION = "add_vacation"
 SERVICE_DELETE_VACATION = "delete_vacation"
 SERVICE_ANSWER_VACATION_REQUEST = "answer_vacation_request"
@@ -165,6 +166,10 @@ def async_register_services(hass: HomeAssistant) -> None:
         child = family_actions.entry_child(entry, call.data["child_id"])
         return {"route": await family_actions.report_sick(hass, entry, child)}
 
+    async def check_sick_report(call: ServiceCall, entry: AulaConfigEntry) -> ServiceResponse:
+        child = family_actions.entry_child(entry, call.data["child_id"])
+        return await family_actions.check_sick_report(hass, entry, child)
+
     async def undo_sick(call: ServiceCall, entry: AulaConfigEntry) -> ServiceResponse:
         child = family_actions.entry_child(entry, call.data["child_id"])
         return {"route": await family_actions.undo_sick(hass, entry, child)}
@@ -200,6 +205,7 @@ def async_register_services(hass: HomeAssistant) -> None:
     actions.async_register(DOMAIN, SERVICE_READ, read, READ_SCHEMA, SupportsResponse.ONLY)
     actions.async_register(DOMAIN, SERVICE_REPORT_SICK, family(report_sick), CHILD_SCHEMA, SupportsResponse.OPTIONAL)
     actions.async_register(DOMAIN, SERVICE_UNDO_SICK, family(undo_sick), CHILD_SCHEMA, SupportsResponse.OPTIONAL)
+    actions.async_register(DOMAIN, SERVICE_CHECK_SICK_REPORT, family(check_sick_report), CHILD_SCHEMA, SupportsResponse.ONLY)
     actions.async_register(DOMAIN, SERVICE_ADD_VACATION, family(add_vacation), ADD_VACATION_SCHEMA, SupportsResponse.NONE)
     actions.async_register(DOMAIN, SERVICE_DELETE_VACATION, family(delete_vacation), DELETE_VACATION_SCHEMA, SupportsResponse.NONE)
     actions.async_register(

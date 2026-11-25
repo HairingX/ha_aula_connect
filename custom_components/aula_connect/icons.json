@@ -51,6 +51,9 @@
     "undo_sick": {
       "service": "mdi:undo"
     },
+    "check_sick_report": {
+      "service": "mdi:clipboard-check-outline"
+    },
     "add_vacation": {
       "service": "mdi:beach"
     },

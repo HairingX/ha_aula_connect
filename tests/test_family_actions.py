@@ -568,3 +568,18 @@ async def test_vacations_and_answers_to_requests_the_options_do_not_allow_are_re
             await _call(hass, service, data)
         assert refused.value.translation_key == key
     assert aula.writes == []
+
+
+@pytest.mark.parametrize(
+    ("route", "found", "sends"),
+    [(AulaSickReportRoute.TABULEX, True, "PUT /x"), (AulaSickReportRoute.NONE, False, None)],
+)
+async def test_checking_a_sick_report_sends_nothing_whatever_the_options_allow(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, route: AulaSickReportRoute, found: bool, sends: str | None
+) -> None:
+    aula.routes = {CHILD.id: route}
+    await set_up(hass, freezer, options={})
+    child = {"config_entry_id": _entry_id(hass), "child_id": CHILD.id}
+    answer = await hass.services.async_call(DOMAIN, "check_sick_report", child, blocking=True, return_response=True)
+    assert answer == {"route": route.value, "child_found": found, "sick_today": False, "would_send": sends}
+    assert aula.writes == []

@@ -23,6 +23,7 @@ from aula_connect.api.models.module import (
     AulaMessageThread,
     AulaProfile,
     AulaProfilePicture,
+    AulaSickReportCheck,
     AulaSickReportRoute,
     AulaVacation,
     AulaVacationDay,
@@ -117,6 +118,11 @@ class FakeAula:
     async def report_sick(self, child: AulaChildProfile) -> AulaSickReportRoute:
         self._call("report_sick", child.id)
         return self._route(child)
+
+    async def check_sick_report(self, child: AulaChildProfile) -> AulaSickReportCheck:
+        self._call("check_sick_report", write=False)
+        route = self.routes.get(child.id, AulaSickReportRoute.AULA)
+        return AulaSickReportCheck(route, route is not AulaSickReportRoute.NONE, False, None if route is AulaSickReportRoute.NONE else "PUT /x")
 
     async def undo_sick(self, child: AulaChildProfile) -> None:
         self._call("undo_sick", child.id)

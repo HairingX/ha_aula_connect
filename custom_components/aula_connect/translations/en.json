@@ -625,6 +625,20 @@
           "description": "Addresses, or paths on the page each login ends at, read with GET too."
         }
       }
+    },
+    "check_sick_report": {
+      "name": "Check sick report",
+      "description": "Tells what reporting the child sick would do, and sends nothing: the route, whether the child is found there, whether it is reported sick there today already, and the request a report would send. It works whatever the options allow.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry of the guardian it is done as."
+        },
+        "child_id": {
+          "name": "Child",
+          "description": "The child's id: the attribute child_id of its picture entity."
+        }
+      }
     }
   },
   "options": {

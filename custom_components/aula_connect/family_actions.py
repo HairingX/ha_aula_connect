@@ -192,6 +192,12 @@ async def report_sick(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaCh
     return route.value
 
 
+async def check_sick_report(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> dict[str, Any]:
+    """What reporting the child sick would do, found without sending anything, whatever the options allow."""
+    check = await _aula(hass, entry, lambda: entry.runtime_data.client.check_sick_report(child), write=False)
+    return {"route": check.route.value, "child_found": check.found, "sick_today": check.sick_today, "would_send": check.request}
+
+
 async def undo_sick(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> str:
     """Take back today's report that the child is sick; the way it was taken back."""
     _require(entry, CONF_ALLOW_SICK_REPORTS)

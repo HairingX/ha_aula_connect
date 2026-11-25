@@ -625,6 +625,20 @@
           "description": "Adresser, eller stier på siden, hvert login ender på, der også læses med GET."
         }
       }
+    },
+    "check_sick_report": {
+      "name": "Kontrollér sygemelding",
+      "description": "Fortæller, hvad en sygemelding af barnet ville gøre, og sender intet: vejen, om barnet findes der, om det allerede er meldt syg der i dag, og det kald en sygemelding ville sende. Det virker, uanset hvad indstillingerne tillader.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Aula Connect-posten for den forælder, det gøres som."
+        },
+        "child_id": {
+          "name": "Barn",
+          "description": "Barnets id: attributten child_id på barnets billede."
+        }
+      }
     }
   },
   "options": {

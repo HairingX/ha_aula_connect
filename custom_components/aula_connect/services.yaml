@@ -86,6 +86,10 @@ undo_sick:
   fields:
     config_entry_id: *entry
     child_id: *child
+check_sick_report:
+  fields:
+    config_entry_id: *entry
+    child_id: *child
 add_vacation:
   fields:
     config_entry_id: *entry
