@@ -336,4 +336,4 @@ async def test_a_renamed_login_keeps_its_childrens_devices_and_which_are_disable
     await hass.async_block_till_done()
     kept = _device(hass, CHILD)
     assert (kept.id, kept.disabled) == (device.id, True)
-    assert cast(AulaConfigEntry, entry).runtime_data.data_coordinator.data.children == []
+    assert entry.runtime_data.data_coordinator.data.children == []
