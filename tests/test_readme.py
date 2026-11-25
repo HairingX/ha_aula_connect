@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 
@@ -39,6 +40,7 @@ def _documented() -> dict[str, set[str]]:
     }
 
 
+@pytest.mark.fresh_install
 async def test_the_readme_lists_every_entity_with_its_attributes(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:

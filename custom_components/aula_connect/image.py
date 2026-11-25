@@ -16,7 +16,7 @@ from homeassistant.util import dt as dt_util
 
 from .aula_data import AulaConfigEntry
 from .aula_data_coordinator import AulaDataCoordinator
-from .entity import child_unique_id, device_info
+from .entity import async_add_child_entities, child_device_info, child_unique_id
 from .redact import error_text
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,8 +32,7 @@ DOWNLOAD_TIMEOUT = timedelta(seconds=10)
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     """Add each child's picture."""
-    coordinator = entry.runtime_data.data_coordinator
-    async_add_entities(AulaPictureImage(hass, entry, child) for child in coordinator.data.children)
+    async_add_child_entities(entry, async_add_entities, lambda child: [AulaPictureImage(hass, entry, child)])
 
 
 def picture_key(coordinator: AulaDataCoordinator, child: AulaChildProfile) -> str | None:
@@ -61,8 +60,7 @@ class AulaPictureImage(ImageEntity):
         self._child = child
         coordinator = entry.runtime_data.data_coordinator
         self._attr_unique_id = child_unique_id(coordinator, "picture", child)
-        self._attr_device_info = device_info(coordinator)
-        self._attr_translation_placeholders = {"name": child.first_name, "institution": child.institution_profile.institution_name}
+        self._attr_device_info = child_device_info(coordinator, child)
         self._attr_extra_state_attributes = {"child_id": child.id}
         self._key = picture_key(coordinator, child)
         self._attr_image_last_updated = dt_util.utcnow() if self._key is not None else None

@@ -52,7 +52,7 @@ the setup on a computer or tablet, or open the link on one.
 
 | Field | What it is |
 |-------|------------|
-| Name | What this Aula login is called in Home Assistant, `Aula` unless you change it. The entity ids start with it, such as `sensor.aula_presence_alma_school`. Each login needs its own name. |
+| Name | What this Aula login is called in Home Assistant, `Aula` unless you change it. The entity ids start with it, such as `sensor.aula_alma_school_presence`. Each login needs its own name. |
 | MitID user ID | The user ID you log in to MitID with. It is used only to start the MitID login. |
 
 Each MitID account can be set up once. Two parents with their own MitID can each set up their
@@ -80,33 +80,50 @@ Aula Connect is a new integration under the domain `aula_connect`, and does not 
 over from the Aula integration (`aula`). To change over:
 
 1. Delete the Aula integration under **Settings > Devices & services**, and remove it in HACS.
-2. Set up Aula Connect as above, with the name `Aula`. Its entities then get the same entity
-   ids as the Aula integration's had, so dashboards, automations and history carry on.
+2. Set up Aula Connect as above, with the name `Aula`. The login's entities then get the same
+   entity ids as the Aula integration's had. A child's entities are named after the child's
+   device, such as `sensor.aula_alma_school_presence` where the Aula integration had
+   `sensor.aula_presence_alma_school`; to keep a dashboard or an automation as it is, give the
+   entity its old id under **Settings > Entities**.
 
 ## Entities
 
-Every login gets one device, named as the login, with these entities. `<child>` is the child's
-first name and `<institution>` the institution's name, as Aula has them.
+Every login gets a device, named as the login, and under it a device for each child at each
+institution Aula lists it at, named by the child's first name and the institution's name, such
+as `Alma · School`. A child at a school and an after-school club has two devices. The entities of
+a child at an institution are on its device, and the login's own on the login's.
+In the entity ids below, `<child>` is the child's first name and `<institution>` the
+institution's name, as Aula has them; an installation set up before the children had devices
+keeps the entity ids it had, such as `sensor.aula_presence_alma_school`.
+
+To leave a child at an institution out - one it no longer attends, or one you do not want in
+Home Assistant - open **Settings > Devices & services > Aula Connect**, select the device, and
+select **Disable**. A disabled device is not read from Aula at all: none of its entities, no
+presence, calendars or picture, and the child at that institution is not in the cards or the
+actions. **Enable** brings it back. A child Aula lists at a new institution gets its device and
+entities by itself, at the next read. When Aula no longer lists a child at an institution, its
+device is removed with its entities; a disabled one is kept until you delete it, which is
+allowed once Aula no longer lists it.
 
 ### For each child
 
 | Entity | State | Attributes |
 |--------|-------|------------|
-| `sensor.aula_status_<child>_<institution>` | What Aula says about the child today: Not present, Sick, Reported absent, Present, Field trip, Sleeping, Spare time activity, Present at location or Checked out. | `check_in_time`, `check_out_time`, `check_in_time_expected`, `check_out_time_expected`, `exit_with`, `institution_name`, `location_description`, `location_icon`, `location_name`, `main_group` |
-| `sensor.aula_presence_<child>_<institution>` | Present while the child is at the institution, on a field trip, asleep or at a location; Not present before arriving, when sick or reported absent, at a spare time activity and when checked out; Unknown otherwise. | `check_in_time`, `check_out_time`, `check_in_time_expected`, `check_out_time_expected`, `exit_with`, `institution_name`, `main_group` |
-| `sensor.aula_present_duration_<child>_<institution>` | Minutes the child has been checked in today. | `check_in_time`, `check_out_time`, `main_group` |
-| `calendar.aula_events_<child>_<institution>` | The institution's calendar: lessons with teachers and substitutes, events, holidays and booked meetings. | |
-| `calendar.aula_weekly_plans_<child>_<institution>` | The weekly plan's tasks and comments, one all-day event each. | |
-| `calendar.aula_birthdays_<child>_<institution>` | The birthdays Aula ties to the child, such as its class's, with the age each turns. | |
-| `calendar.aula_easyiq_weekly_plans_<child>_<institution>` | The EasyIQ weekly plan. | |
-| `calendar.aula_newsletter_<child>_<institution>` | The MinUddannelse newsletters, one for each week, with their HTML as the description. | |
-| `image.aula_picture_<child>_<institution>` | The child's profile picture in Aula, read anew when it is shown, as Aula's link to it expires within the hour; the time it last changed. Aula's link is never an attribute. | `child_id` |
-| `todo.aula_homework_<child>_<institution>` | The weekly plan's tasks, each due on its day: the number not ticked. Ticking one is remembered in Home Assistant only, never told to Aula; a task cannot be added, renamed or removed, as the plan is the teachers'. | |
-| `binary_sensor.aula_school_today_<child>_<institution>` | On when the child has lessons today; off on a day without, and on a holiday. | `start`, `end` |
-| `binary_sensor.aula_school_tomorrow_<child>_<institution>` | The same for tomorrow. | `start`, `end` |
-| `sensor.aula_school_start_<child>_<institution>` | When the child's first lesson today starts; unknown on a day off. | |
-| `sensor.aula_school_end_<child>_<institution>` | When the child's last lesson today ends; unknown on a day off. | |
-| `binary_sensor.aula_vacation_request_<child>_<institution>` | On while the institution waits for an answer to a vacation request that can still be answered: `count` of them, and the first `deadline`. | `count`, `deadline` |
+| `sensor.aula_<child>_<institution>_status` | What Aula says about the child today: Not present, Sick, Reported absent, Present, Field trip, Sleeping, Spare time activity, Present at location or Checked out. | `check_in_time`, `check_out_time`, `check_in_time_expected`, `check_out_time_expected`, `exit_with`, `institution_name`, `location_description`, `location_icon`, `location_name`, `main_group` |
+| `sensor.aula_<child>_<institution>_presence` | Present while the child is at the institution, on a field trip, asleep or at a location; Not present before arriving, when sick or reported absent, at a spare time activity and when checked out; Unknown otherwise. | `check_in_time`, `check_out_time`, `check_in_time_expected`, `check_out_time_expected`, `exit_with`, `institution_name`, `main_group` |
+| `sensor.aula_<child>_<institution>_present_duration` | Minutes the child has been checked in today. | `check_in_time`, `check_out_time`, `main_group` |
+| `calendar.aula_<child>_<institution>_events` | The institution's calendar: lessons with teachers and substitutes, events, holidays and booked meetings. | |
+| `calendar.aula_<child>_<institution>_weekly_plans` | The weekly plan's tasks and comments, one all-day event each. | |
+| `calendar.aula_<child>_<institution>_birthdays` | The birthdays Aula ties to the child, such as its class's, with the age each turns. | |
+| `calendar.aula_<child>_<institution>_easyiq_weekly_plans` | The EasyIQ weekly plan. | |
+| `calendar.aula_<child>_<institution>_newsletter` | The MinUddannelse newsletters, one for each week, with their HTML as the description. | |
+| `image.aula_<child>_<institution>_picture` | The child's profile picture in Aula, read anew when it is shown, as Aula's link to it expires within the hour; the time it last changed. Aula's link is never an attribute. | `child_id` |
+| `todo.aula_<child>_<institution>_homework` | The weekly plan's tasks, each due on its day: the number not ticked. Ticking one is remembered in Home Assistant only, never told to Aula; a task cannot be added, renamed or removed, as the plan is the teachers'. | |
+| `binary_sensor.aula_<child>_<institution>_school_today` | On when the child has lessons today; off on a day without, and on a holiday. | `start`, `end` |
+| `binary_sensor.aula_<child>_<institution>_school_tomorrow` | The same for tomorrow. | `start`, `end` |
+| `sensor.aula_<child>_<institution>_school_start` | When the child's first lesson today starts; unknown on a day off. | |
+| `sensor.aula_<child>_<institution>_school_end` | When the child's last lesson today ends; unknown on a day off. | |
+| `binary_sensor.aula_<child>_<institution>_vacation_request` | On while the institution waits for an answer to a vacation request that can still be answered: `count` of them, and the first `deadline`. | `count`, `deadline` |
 
 The weekly plan and birthday calendars and the homework come with an institution that has
 weekly plans in Aula, the EasyIQ calendar with one that has EasyIQ's weekly plans, and the
@@ -166,12 +183,12 @@ automation:
   - alias: "Alma is checked out"
     triggers:
       - trigger: state
-        entity_id: sensor.aula_status_alma_school
+        entity_id: sensor.aula_alma_school_status
         to: "8"
     actions:
       - action: notify.notify
         data:
-          message: "Alma has been checked out ({{ state_attr('sensor.aula_status_alma_school', 'exit_with') }})."
+          message: "Alma has been checked out ({{ state_attr('sensor.aula_alma_school_status', 'exit_with') }})."
 ```
 
 A notification when a message arrives in Aula:
@@ -198,7 +215,7 @@ script:
     sequence:
       - action: calendar.get_events
         target:
-          entity_id: calendar.aula_weekly_plans_alma_school
+          entity_id: calendar.aula_alma_school_weekly_plans
         data:
           start_date_time: "{{ (today_at() + timedelta(days=1)).isoformat() }}"
           duration:
@@ -207,7 +224,7 @@ script:
       - action: notify.notify
         data:
           message: >-
-            {{ plan['calendar.aula_weekly_plans_alma_school'].events
+            {{ plan['calendar.aula_alma_school_weekly_plans'].events
                | map(attribute='summary') | join('\n') }}
 ```
 
@@ -216,9 +233,9 @@ The calendars show in Home Assistant's own calendar, and on a dashboard with the
 ```yaml
 type: calendar
 entities:
-  - calendar.aula_events_alma_school
-  - calendar.aula_weekly_plans_alma_school
-  - calendar.aula_birthdays_alma_school
+  - calendar.aula_alma_school_events
+  - calendar.aula_alma_school_weekly_plans
+  - calendar.aula_alma_school_birthdays
 ```
 
 ## Changing and logging in again
@@ -281,14 +298,14 @@ responds with the route it took: `aula` or `tabulex`.
 action: aula_connect.report_sick
 data:
   config_entry_id: <the Aula Connect entry>
-  child_id: "{{ state_attr('image.aula_picture_alma_school', 'child_id') }}"
+  child_id: "{{ state_attr('image.aula_alma_school_picture', 'child_id') }}"
 ```
 
 ```yaml
 action: aula_connect.add_vacation
 data:
   config_entry_id: <the Aula Connect entry>
-  child_ids: ["{{ state_attr('image.aula_picture_alma_school', 'child_id') }}"]
+  child_ids: ["{{ state_attr('image.aula_alma_school_picture', 'child_id') }}"]
   start: "2027-07-05"
   end: "2027-07-23"
   comment: Sommerferie

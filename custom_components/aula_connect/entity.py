@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import Callable, Iterable
 from typing import Generic, TypeVar
 
 from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.device_registry import ChildDeviceInfo, DeviceInfo
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from aula_connect.api.models.module import AulaChildProfile
 
+from .aula_data import AulaConfigEntry
 from .aula_calendar_coordinator import EVENTS, AulaCalendarCoordinator, AulaCalendarCoordinatorData
 from .aula_data_coordinator import AulaDataCoordinator, AulaDataCoordinatorData
 from .const import CONF_ENTITY_PREFIX, DOMAIN, MANUFACTURER
+from .devices import child_device_name, child_identifier
 
 CONTEXT_TYPE = TypeVar("CONTEXT_TYPE")
 
@@ -26,6 +31,42 @@ def device_info(coordinator: AulaDataCoordinator | AulaCalendarCoordinator) -> D
         manufacturer=MANUFACTURER,
         sw_version=f"{coordinator.aula_version}",
     )
+
+
+def child_device_info(coordinator: AulaDataCoordinator | AulaCalendarCoordinator, child: AulaChildProfile) -> ChildDeviceInfo:
+    """The device of a child at its institution, a part of the login's device."""
+    entry: AulaConfigEntry | None = coordinator.config_entry
+    assert entry is not None
+    login = dr.async_get(coordinator.hass).async_get_device_by_identifier((DOMAIN, coordinator.device_id), entry.entry_id)
+    assert login is not None
+    return ChildDeviceInfo(
+        identifiers={child_identifier(coordinator.device_id, child)},
+        name=child_device_name(child),
+        parent_device_id=login.id,
+    )
+
+
+def async_add_child_entities(
+    entry: AulaConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+    create: Callable[[AulaChildProfile], Iterable[Entity]],
+) -> None:
+    """Add the entities `create` makes for each child, and for each child a later read finds."""
+    coordinator = entry.runtime_data.data_coordinator
+    added = set[int]()
+
+    @callback
+    def add_new() -> None:
+        children = coordinator.data.children
+        # A child no longer read has lost its entities with its device, or by its disabling.
+        added.intersection_update(child.id for child in children)
+        new = [child for child in children if child.id not in added]
+        if new:
+            added.update(child.id for child in new)
+            async_add_entities([entity for child in new for entity in create(child)])
+
+    add_new()
+    entry.async_on_unload(coordinator.async_add_listener(add_new))
 
 
 def unique_id(coordinator: AulaDataCoordinator | AulaCalendarCoordinator, key: str) -> str:
@@ -48,7 +89,9 @@ class AulaEntityBase(Entity, Generic[CONTEXT_TYPE]):
         self.coordinator_context = context
         self._attr_translation_key = name
         self._attr_unique_id = unique_id(coordinator, name)
-        self._attr_device_info = device_info(coordinator)
+        self._attr_device_info = (
+            child_device_info(coordinator, context) if isinstance(context, AulaChildProfile) else device_info(coordinator)
+        )
 
     async def async_added_to_hass(self) -> None:
         """Follow the coordinator's updates while the entity is in Home Assistant."""
@@ -141,11 +184,7 @@ class AulaChildEventsEntity(Entity):
         self._child = child
         self._attr_translation_key = key
         self._attr_unique_id = child_unique_id(coordinator, key, child)
-        self._attr_device_info = device_info(coordinator)
-        self._attr_translation_placeholders = {
-            "name": child.first_name,
-            "institution": child.institution_profile.institution_name,
-        }
+        self._attr_device_info = child_device_info(coordinator, child)
 
     async def async_added_to_hass(self) -> None:
         """Have the coordinator read the institution's events, and follow its reads."""

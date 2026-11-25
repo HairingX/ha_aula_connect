@@ -34,7 +34,7 @@ from aula_connect.api.models.module import (
     AulaDailyPlan,
 )
 
-from .entity import AulaCalendarEntityBase
+from .entity import AulaCalendarEntityBase, async_add_child_entities, child_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -104,27 +104,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
     """Add the calendars of the entry's profiles and children, each kind where Aula offers it."""
     data_coordinator = entry.runtime_data.data_coordinator
     calendar_coordinator = entry.runtime_data.calendar_coordinator
-    entities: List[CalendarEntity] = []
-    for child in data_coordinator.data.children:
-        entities.append(AulaEventCalendar(calendar_coordinator, data_coordinator, child, child.institution_profile))
-    for profile in data_coordinator.data.profiles:
-        for institution in profile.institution_profiles:
-            entities.append(AulaEventCalendar(calendar_coordinator, data_coordinator, profile, institution))
+    async_add_entities(
+        AulaEventCalendar(calendar_coordinator, data_coordinator, profile, institution)
+        for profile in data_coordinator.data.profiles
+        for institution in profile.institution_profiles
+    )
 
-    if data_coordinator.weekly_plans_supported():
-        for child in data_coordinator.data.children:
-            entities.append(AulaWeeklyPlanCalendar(calendar_coordinator, data_coordinator, child, child.institution_profile))
-            entities.append(AulaBirthdayCalendar(calendar_coordinator, data_coordinator, child, child.institution_profile))
+    def create(child: AulaChildProfile) -> List[CalendarEntity]:
+        institution = child.institution_profile
+        entities: List[CalendarEntity] = [AulaEventCalendar(calendar_coordinator, data_coordinator, child, institution)]
+        if data_coordinator.weekly_plans_supported():
+            entities.append(AulaWeeklyPlanCalendar(calendar_coordinator, data_coordinator, child, institution))
+            entities.append(AulaBirthdayCalendar(calendar_coordinator, data_coordinator, child, institution))
+        if data_coordinator.easyiq_weekplan_supported():
+            entities.append(AulaEasyiqWeekplanCalendar(calendar_coordinator, data_coordinator, child, institution))
+        if data_coordinator.newsletter_supported():
+            entities.append(AulaNewsletterCalendar(calendar_coordinator, data_coordinator, child, institution))
+        return entities
 
-    if data_coordinator.easyiq_weekplan_supported():
-        for child in data_coordinator.data.children:
-            entities.append(AulaEasyiqWeekplanCalendar(calendar_coordinator, data_coordinator, child, child.institution_profile))
-
-    if data_coordinator.newsletter_supported():
-        for child in data_coordinator.data.children:
-            entities.append(AulaNewsletterCalendar(calendar_coordinator, data_coordinator, child, child.institution_profile))
-
-    async_add_entities(entities)
+    async_add_child_entities(entry, async_add_entities, create)
 
 class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
     """The birthdays at a child's institution."""
@@ -142,7 +140,7 @@ class AulaBirthdayCalendar(AulaCalendarEntityBase, CalendarEntity):
         first_name = profile.first_name
         institution_name = institution.institution_name
         self._attr_unique_id = f"{self._attr_unique_id}_{first_name}_{institution_name}"
-        self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
+        self._attr_device_info = child_device_info(calendar_coordinator, profile)
 
     async def async_will_remove_from_hass(self):
         """Stop having the coordinator read the child's birthdays."""
@@ -218,7 +216,11 @@ class AulaEventCalendar(AulaCalendarEntityBase, CalendarEntity):
         first_name = profile.first_name
         institution_name = institution.institution_name
         self._attr_unique_id = f"{self._attr_unique_id}_{first_name}_{institution_name}"
-        self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
+        if isinstance(profile, AulaChildProfile):
+            self._attr_device_info = child_device_info(calendar_coordinator, profile)
+        else:
+            self._attr_translation_key = "parent_events"
+            self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
 
     async def async_will_remove_from_hass(self):
         """Stop having the coordinator read the institution's events."""
@@ -331,7 +333,7 @@ class AulaWeeklyPlanCalendar(AulaCalendarEntityBase, CalendarEntity):
         first_name = profile.first_name
         institution_name = institution.institution_name
         self._attr_unique_id = f"{self._attr_unique_id}_{first_name}_{institution_name}"
-        self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
+        self._attr_device_info = child_device_info(calendar_coordinator, profile)
 
     async def async_will_remove_from_hass(self):
         """Stop having the coordinator read the child's weekly plans."""
@@ -439,7 +441,7 @@ class AulaEasyiqWeekplanCalendar(AulaCalendarEntityBase, CalendarEntity):
         first_name = profile.first_name
         institution_name = institution.institution_name
         self._attr_unique_id = f"{self._attr_unique_id}_{first_name}_{institution_name}"
-        self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
+        self._attr_device_info = child_device_info(calendar_coordinator, profile)
 
     async def async_will_remove_from_hass(self):
         """Stop having the coordinator read the child's EasyIQ weekly plans."""
@@ -521,7 +523,7 @@ class AulaNewsletterCalendar(AulaCalendarEntityBase, CalendarEntity):
         first_name = profile.first_name
         institution_name = institution.institution_name
         self._attr_unique_id = f"{self._attr_unique_id}_{first_name}_{institution_name}"
-        self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
+        self._attr_device_info = child_device_info(calendar_coordinator, profile)
 
     async def async_will_remove_from_hass(self):
         """Stop having the coordinator read the child's newsletters."""

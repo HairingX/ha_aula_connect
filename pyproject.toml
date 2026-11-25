@@ -11,7 +11,10 @@ addopts = "-p no:respx"
 # custom_components/ is imported from the repository's root.
 pythonpath = ["."]
 testpaths = ["tests"]
-markers = ["live: needs a real Aula account; skipped unless one is configured"]
+markers = [
+    "live: needs a real Aula account; skipped unless one is configured",
+    "fresh_install: sets up with no entity registered before, as a new installation does",
+]
 
 [tool.pyright]
 # The standard belongs to the repository, not to a personal editor setting: an IDE and a CI

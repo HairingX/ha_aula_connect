@@ -89,6 +89,28 @@ log says so once, and once more when Aula can be read in full again.
 Which calendars an institution has follows the widgets Aula lists for it: weekly plans and
 birthdays with the weekly plan widget, EasyIQ with EasyIQ's, newsletters with MinUddannelse's.
 
+## Devices
+
+Aula has a child once for each institution it is at, with an institution profile of its own
+(`AulaChildProfile.id`). The login is a device, named as the entry, and each child at each
+institution a child device of it: identified by the login's identifier and the child's id, named
+by the child's first name and the institution's name, as two institutions can both take sick
+reports. The entities of a child at an institution are on its device; the login's own - what is
+unread, the new-item events, the parents' calendars - on the login's. A unique id never names a
+device, so moving an entity onto its device keeps its unique id, and the entity registry keeps its
+entity id.
+
+A child whose device the user disabled is left out where the data coordinator reads the login:
+its profile is taken out of the profiles before anything else is read, so neither coordinator,
+no calendar, no picture, the cards nor the actions ask Aula anything for it. Disabling a device
+disables its entities, which leave Home Assistant by themselves; the entry reads Aula again at
+once, without the child. Enabling it enables them again, and Home Assistant reloads the entry 30
+seconds later, as it does for every entity enabled again.
+
+After each read of the login, a child device whose child Aula no longer lists is removed with its
+entities, unless it is disabled: the user left that one out, and may delete it once Aula no longer
+lists the child. A child Aula lists anew gets its device and entities at the read that finds it.
+
 ## Entities
 
 - Three sensors per child (status, presence, minutes present), from the daily overview.
@@ -96,8 +118,10 @@ birthdays with the weekly plan widget, EasyIQ with EasyIQ's, newsletters with Mi
 - An events calendar per child and per parent for each institution, and the other calendars per
   child.
 
-Names come from the translations, with the child's first name and the institution's name as
-placeholders. A few calendar details are Aula's rather than Home Assistant's:
+Names come from the translations. A child's entities are named for what they show, as their
+device names the child and the institution; a parent's calendar has the parent's first name and
+the institution's name as placeholders. A few calendar details are Aula's rather than Home
+Assistant's:
 
 - A parents' meeting runs over days while parents book a time; once booked, it shows only the
   booked time, and until then is marked `<!>`.
@@ -111,9 +135,9 @@ A dashboard card shows each child's weeks through three websocket commands. They
 mark nothing read and write nothing to Aula. Any user may call them, as a dashboard's viewers
 need not be administrators; they send no token, no MitID user ID and no UNI-login.
 
-- `aula_connect/children` answers with the children of every loaded entry, each with its
-  entry's id and the id its calendars are kept under (`child_id`), its names and its
-  institution's name.
+- `aula_connect/children` answers with the children of every loaded entry, but those whose
+  device is disabled, each with its entry's id and the id its calendars are kept under
+  (`child_id`), its names and its institution's name.
 - `aula_connect/week/subscribe` takes an entry, a child and a period of 1 to 21 days (`start`
   included, `end` not), answers, and then sends the period's lessons, other events, Meebook
   tasks and birthdays, each sorted by time. A malformed period is refused as `invalid_format`, an
@@ -154,4 +178,8 @@ calendars through the `calendar.get_events` action. The login flow runs with a s
 client. One test runs the whole way on the real libraries: the setup's MitID login through the
 library's simulated Aula login chain (`aula_connect.testing`, with `mitid_connect`'s simulated
 MitID behind it), and the entities read from its simulated API. A test checks that the README
-names every entity and attribute there is, and no other.
+names every entity and attribute there is, and no other. Unless a test is marked
+`fresh_install`, the entity registry holds the made-up account's entities as an installation from
+before the children had devices had them, so the tests read the entity ids such an installation
+keeps; the entity ids of a new installation are held by a test of their own, in English and in
+Danish.

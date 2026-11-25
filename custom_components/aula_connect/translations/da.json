@@ -160,7 +160,7 @@
         }
       },
       "school_today": {
-        "name": "Skole I Dag {name} {institution}",
+        "name": "Skole I Dag",
         "state_attributes": {
           "start": {
             "name": "Start"
@@ -171,7 +171,7 @@
         }
       },
       "school_tomorrow": {
-        "name": "Skole I Morgen {name} {institution}",
+        "name": "Skole I Morgen",
         "state_attributes": {
           "start": {
             "name": "Start"
@@ -182,7 +182,7 @@
         }
       },
       "vacation_request": {
-        "name": "Ferieanmodning {name} {institution}",
+        "name": "Ferieanmodning",
         "state_attributes": {
           "count": {
             "name": "Antal"
@@ -195,24 +195,27 @@
     },
     "calendar": {
       "birthdays": {
-        "name": "Fødselsdage {name} {institution}"
+        "name": "Fødselsdage"
       },
       "events": {
+        "name": "Begivenheder"
+      },
+      "parent_events": {
         "name": "Begivenheder {name} {institution}"
       },
       "easyiq_weekplan": {
-        "name": "EasyIQ Ugeplaner {name} {institution}"
+        "name": "EasyIQ Ugeplaner"
       },
       "newsletter": {
-        "name": "Ugebrev {name} {institution}"
+        "name": "Ugebrev"
       },
       "weekly_plan": {
-        "name": "Ugeplaner {name} {institution}"
+        "name": "Ugeplaner"
       }
     },
     "sensor": {
       "presence": {
-        "name": "Tilstede {name} {institution}",
+        "name": "Tilstede",
         "state": {
           "not_present": "Ikke tilstede",
           "present": "Tilstede",
@@ -243,7 +246,7 @@
         }
       },
       "presence_duration": {
-        "name": "Tilstede Varighed {name} {institution}",
+        "name": "Tilstede Varighed",
         "state_attributes": {
           "check_in_time": {
             "name": "Check-in Tid"
@@ -257,7 +260,7 @@
         }
       },
       "status": {
-        "name": "Status {name} {institution}",
+        "name": "Status",
         "state": {
           "0": "Ikke til stede",
           "1": "Syg",
@@ -305,15 +308,15 @@
         }
       },
       "school_start": {
-        "name": "Skolestart {name} {institution}"
+        "name": "Skolestart"
       },
       "school_end": {
-        "name": "Skoleslut {name} {institution}"
+        "name": "Skoleslut"
       }
     },
     "image": {
       "picture": {
-        "name": "Billede {name} {institution}",
+        "name": "Billede",
         "state_attributes": {
           "child_id": {
             "name": "Barnets id"
@@ -323,7 +326,7 @@
     },
     "todo": {
       "homework": {
-        "name": "Lektier {name} {institution}"
+        "name": "Lektier"
       }
     },
     "event": {

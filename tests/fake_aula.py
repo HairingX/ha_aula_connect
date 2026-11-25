@@ -91,6 +91,8 @@ class FakeAula:
         """Each write asked for, by its method, with its arguments."""
         self.reads: list[str] = []
         """Each of the calls below that only reads, by its method."""
+        self.asked: list[int] = []
+        """The id of each child and institution profile a read was asked about."""
 
     def _call(self, method: str, *args: Any, write: bool = True) -> None:
         if write:
@@ -101,6 +103,7 @@ class FakeAula:
             raise self.error
 
     async def get_vacation_requests(self, children: list[AulaChildProfile]) -> list[AulaVacationRequest]:
+        self.asked.extend(child.id for child in children)
         self._call("get_vacation_requests", write=False)
         return list(self.vacation_requests)
 
@@ -112,6 +115,7 @@ class FakeAula:
         self._call("answer_vacation_request", response_id, list(days), comment)
 
     async def get_sick_report_route(self, child: AulaChildProfile) -> AulaSickReportRoute:
+        self.asked.append(child.id)
         self._call("get_sick_report_route", write=False)
         return self.routes.get(child.id, AulaSickReportRoute.AULA)
 
@@ -154,6 +158,7 @@ class FakeAula:
         self._call("reply", thread_id, text)
 
     async def get_profile_picture(self, child: AulaChildProfile) -> AulaProfilePicture | None:
+        self.asked.append(child.id)
         self._call("get_profile_picture", write=False)
         return self.picture
 
@@ -181,21 +186,25 @@ class FakeAula:
     def has_widget(self, widget_id: str) -> bool:
         return widget_id in self.widgets
 
-    async def get_daily_overviews(self, profiles: Any) -> list[AulaDailyOverview]:
+    async def get_daily_overviews(self, profiles: list[AulaProfile]) -> list[AulaDailyOverview]:
+        self.asked.extend(child.id for profile in profiles for child in profile.children)
         return list(self.daily_overviews)
 
     async def get_message_threads(self) -> list[AulaMessageThread]:
         return list(self.message_threads)
 
-    async def get_notifications(self, children: Any) -> list[AULA_NOTIFICATION_TYPES]:
+    async def get_notifications(self, children: list[AulaChildProfile]) -> list[AULA_NOTIFICATION_TYPES]:
+        self.asked.extend(child.id for child in children)
         return list(self.notifications)
 
-    async def get_birthday_events(self, profiles: Any, start: datetime, end: datetime) -> list[AulaBirthdayEvent]:
+    async def get_birthday_events(self, profiles: list[AulaChildProfile], start: datetime, end: datetime) -> list[AulaBirthdayEvent]:
+        self.asked.extend(profile.id for profile in profiles)
         return list(self.birthdays)
 
     async def get_calendar_events(
         self, institutions: list[AulaInstitutionProfile], start: datetime, end: datetime
     ) -> list[AulaCalendarEvent]:
+        self.asked.extend(institution.id for institution in institutions)
         return [item for institution in institutions for item in self.events.get(institution.id, [])]
 
     async def get_event(self, event_id: int) -> AulaEventDetail | None:
@@ -203,13 +212,16 @@ class FakeAula:
             raise self.event_error
         return self.event_details.get(event_id)
 
-    async def get_weekly_plans(self, profiles: Any, start: datetime, end: datetime) -> list[AulaWeeklyPlan]:
+    async def get_weekly_plans(self, profiles: list[AulaChildProfile], start: datetime, end: datetime) -> list[AulaWeeklyPlan]:
+        self.asked.extend(profile.id for profile in profiles)
         return list(self.weekly_plans)
 
-    async def get_easyiq_weekly_plans(self, profiles: Any, start: datetime, end: datetime) -> list[AulaEasyiqWeeklyPlan]:
+    async def get_easyiq_weekly_plans(self, profiles: list[AulaChildProfile], start: datetime, end: datetime) -> list[AulaEasyiqWeeklyPlan]:
+        self.asked.extend(profile.id for profile in profiles)
         return list(self.easyiq_plans)
 
-    async def get_newsletters(self, profiles: Any, start: datetime, end: datetime) -> list[AulaWeeklyNewsletter]:
+    async def get_newsletters(self, profiles: list[AulaChildProfile], start: datetime, end: datetime) -> list[AulaWeeklyNewsletter]:
+        self.asked.extend(profile.id for profile in profiles)
         return list(self.newsletters)
 
 

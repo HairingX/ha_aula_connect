@@ -7,12 +7,48 @@ from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
+from homeassistant.helpers import entity_registry as er
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from custom_components.aula_connect.aula_calendar_coordinator import AulaCalendarCoordinatorData
 from custom_components.aula_connect.aula_data_coordinator import AulaDataCoordinatorData
 
+from custom_components.aula_connect.const import DOMAIN
+
 from .fake_aula import PARENT, FakeAula
+
+INSTALLED = {
+    "binary_sensor.aula_school_today_alma_school": "Aula_school_today_Alma_School",
+    "binary_sensor.aula_school_tomorrow_alma_school": "Aula_school_tomorrow_Alma_School",
+    "binary_sensor.aula_unread_calendar": "Aula_unread_calendar",
+    "binary_sensor.aula_unread_gallery": "Aula_unread_gallery",
+    "binary_sensor.aula_unread_message": "Aula_unread_message",
+    "binary_sensor.aula_unread_post": "Aula_unread_post",
+    "binary_sensor.aula_unread_presence": "Aula_unread_presence",
+    "binary_sensor.aula_vacation_request_alma_school": "Aula_vacation_request_Alma_School",
+    "calendar.aula_birthdays_alma_school": "Aula_birthdays_Alma_School",
+    "calendar.aula_easyiq_weekly_plans_alma_school": "Aula_easyiq_weekplan_Alma_School",
+    "calendar.aula_events_alma_school": "Aula_events_Alma_School",
+    "calendar.aula_events_pat_school": "Aula_events_Pat_School",
+    "calendar.aula_newsletter_alma_school": "Aula_newsletter_Alma_School",
+    "calendar.aula_weekly_plans_alma_school": "Aula_weekly_plan_Alma_School",
+    "event.aula_new_event": "Aula_new_event",
+    "event.aula_new_message": "Aula_new_message",
+    "event.aula_new_photo": "Aula_new_photo",
+    "image.aula_picture_alma_school": "Aula_picture_Alma_School",
+    "sensor.aula_presence_alma_school": "Aula_presence_Alma_School",
+    "sensor.aula_present_duration_alma_school": "Aula_presence_duration_Alma_School",
+    "sensor.aula_school_end_alma_school": "Aula_school_end_Alma_School",
+    "sensor.aula_school_start_alma_school": "Aula_school_start_Alma_School",
+    "sensor.aula_status_alma_school": "Aula_status_Alma_School",
+    "todo.aula_homework_alma_school": "Aula_homework_Alma_School",
+}
+"""Every entity an installation of the made-up account had before each child got a device, by its entity id, with its unique id."""
+
+INSTALLED_SECOND = {
+    entity_id.replace(".aula_", ".aula_2_"): unique_id.replace("Aula_", "Aula 2_", 1) for entity_id, unique_id in INSTALLED.items()
+}
+"""The same, for a second login set up under the name `Aula 2`."""
 
 
 @pytest.fixture(autouse=True)
@@ -39,6 +75,17 @@ def no_deprecated_usage(caplog: pytest.LogCaptureFixture) -> Iterator[None]:
         or " was used from aula_connect" in record.getMessage()
     ]
     assert reports == []
+
+
+@pytest.fixture(autouse=True)
+def installed_before(request: pytest.FixtureRequest) -> None:
+    """Register the made-up account's entities as an installation from before had them, unless the test is a fresh installation."""
+    if "hass" not in request.fixturenames or "fresh_install" in request.keywords:
+        return
+    registry = er.async_get(request.getfixturevalue("hass"))
+    for entity_id, unique_id in {**INSTALLED, **INSTALLED_SECOND}.items():
+        domain, object_id = entity_id.split(".")
+        registry.async_get_or_create(domain, DOMAIN, unique_id, suggested_object_id=object_id)
 
 
 @pytest.fixture

@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .aula_calendar_coordinator import WEEKLY_PLANS, AulaCalendarCoordinator
 from .aula_data import AulaConfigEntry
 from .const import DOMAIN
-from .entity import child_unique_id, device_info
+from .entity import async_add_child_entities, child_device_info, child_unique_id
 from .family import FamilyMemory
 
 # The entities read what the coordinators fetched, so updating them never waits on Aula.
@@ -26,8 +26,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
     runtime = entry.runtime_data
     if not runtime.data_coordinator.weekly_plans_supported():
         return
-    async_add_entities(
-        AulaHomeworkList(runtime.calendar_coordinator, runtime.memory, child) for child in runtime.data_coordinator.data.children
+    async_add_child_entities(
+        entry, async_add_entities, lambda child: [AulaHomeworkList(runtime.calendar_coordinator, runtime.memory, child)]
     )
 
 
@@ -58,8 +58,7 @@ class AulaHomeworkList(TodoListEntity):
         self._memory = memory
         self._child = child
         self._attr_unique_id = child_unique_id(coordinator, "homework", child)
-        self._attr_device_info = device_info(coordinator)
-        self._attr_translation_placeholders = {"name": child.first_name, "institution": child.institution_profile.institution_name}
+        self._attr_device_info = child_device_info(coordinator, child)
         self._attr_todo_items = []
         self._due: dict[str, date] = {}
         """The day each task is due, by its uid."""

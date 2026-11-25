@@ -4,9 +4,11 @@ from collections.abc import Callable
 
 import aiohttp
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.typing import ConfigType
@@ -19,6 +21,8 @@ from aula_connect.login import AulaLoginClient
 from .aula_data import AulaConfigEntry, AulaRuntimeData
 from .aula_data_coordinator import AulaDataCoordinator
 from .aula_calendar_coordinator import AulaCalendarCoordinator
+from .devices import listed_device
+from .entity import device_info
 from .family import FamilyMemory
 from .const import (
     CONF_ACCESS_TOKEN,
@@ -105,11 +109,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool
     await calendar_coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = AulaRuntimeData(client, data_coordinator, calendar_coordinator, memory)
+    # The children's devices are parts of the login's, which must be there first.
+    dr.async_get(hass).async_get_or_create_from_info(config_entry_id=entry.entry_id, device_info=device_info(data_coordinator))
+
+    @callback
+    def device_switched(event: Event[dr.EventDeviceRegistryUpdatedData]) -> None:
+        """Read Aula again when one of the entry's devices is disabled or enabled, so that its child is left out or back at once."""
+        device = dr.async_get(hass).async_get(event.data["device_id"])
+        if device is not None and device.config_entry_id == entry.entry_id:
+            entry.async_create_task(hass, data_coordinator.async_request_refresh())
+
+    entry.async_on_unload(
+        hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, device_switched, event_filter=_disabled_by_changed)
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # No update listener: writing the renewed tokens to the entry would reload it each time.
     return True
+
+
+@callback
+def _disabled_by_changed(data: dr.EventDeviceRegistryUpdatedData) -> bool:
+    return data["action"] == "update" and "disabled_by" in data["changes"]
+
+
+async def async_remove_config_entry_device(hass: HomeAssistant, entry: AulaConfigEntry, device: dr.AnyDeviceEntry) -> bool:
+    """Let a child's device be deleted once Aula no longer lists the child for the login.
+
+    The login's own device, and a child's while Aula lists it, would come back; they are kept.
+    """
+    if entry.state is not ConfigEntryState.LOADED:
+        return False
+    coordinator = entry.runtime_data.data_coordinator
+    return not listed_device(device, coordinator.device_id, coordinator.data.listed_children)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:

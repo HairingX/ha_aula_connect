@@ -10,7 +10,7 @@ from homeassistant.util import dt as dt_util
 from typing import Any, List
 import logging
 
-from .entity import AulaChildEventsEntity, AulaEntityBase, child_unique_id
+from .entity import AulaChildEventsEntity, AulaEntityBase, async_add_child_entities, child_unique_id
 from .aula_calendar_coordinator import AulaCalendarCoordinator
 from .aula_data_coordinator import MESSAGE_THREADS, NOTIFICATIONS, VACATION_REQUESTS, AulaDataCoordinator, AulaDataCoordinatorData, pending_vacation_requests
 from .aula_data import AulaConfigEntry
@@ -24,7 +24,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback):
-    """Add the login's unread message, gallery, calendar, post and presence binary sensors."""
+    """Add the login's unread message, gallery, calendar, post and presence binary sensors, and each child's school day and vacation request."""
     coordinator = entry.runtime_data.data_coordinator
     entities: List[BinarySensorEntity] = []
     entities.append(AulaUnreadMessageBinarySensor(coordinator))
@@ -32,11 +32,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
     entities.append(AulaUnreadCalendarEventBinarySensor(coordinator))
     entities.append(AulaUnreadPostBinarySensor(coordinator))
     entities.append(AulaUnreadPresenceBinarySensor(coordinator))
-    for child in coordinator.data.children:
-        entities.append(AulaSchoolDayBinarySensor(entry.runtime_data.calendar_coordinator, child, days_ahead=0))
-        entities.append(AulaSchoolDayBinarySensor(entry.runtime_data.calendar_coordinator, child, days_ahead=1))
-        entities.append(AulaVacationRequestBinarySensor(coordinator, child))
     async_add_entities(entities)
+    calendar_coordinator = entry.runtime_data.calendar_coordinator
+
+    def create(child: AulaChildProfile) -> List[BinarySensorEntity]:
+        return [
+            AulaSchoolDayBinarySensor(calendar_coordinator, child, days_ahead=0),
+            AulaSchoolDayBinarySensor(calendar_coordinator, child, days_ahead=1),
+            AulaVacationRequestBinarySensor(coordinator, child),
+        ]
+
+    async_add_child_entities(entry, async_add_entities, create)
 
 
 class AulaSchoolDayBinarySensor(AulaChildEventsEntity, BinarySensorEntity):
@@ -63,7 +69,6 @@ class AulaVacationRequestBinarySensor(AulaEntityBase[AulaChildProfile], BinarySe
     def __init__(self, coordinator: AulaDataCoordinator, child: AulaChildProfile) -> None:
         super().__init__(coordinator, name="vacation_request", context=child)
         self._attr_unique_id = child_unique_id(coordinator, "vacation_request", child)
-        self._attr_translation_placeholders = {"name": child.first_name, "institution": child.institution_profile.institution_name}
         self._init_data()
 
     def _set_values(self, data: AulaDataCoordinatorData, context: AulaChildProfile) -> None:

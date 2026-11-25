@@ -16,7 +16,7 @@ from .aula_calendar_coordinator import AulaCalendarCoordinator
 from .aula_data import AulaConfigEntry
 from .aula_data_coordinator import DAILY_OVERVIEWS, AulaDataCoordinator, AulaDataCoordinatorData
 from aula_connect.api.models.aula_profile_models import AulaChildProfile, AulaDailyOverview
-from .entity import AulaChildEventsEntity, AulaEntityBase
+from .entity import AulaChildEventsEntity, AulaEntityBase, async_add_child_entities
 from .school_day import school_day
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,15 +29,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_a
     """Add the status, presence and presence duration sensors of each child, and its school's start and end today."""
     coordinator = entry.runtime_data.data_coordinator
     calendar_coordinator = entry.runtime_data.calendar_coordinator
-    entities: List[SensorEntity] = []
-    children = coordinator.data.children
-    for child in children:
-        entities.append(AulaStatusSensor(coordinator, child))
-        entities.append(AulaPresenceSensor(coordinator, child))
-        entities.append(AulaPresenceDurationSensor(coordinator, child))
-        entities.append(AulaSchoolTimeSensor(calendar_coordinator, child, start=True))
-        entities.append(AulaSchoolTimeSensor(calendar_coordinator, child, start=False))
-    async_add_entities(entities)
+
+    def create(child: AulaChildProfile) -> List[SensorEntity]:
+        return [
+            AulaStatusSensor(coordinator, child),
+            AulaPresenceSensor(coordinator, child),
+            AulaPresenceDurationSensor(coordinator, child),
+            AulaSchoolTimeSensor(calendar_coordinator, child, start=True),
+            AulaSchoolTimeSensor(calendar_coordinator, child, start=False),
+        ]
+
+    async_add_child_entities(entry, async_add_entities, create)
 
 
 class AulaSchoolTimeSensor(AulaChildEventsEntity, SensorEntity):
@@ -75,7 +77,6 @@ class AulaStatusSensor(_ChildPresenceSensor):
         first_name = profile.first_name
         institution_name = profile.institution_profile.institution_name
         self._attr_unique_id = f"{self._attr_unique_id}_{first_name}_{institution_name}"
-        self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
         self._init_data()
 
     def _set_values(self, data: AulaDataCoordinatorData, context: AulaChildProfile) -> None:
@@ -128,7 +129,6 @@ class AulaPresenceSensor(_ChildPresenceSensor):
         first_name = profile.first_name
         institution_name = profile.institution_profile.institution_name
         self._attr_unique_id = f"{self._attr_unique_id}_{first_name}_{institution_name}"
-        self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
         self._init_data()
 
     def _set_values(self, data: AulaDataCoordinatorData, context: AulaChildProfile) -> None:
@@ -173,7 +173,6 @@ class AulaPresenceDurationSensor(_ChildPresenceSensor):
         first_name = profile.first_name
         institution_name = profile.institution_profile.institution_name
         self._attr_unique_id = f"{self._attr_unique_id}_{first_name}_{institution_name}"
-        self._attr_translation_placeholders = { "name": first_name, "institution": institution_name }
         self._init_data()
 
     def _set_values(self, data: AulaDataCoordinatorData, context: AulaChildProfile) -> None:

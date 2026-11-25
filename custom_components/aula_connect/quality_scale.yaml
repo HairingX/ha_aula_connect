@@ -74,7 +74,12 @@ rules:
     comment: The tests cover every line of the integration; the build fails below 100%.
 
   # Gold
-  devices: done
+  devices:
+    status: done
+    comment: >-
+      A device for the login, and under it a child device for each child at each institution
+      Aula lists it at, named by the child's first name and the institution's name; the entities
+      of a child at an institution are on its device.
   diagnostics: done
   discovery-update-info:
     status: exempt
@@ -92,10 +97,11 @@ rules:
   docs-troubleshooting: done
   docs-use-cases: done
   dynamic-devices:
-    status: todo
+    status: done
     comment: >-
-      Entities for children are created at setup only; a child added to the account appears
-      after a reload.
+      A child Aula lists at a new institution gets its device and entities at the next read of
+      the data coordinator, without a reload. The login's own entities, the parents' calendars
+      among them, are on the login's device and set up with the entry.
   entity-category:
     status: done
     comment: Every entity is primary data; none is configuration or diagnostic.
@@ -119,8 +125,12 @@ rules:
   reconfiguration-flow: done
   repair-issues: done
   stale-devices:
-    status: exempt
-    comment: An entry is one device, which goes with the entry.
+    status: done
+    comment: >-
+      After each read of the login, the device of a child Aula no longer lists at an institution
+      is removed with its entities, unless the user disabled it; a disabled one, left out of
+      every read on purpose, is kept, and async_remove_config_entry_device lets the user delete
+      it once Aula no longer lists the child. The login's device goes with the entry.
 
   # Platinum
   async-dependency: done

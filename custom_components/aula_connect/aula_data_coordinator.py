@@ -1,6 +1,6 @@
 """The coordinator that reads an Aula login's profiles, daily overviews, messages and notifications."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import List
 from homeassistant.config_entries import ConfigEntry
@@ -10,6 +10,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .devices import async_tidy_child_devices, disabled_children
 from .family import FamilyMemory
 from .redact import error_text
 from .const import ANOMALY_HELP, ANOMALY_WINDOW, DOMAIN, anomaly_issue_id
@@ -65,6 +66,8 @@ class AulaDataCoordinatorData:
     vacation_requests: List[AulaVacationRequest] = field(default_factory=lambda: list[AulaVacationRequest]())
     sick_routes: dict[int, AulaSickReportRoute] = field(default_factory=lambda: dict[int, AulaSickReportRoute]())
     """The way each child is reported sick, by its id; a child not read yet is missing."""
+    listed_children: List[AulaChildProfile] = field(default_factory=lambda: list[AulaChildProfile]())
+    """Every child Aula lists for the login, those whose device is disabled included."""
 
 def pending_vacation_requests(data: AulaDataCoordinatorData, child: AulaChildProfile) -> List[AulaVacationRequest]:
     """The child's vacation requests that wait for an answer and can still be answered today."""
@@ -213,6 +216,14 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
         except Exception as ex:
             return ex
 
+        listed = [child for profile in profiles for child in profile.children]
+        async_tidy_child_devices(self.hass, self._entry_id, self.device_id, listed)
+        # A child whose device is disabled is left out before anything is asked of Aula for it.
+        left_out = disabled_children(self.hass, self._entry_id, self.device_id, listed)
+        profiles = [
+            replace(profile, children=[child for child in profile.children if child.id not in left_out])
+            for profile in profiles
+        ]
         children = [child for profile in profiles for child in profile.children]
         before = self.data
         failures = dict[str, str]()
@@ -267,6 +278,7 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             profiles=profiles,
             vacation_requests=vacation_requests,
             sick_routes=sick_routes,
+            listed_children=listed,
         )
 
     async def _sick_routes(

@@ -160,7 +160,7 @@
         }
       },
       "school_today": {
-        "name": "School Today {name} {institution}",
+        "name": "School Today",
         "state_attributes": {
           "start": {
             "name": "Start"
@@ -171,7 +171,7 @@
         }
       },
       "school_tomorrow": {
-        "name": "School Tomorrow {name} {institution}",
+        "name": "School Tomorrow",
         "state_attributes": {
           "start": {
             "name": "Start"
@@ -182,7 +182,7 @@
         }
       },
       "vacation_request": {
-        "name": "Vacation Request {name} {institution}",
+        "name": "Vacation Request",
         "state_attributes": {
           "count": {
             "name": "Count"
@@ -195,24 +195,27 @@
     },
     "calendar": {
       "birthdays": {
-        "name": "Birthdays {name} {institution}"
+        "name": "Birthdays"
       },
       "events": {
+        "name": "Events"
+      },
+      "parent_events": {
         "name": "Events {name} {institution}"
       },
       "easyiq_weekplan": {
-        "name": "EasyIQ Weekly Plans {name} {institution}"
+        "name": "EasyIQ Weekly Plans"
       },
       "newsletter": {
-        "name": "Newsletter {name} {institution}"
+        "name": "Newsletter"
       },
       "weekly_plan": {
-        "name": "Weekly Plans {name} {institution}"
+        "name": "Weekly Plans"
       }
     },
     "sensor": {
       "presence": {
-        "name": "Presence {name} {institution}",
+        "name": "Presence",
         "state": {
           "not_present": "Not Present",
           "present": "Present",
@@ -243,7 +246,7 @@
         }
       },
       "presence_duration": {
-        "name": "Present Duration {name} {institution}",
+        "name": "Present Duration",
         "state_attributes": {
           "check_in_time": {
             "name": "Check-in Time"
@@ -257,7 +260,7 @@
         }
       },
       "status": {
-        "name": "Status {name} {institution}",
+        "name": "Status",
         "state": {
           "0": "Not present",
           "1": "Sick",
@@ -305,15 +308,15 @@
         }
       },
       "school_start": {
-        "name": "School Start {name} {institution}"
+        "name": "School Start"
       },
       "school_end": {
-        "name": "School End {name} {institution}"
+        "name": "School End"
       }
     },
     "image": {
       "picture": {
-        "name": "Picture {name} {institution}",
+        "name": "Picture",
         "state_attributes": {
           "child_id": {
             "name": "Child ID"
@@ -323,7 +326,7 @@
     },
     "todo": {
       "homework": {
-        "name": "Homework {name} {institution}"
+        "name": "Homework"
       }
     },
     "event": {
