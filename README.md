@@ -58,6 +58,22 @@ the setup on a computer or tablet, or open the link on one.
 Each MitID account can be set up once. Two parents with their own MitID can each set up their
 own login under different names.
 
+### Options
+
+Under **Settings** > **Devices & services** > **Aula Connect** > **Configure**, each kind of change
+in Aula is turned on or off for the login. Each is off until you turn it on; what is off, neither
+the cards, the actions nor an AI assistant using Home Assistant can do, and the cards show no
+button for it. Reading Aula is always on.
+
+| Option | What it allows |
+|--------|----------------|
+| Report sick | Reporting a child sick today, and taking it back where Aula can. A report through IST's Tabulex cannot be taken back. |
+| Register and delete vacations | Registering a vacation for the children, and deleting one. |
+| Answer vacation requests | Answering an institution's vacation request, day by day. |
+| Reply in threads | Replying in a thread about a child, to everyone in it. A new thread is never started. |
+
+The login is reloaded when the options change.
+
 ### Coming from the Aula integration
 
 Aula Connect is a new integration under the domain `aula_connect`, and does not take anything
@@ -236,7 +252,8 @@ entities:
 > web portal sends, and tested against a simulated Aula. Try each once, on a date you choose -
 > for example a vacation far ahead that you then delete - before relying on it.
 
-Aula Connect changes something in Aula only when a user asks for it: an action called by hand,
+Aula Connect changes something in Aula only where its [options](#options) allow that kind of
+change, and only when a user asks for it: an action called by hand,
 by a script or an automation, or a tap in the Aula Connect cards, which ask for confirmation
 first. Nothing is sent by the regular reads. Each is sent once and never again by itself: where
 it fails, Aula may or may not have done it, and the error says to look in Aula before trying

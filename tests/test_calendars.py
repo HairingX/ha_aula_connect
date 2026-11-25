@@ -33,7 +33,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
 
-from custom_components.aula_connect.const import DOMAIN
+from custom_components.aula_connect.const import ALLOWED_CHANGES, DOMAIN
 
 from .fake_aula import CHILD, PARENT_AT_SCHOOL, SCHOOL, FakeAula, failing_once
 from .test_init import DATA
@@ -63,12 +63,24 @@ def event(event_id: int, title: str, start: datetime, end: datetime, **fields: A
     return AulaCalendarEvent(**values)
 
 
-async def set_up(hass: HomeAssistant, freezer: FrozenDateTimeFactory, loads: bool = True) -> None:
-    """Set up an entry of the made-up account at a Monday morning in Copenhagen."""
+ALL_ALLOWED = {option: True for option in ALLOWED_CHANGES}
+"""Options that allow every kind of change in Aula."""
+
+
+async def set_up(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, loads: bool = True, options: dict[str, bool] | None = None
+) -> None:
+    """Set up an entry of the made-up account at a Monday morning in Copenhagen, every change allowed unless `options` say otherwise."""
     await hass.config.async_set_time_zone("Europe/Copenhagen")
     freezer.move_to(NOW)
     entry = MockConfigEntry(
-        domain=DOMAIN, unique_id="account", title="Aula", data={**DATA, "entity_prefix": "Aula"}, version=2, minor_version=2
+        domain=DOMAIN,
+        unique_id="account",
+        title="Aula",
+        data={**DATA, "entity_prefix": "Aula"},
+        options=ALL_ALLOWED if options is None else options,
+        version=2,
+        minor_version=2,
     )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id) is loads

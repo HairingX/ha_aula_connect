@@ -437,6 +437,18 @@
     },
     "tabulex_write_failed": {
       "message": "Tabulex did not confirm it, and may or may not have done it; look in Tabulex before trying again: {error}"
+    },
+    "sick_reports_not_allowed": {
+      "message": "Reporting sick is turned off in Aula Connect's options."
+    },
+    "vacations_not_allowed": {
+      "message": "Registering and deleting vacations is turned off in Aula Connect's options."
+    },
+    "vacation_requests_not_allowed": {
+      "message": "Answering vacation requests is turned off in Aula Connect's options."
+    },
+    "messages_not_allowed": {
+      "message": "Replying in threads is turned off in Aula Connect's options."
     }
   },
   "issues": {
@@ -611,6 +623,26 @@
         "reads": {
           "name": "Further addresses",
           "description": "Addresses, or paths on the page each login ends at, read with GET too."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "What Aula Connect may change in Aula",
+        "description": "Each kind of change is off until you turn it on. What is off, neither the cards, the actions nor an AI assistant can do; reading Aula is always allowed.",
+        "data": {
+          "allow_sick_reports": "Report sick",
+          "allow_vacations": "Register and delete vacations",
+          "allow_vacation_requests": "Answer vacation requests",
+          "allow_messages": "Reply in threads"
+        },
+        "data_description": {
+          "allow_sick_reports": "Report a child sick today, and take it back where Aula can. A report through IST's Tabulex cannot be taken back.",
+          "allow_vacations": "Register a vacation for the children, and delete one.",
+          "allow_vacation_requests": "Answer an institution's vacation request, day by day.",
+          "allow_messages": "Reply in a thread about a child, to everyone in it. A new thread is never started."
         }
       }
     }

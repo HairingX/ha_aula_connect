@@ -17,7 +17,8 @@ into Home Assistant devices and entities. How and why it is built as it is: `doc
   the name the entry was set up under (`entity_prefix`) and the entity's key, and changing one is
   agreed with the user first.
 - The README names every entity and attribute, and a test holds it to them.
-- It changes things in Aula only on a user's explicit action - an action called, or a websocket
+- It changes things in Aula only where the entry's options allow that kind of change - each off
+  until a user turns it on - and only on a user's explicit action - an action called, or a websocket
   command the cards send after the user confirms: reporting a child sick and taking it back,
   registering and deleting a vacation, answering a vacation request, and replying in a thread
   about a child. Each is sent once, never from a coordinator's poll and never retried; where it

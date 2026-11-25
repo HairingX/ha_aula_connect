@@ -30,7 +30,14 @@ from homeassistant.util import dt as dt_util
 
 from .aula_data import AulaConfigEntry
 from .aula_data_coordinator import pending_vacation_requests
-from .const import DOMAIN
+from .const import (
+    ALLOWED_CHANGES,
+    CONF_ALLOW_MESSAGES,
+    CONF_ALLOW_SICK_REPORTS,
+    CONF_ALLOW_VACATION_REQUESTS,
+    CONF_ALLOW_VACATIONS,
+    DOMAIN,
+)
 from .family import previous_school_day, school_year_start
 from .redact import error_text
 
@@ -61,8 +68,27 @@ class NotSupportedError(FamilyActionError):
     """What was asked is done another way, which Aula Connect cannot use."""
 
 
+class NotAllowedError(FamilyActionError):
+    """What was asked changes Aula in a way the entry's options do not allow."""
+
+
 class AulaError(FamilyActionError):
     """Aula refused, or could not be reached; a write may or may not have been done."""
+
+
+def allowed(entry: AulaConfigEntry) -> list[str]:
+    """The kinds of change in Aula the entry's options allow, by the names the cards know them by."""
+    return [name for option, name in ALLOWED_CHANGES.items() if entry.options.get(option) is True]
+
+
+def _require(entry: AulaConfigEntry, option: str) -> None:
+    """Refuse a change of the kind `option` allows where the entry's options do not allow it.
+
+    Raises:
+        NotAllowedError: The option is off.
+    """
+    if entry.options.get(option) is not True:
+        raise NotAllowedError(f"{ALLOWED_CHANGES[option]}_not_allowed", f"The entry's options do not allow {ALLOWED_CHANGES[option].replace('_', ' ')}")
 
 
 def loaded_entry(hass: HomeAssistant, entry_id: str) -> AulaConfigEntry:
@@ -158,6 +184,7 @@ def today(entry: AulaConfigEntry, child: AulaChildProfile) -> dict[str, Any]:
 
 async def report_sick(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> str:
     """Report the child sick today, the way Aula offers; the way it was reported."""
+    _require(entry, CONF_ALLOW_SICK_REPORTS)
     runtime = entry.runtime_data
     route = await _aula(hass, entry, lambda: runtime.client.report_sick(child), write=True)
     runtime.memory.note_sick(child.id, dt_util.now().date())
@@ -167,6 +194,7 @@ async def report_sick(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaCh
 
 async def undo_sick(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> str:
     """Take back today's report that the child is sick; the way it was taken back."""
+    _require(entry, CONF_ALLOW_SICK_REPORTS)
     runtime = entry.runtime_data
     await _aula(hass, entry, lambda: runtime.client.undo_sick(child), write=True)
     runtime.memory.forget_sick(child.id, dt_util.now().date())
@@ -224,6 +252,7 @@ async def reply(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildPro
     Raises:
         NotFoundError: The thread is not one about the child that can be replied in.
     """
+    _require(entry, CONF_ALLOW_MESSAGES)
     runtime = entry.runtime_data
     found = await _aula(hass, entry, lambda: runtime.client.threads_about(child), write=False)
     if not any(thread.id == thread_id and _can_reply(thread) for thread in found):
@@ -255,11 +284,13 @@ async def add_vacation(
     hass: HomeAssistant, entry: AulaConfigEntry, children: list[AulaChildProfile], start: date, end: date, comment: str
 ) -> None:
     """Register a vacation for the children, `start` to `end` included."""
+    _require(entry, CONF_ALLOW_VACATIONS)
     await _aula(hass, entry, lambda: entry.runtime_data.client.add_vacation(children, start, end, comment), write=True)
 
 
 async def delete_vacation(hass: HomeAssistant, entry: AulaConfigEntry, vacation_id: int) -> None:
     """Delete a vacation of one of the entry's children."""
+    _require(entry, CONF_ALLOW_VACATIONS)
     await _aula(hass, entry, lambda: entry.runtime_data.client.delete_vacation(vacation_id), write=True)
 
 
@@ -316,6 +347,7 @@ async def answer_vacation_request(
     Raises:
         NotFoundError: The child has no such request.
     """
+    _require(entry, CONF_ALLOW_VACATION_REQUESTS)
     client = entry.runtime_data.client
     detail = await _aula(hass, entry, lambda: client.get_vacation_request(response_id), write=False)
     if detail is None or detail.child_id != child.id:

@@ -17,6 +17,18 @@ AUTH_METHOD_APP = "APP"
 CONF_ENTITY_PREFIX = "entity_prefix"
 """The name the entry was set up under, which its entities' unique ids start with."""
 
+CONF_ALLOW_SICK_REPORTS = "allow_sick_reports"
+CONF_ALLOW_VACATIONS = "allow_vacations"
+CONF_ALLOW_VACATION_REQUESTS = "allow_vacation_requests"
+CONF_ALLOW_MESSAGES = "allow_messages"
+ALLOWED_CHANGES = {
+    CONF_ALLOW_SICK_REPORTS: "sick_reports",
+    CONF_ALLOW_VACATIONS: "vacations",
+    CONF_ALLOW_VACATION_REQUESTS: "vacation_requests",
+    CONF_ALLOW_MESSAGES: "messages",
+}
+"""The options that each allow a kind of change in Aula, off until a user turns it on, by the name the cards know it by."""
+
 
 def account_id(mitid_username: str) -> str:
     """The unique id of the entry for a MitID account; the user ID itself is a credential."""

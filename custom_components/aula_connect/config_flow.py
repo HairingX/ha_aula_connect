@@ -10,7 +10,7 @@ import logging
 from typing import Any, cast
 
 from aula_connect.login.client import AulaLoginClient
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlowWithReload
 from homeassistant.const import CONF_ID
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import UnknownFlow
@@ -25,6 +25,7 @@ import probatio
 from .auth_session import AuthSession, auth_sessions, mitid_status
 from .redact import error_text
 from .const import (
+    ALLOWED_CHANGES,
     AUTH_METHOD_APP,
     CONF_ACCESS_TOKEN,
     CONF_AUTH_METHOD,
@@ -48,6 +49,9 @@ USER_SCHEMA = probatio.Schema(
 
 USERNAME_SCHEMA = probatio.Schema({probatio.Required(CONF_MITID_USERNAME): cv.string})
 
+OPTIONS_SCHEMA = probatio.Schema({probatio.Required(option, default=False): cv.boolean for option in ALLOWED_CHANGES})
+"""Whether each kind of change in Aula is allowed: none until a user turns it on."""
+
 IDENTITY_TIMEOUT = 300
 """Seconds the login waits for the user to choose between several MitID identities."""
 
@@ -55,11 +59,27 @@ LOGIN_KEPT_FOR = 60
 """Seconds a completed login is kept for its page to see it complete."""
 
 
+class AulaOptionsFlow(OptionsFlowWithReload):
+    """Choose which kinds of change in Aula the entry may make: reporting sick, vacations, answers to vacation requests, messages."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Show the options, and keep them once chosen; the entry is reloaded with them."""
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+        return self.async_show_form(step_id="init", data_schema=self.add_suggested_values_to_schema(OPTIONS_SCHEMA, self.config_entry.options))
+
+
 class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
     """Set up an Aula login, logging in through MitID."""
 
     VERSION = 2
     MINOR_VERSION = 2
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> AulaOptionsFlow:
+        """The flow of the entry's options."""
+        return AulaOptionsFlow()
 
     def __init__(self) -> None:
         self._entry_id = "Aula"

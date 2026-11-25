@@ -17,13 +17,15 @@ import pytest
 from aula_connect.client import AulaClient
 from aula_connect.login import AulaLoginClient
 from aula_connect.testing import SimulatedAulaApi, SimulatedAulaLogin
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
 
 from custom_components.aula_connect.auth_session import auth_session
-from custom_components.aula_connect.const import DOMAIN
+from custom_components.aula_connect.const import ALLOWED_CHANGES, DOMAIN
 from custom_components.aula_connect.diagnostics import async_get_config_entry_diagnostics
 
 from .test_login_flow import a_minute_later, run_flow
@@ -70,12 +72,12 @@ async def set_up(
             assert session.error is None
             assert (await run_flow(hass, flow_id))["type"] is FlowResultType.CREATE_ENTRY
             await hass.async_block_till_done()
-        try:
-            yield login, api
-        finally:
-            [entry] = hass.config_entries.async_entries(DOMAIN)
-            assert await hass.config_entries.async_unload(entry.entry_id)
-            a_minute_later(hass)
+            try:
+                yield login, api
+            finally:
+                [entry] = hass.config_entries.async_entries(DOMAIN)
+                assert await hass.config_entries.async_unload(entry.entry_id)
+                a_minute_later(hass)
 
 
 @pytest.mark.usefixtures("local_cookies", "socket_enabled")
@@ -178,6 +180,19 @@ async def test_a_guardian_reports_sick_registers_a_vacation_answers_a_request_an
         state = hass.states.get("binary_sensor.aula_vacation_request_alma_school")
         assert state is not None and state.state == "on" and state.attributes["count"] == 1
         child = {"config_entry_id": entry.entry_id, "child_id": 11}
+        with pytest.raises(ServiceValidationError) as off:
+            await hass.services.async_call(DOMAIN, "report_sick", child, blocking=True, return_response=True)
+        assert off.value.translation_key == "sick_reports_not_allowed" and "presence.updateStatusByInstitutionProfileIds" not in api.requests
+
+        options: Any = hass.config_entries.options
+        form = await options.async_init(entry.entry_id)
+        assert (form["type"], form["step_id"]) == (FlowResultType.FORM, "init")
+        assert {str(key): key.default() for key in form["data_schema"].schema} == {option: False for option in ALLOWED_CHANGES}
+        saved = await options.async_configure(form["flow_id"], {option: True for option in ALLOWED_CHANGES})
+        assert saved["type"] is FlowResultType.CREATE_ENTRY
+        await hass.async_block_till_done()
+        [entry] = hass.config_entries.async_entries(DOMAIN)
+        assert entry.state is ConfigEntryState.LOADED and entry.options == {option: True for option in ALLOWED_CHANGES}
 
         assert await hass.services.async_call(DOMAIN, "report_sick", child, blocking=True, return_response=True) == {"route": "aula"}
         assert api.presence_statuses == {11: 1}

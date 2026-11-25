@@ -437,6 +437,18 @@
     },
     "tabulex_write_failed": {
       "message": "Tabulex bekræftede det ikke, og har måske gjort det; se efter i Tabulex, før du prøver igen: {error}"
+    },
+    "sick_reports_not_allowed": {
+      "message": "Sygemelding er slået fra i Aula Connects indstillinger."
+    },
+    "vacations_not_allowed": {
+      "message": "Registrering og sletning af ferie er slået fra i Aula Connects indstillinger."
+    },
+    "vacation_requests_not_allowed": {
+      "message": "Svar på ferieanmodninger er slået fra i Aula Connects indstillinger."
+    },
+    "messages_not_allowed": {
+      "message": "Svar i tråde er slået fra i Aula Connects indstillinger."
     }
   },
   "issues": {
@@ -611,6 +623,26 @@
         "reads": {
           "name": "Flere adresser",
           "description": "Adresser, eller stier på siden, hvert login ender på, der også læses med GET."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hvad Aula Connect må ændre i Aula",
+        "description": "Hver slags ændring er slået fra, indtil du slår den til. Det, der er slået fra, kan hverken kortene, handlingerne eller en AI-assistent gøre; at læse Aula er altid tilladt.",
+        "data": {
+          "allow_sick_reports": "Sygemelde",
+          "allow_vacations": "Registrere og slette ferie",
+          "allow_vacation_requests": "Svare på ferieanmodninger",
+          "allow_messages": "Svare i tråde"
+        },
+        "data_description": {
+          "allow_sick_reports": "Melde et barn sygt i dag, og tage det tilbage, hvor Aula kan. En sygemelding gennem IST's Tabulex kan ikke tages tilbage.",
+          "allow_vacations": "Registrere ferie for børnene, og slette den.",
+          "allow_vacation_requests": "Svare på en institutions ferieanmodning, dag for dag.",
+          "allow_messages": "Svare i en tråd om et barn, til alle i den. En ny tråd startes aldrig."
         }
       }
     }

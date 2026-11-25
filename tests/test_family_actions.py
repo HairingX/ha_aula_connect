@@ -33,7 +33,7 @@ from custom_components.aula_connect.diagnostics import async_get_config_entry_di
 from custom_components.aula_connect.family import FamilyMemory, previous_school_day, school_year_start
 
 from .fake_aula import CHILD, PARENT, SCHOOL, FakeAula
-from .test_calendars import TZ, at, set_up
+from .test_calendars import ALL_ALLOWED, TZ, at, set_up
 from .test_family_entities import message_thread, vacation_request
 from .test_init import DATA
 
@@ -526,3 +526,45 @@ async def test_a_second_entry_of_the_same_family_counts_its_guardian_as_family(
     answer = await _result(client, _child(hass, "threads"))
     assert answer["threads"][0]["employees"] == ["Jane Doe"]
     assert await hass.config_entries.async_unload(second.entry_id)
+
+
+@pytest.mark.parametrize(
+    ("option", "service", "command", "key"),
+    [
+        ("allow_sick_reports", "report_sick", {"type": "aula_connect/sick/report"}, "sick_reports_not_allowed"),
+        ("allow_sick_reports", "undo_sick", {"type": "aula_connect/sick/undo"}, "sick_reports_not_allowed"),
+        ("allow_messages", "send_message", {"type": "aula_connect/message/reply", "thread_id": 1, "text": "Hej"}, "messages_not_allowed"),
+    ],
+)
+async def test_a_change_the_options_do_not_allow_is_refused_by_the_action_and_the_card_alike(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket,
+    option: str, service: str, command: dict[str, Any], key: str,
+) -> None:
+    aula.threads = [message_thread(1, "m1")]
+    await set_up(hass, freezer, options={**ALL_ALLOWED, option: False})
+    child = {"config_entry_id": _entry_id(hass), "child_id": CHILD.id}
+    data = {**child, "thread_id": 1, "text": "Hej"} if service == "send_message" else child
+    with pytest.raises(ServiceValidationError) as refused:
+        await _call(hass, service, data)
+    assert refused.value.translation_key == key
+    await client.send_json_auto_id({**command, "entry_id": _entry_id(hass), "child_id": CHILD.id})
+    answer = await client.receive_json()
+    assert (answer["success"], answer["error"]["code"]) == (False, "not_allowed")
+    assert aula.writes == []
+
+
+async def test_vacations_and_answers_to_requests_the_options_do_not_allow_are_refused(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
+) -> None:
+    await set_up(hass, freezer, options={})
+    entry_id = _entry_id(hass)
+    calls: list[tuple[str, dict[str, Any], str]] = [
+        ("add_vacation", {"config_entry_id": entry_id, "child_ids": [CHILD.id], "start": "2027-02-15", "end": "2027-02-16"}, "vacations_not_allowed"),
+        ("delete_vacation", {"config_entry_id": entry_id, "vacation_id": 5}, "vacations_not_allowed"),
+        ("answer_vacation_request", {"config_entry_id": entry_id, "child_id": CHILD.id, "request_id": 1, "days": list[Any]()}, "vacation_requests_not_allowed"),
+    ]
+    for service, data, key in calls:
+        with pytest.raises(ServiceValidationError) as refused:
+            await _call(hass, service, data)
+        assert refused.value.translation_key == key
+    assert aula.writes == []

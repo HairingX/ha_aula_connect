@@ -38,7 +38,7 @@ from .aula_data import AulaConfigEntry
 from .calendar import booked_time_slot, celebrated_on, is_meeting, shown_for
 from .const import DOMAIN
 from .entity import child_unique_id
-from .family_actions import AulaError, FamilyActionError, InvalidError, NotFoundError, NotSupportedError
+from .family_actions import AulaError, FamilyActionError, InvalidError, NotAllowedError, NotFoundError, NotSupportedError
 from .redact import error_text
 
 MAX_DAYS = 21
@@ -55,6 +55,9 @@ _websocket_command: Callable[[VolDictType], Callable[[WebSocketCommandHandler], 
 _async_register_command: Callable[[HomeAssistant, WebSocketCommandHandler], None] = getattr(
     websocket_api, "async_register_command"
 )
+
+ERR_NOT_ALLOWED = "not_allowed"
+"""The error of a change in Aula the entry's options do not allow."""
 _async_response: Callable[
     [Callable[[HomeAssistant, ActiveConnection, dict[str, Any]], Awaitable[None]]], WebSocketCommandHandler
 ] = getattr(websocket_api, "async_response")
@@ -166,6 +169,7 @@ def ws_children(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str
                 "institution_name": child.institution_profile.institution_name,
                 "picture_entity": registry.async_get_entity_id("image", DOMAIN, child_unique_id(coordinator, "picture", child)),
                 "guardian": guardian,
+                "allowed": family_actions.allowed(entry),
             })
     connection.send_result(msg["id"], {"children": children})
 
@@ -180,6 +184,8 @@ async def _respond(connection: ActiveConnection, msg: dict[str, Any], work: Call
         connection.send_error(msg["id"], ERR_INVALID_FORMAT, str(err))
     except NotSupportedError as err:
         connection.send_error(msg["id"], ERR_NOT_SUPPORTED, str(err))
+    except NotAllowedError as err:
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, str(err))
     except AulaError as err:
         connection.send_error(msg["id"], ERR_HOME_ASSISTANT_ERROR, str(err))
     else:
