@@ -40,7 +40,7 @@ def child_device_info(coordinator: AulaDataCoordinator | AulaCalendarCoordinator
     login = dr.async_get(coordinator.hass).async_get_device_by_identifier((DOMAIN, coordinator.device_id), entry.entry_id)
     assert login is not None
     return ChildDeviceInfo(
-        identifiers={child_identifier(coordinator.device_id, child)},
+        identifiers={child_identifier(entry.entry_id, child)},
         name=child_device_name(child),
         parent_device_id=login.id,
     )

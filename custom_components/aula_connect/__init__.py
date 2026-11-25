@@ -142,7 +142,7 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: AulaConfi
     if entry.state is not ConfigEntryState.LOADED:
         return False
     coordinator = entry.runtime_data.data_coordinator
-    return not listed_device(device, coordinator.device_id, coordinator.data.listed_children)
+    return not listed_device(device, entry.entry_id, coordinator.data.listed_children)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:

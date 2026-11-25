@@ -42,7 +42,8 @@ def _entry(hass: HomeAssistant) -> AulaConfigEntry:
 
 
 def _device(hass: HomeAssistant, child: AulaChildProfile) -> dr.ChildDeviceEntry:
-    device = dr.async_get(hass).async_get_child_device_by_identifier((DOMAIN, f"Aula_{child.id}"), _entry(hass).entry_id)
+    entry_id = _entry(hass).entry_id
+    device = dr.async_get(hass).async_get_child_device_by_identifier((DOMAIN, f"{entry_id}_{child.id}"), entry_id)
     assert device is not None
     return device
 
@@ -262,7 +263,7 @@ async def test_a_device_of_a_child_aula_no_longer_lists_is_removed_but_a_disable
 
     _with_children(aula, CHILD)
     await _refresh(hass)
-    assert registry.async_get_child_device_by_identifier((DOMAIN, "Aula_12"), entry.entry_id) is None
+    assert registry.async_get_child_device_by_identifier((DOMAIN, f"{entry.entry_id}_12"), entry.entry_id) is None
     assert er.async_get(hass).async_get("sensor.aula_alma_kindergarten_presence") is None
     assert hass.states.get("sensor.aula_alma_kindergarten_presence") is None
     assert registry.async_get(bo.id) is not None
@@ -313,9 +314,26 @@ async def test_disabling_a_childs_device_of_one_login_leaves_the_child_of_anothe
     assert await hass.config_entries.async_setup(second.entry_id)
     await hass.async_block_till_done()
     registry = dr.async_get(hass)
-    device = registry.async_get_child_device_by_identifier((DOMAIN, "Aula_11"), first.entry_id)
+    device = registry.async_get_child_device_by_identifier((DOMAIN, f"{first.entry_id}_11"), first.entry_id)
     assert device is not None
     registry.async_update_child_device(device.id, disabled_by=dr.DeviceEntryDisabler.USER)
     await hass.async_block_till_done()
     assert cast(AulaConfigEntry, first).runtime_data.data_coordinator.data.children == []
     assert [child.id for child in cast(AulaConfigEntry, second).runtime_data.data_coordinator.data.children] == [CHILD.id]
+
+
+async def test_a_renamed_login_keeps_its_childrens_devices_and_which_are_disabled(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
+) -> None:
+    await set_up(hass, freezer)
+    entry = _entry(hass)
+    registry = dr.async_get(hass)
+    device = _device(hass, CHILD)
+    registry.async_update_child_device(device.id, disabled_by=dr.DeviceEntryDisabler.USER)
+    await hass.async_block_till_done()
+    hass.config_entries.async_update_entry(entry, title="Familien")
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    kept = _device(hass, CHILD)
+    assert (kept.id, kept.disabled) == (device.id, True)
+    assert cast(AulaConfigEntry, entry).runtime_data.data_coordinator.data.children == []

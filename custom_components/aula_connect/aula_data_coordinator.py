@@ -217,9 +217,9 @@ class AulaDataCoordinator(DataUpdateCoordinator[AulaDataCoordinatorData]):
             return ex
 
         listed = [child for profile in profiles for child in profile.children]
-        async_tidy_child_devices(self.hass, self._entry_id, self.device_id, listed)
+        async_tidy_child_devices(self.hass, self._entry_id, listed)
         # A child whose device is disabled is left out before anything is asked of Aula for it.
-        left_out = disabled_children(self.hass, self._entry_id, self.device_id, listed)
+        left_out = disabled_children(self.hass, self._entry_id, listed)
         profiles = [
             replace(profile, children=[child for child in profile.children if child.id not in left_out])
             for profile in profiles
