@@ -223,8 +223,9 @@ entities:
   or 10.
 - What is sent to Aula is limited to the actions below. A new message cannot be started, only a
   reply in a thread there is; pick-up times, check-in and check-out cannot be registered.
-- A child whose institution takes sick reports in IST's Tabulex cannot be reported sick from
-  Home Assistant yet.
+- A child reported sick through IST's Tabulex cannot be reported well again from Home
+  Assistant: Tabulex takes no report back. It is found in Tabulex by its first name, and by its
+  last name where several share it.
 - Whether the family wrote to the teachers yesterday is known only of replies sent through Home
   Assistant, and a school day there is any weekday.
 - Photos are not in Home Assistant's media browser yet.
@@ -253,8 +254,10 @@ Assistant may call them, as with Home Assistant's other actions.
 
 Each takes `config_entry_id`, the entry of the guardian it is done as, and the child's id,
 `child_id`, which is the attribute `child_id` of the child's picture entity. Where the
-institution takes sick reports elsewhere, as in IST's Tabulex, or not from guardians at all,
-`report_sick` says so and sends nothing.
+institution takes sick reports in IST's Tabulex, `report_sick` reports the child sick there, for
+today, through the login's widget into Tabulex, and it cannot be taken back; `undo_sick` says so.
+Where it takes them not from guardians at all, `report_sick` says so and sends nothing. Each
+responds with the route it took: `aula` or `tabulex`.
 
 ```yaml
 action: aula_connect.report_sick

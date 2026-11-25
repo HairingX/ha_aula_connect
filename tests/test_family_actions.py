@@ -18,6 +18,7 @@ from aula_connect.api.models.module import (
     AulaVacationDay,
     AulaVacationRequestDetail,
 )
+from aula_connect.tabulex import TabulexError
 from aula_connect.widget_probe import WidgetProbeReport
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
@@ -167,7 +168,6 @@ async def test_reporting_sick_sends_it_once_remembers_the_day_and_reads_presence
 @pytest.mark.parametrize(
     ("route", "code", "message"),
     [
-        (AulaSickReportRoute.TABULEX, "not_supported", "The child is reported sick through IST Tabulex, which Aula Connect cannot do yet"),
         (AulaSickReportRoute.NONE, "not_supported", "Aula offers no way to report the child sick"),
     ],
 )
@@ -408,9 +408,16 @@ async def test_an_action_that_cannot_be_done_says_why_in_the_users_language(
         await _call(hass, "send_message", {**child, "thread_id": 5, "text": "Hej"})
     assert thread.value.translation_key == "thread_not_found"
     aula.routes = {CHILD.id: AulaSickReportRoute.TABULEX}
-    with pytest.raises(ServiceValidationError) as tabulex:
-        await _call(hass, "report_sick", child)
-    assert (tabulex.value.translation_key, tabulex.value.translation_placeholders) == ("sick_route_not_supported", {"route": "IST Tabulex"})
+    assert await hass.services.async_call(DOMAIN, "report_sick", child, blocking=True, return_response=True) == {"route": "tabulex"}
+    with pytest.raises(ServiceValidationError) as final:
+        await _call(hass, "undo_sick", child)
+    assert (final.value.translation_key, final.value.translation_placeholders) == ("sick_report_final", {"route": "IST Tabulex"})
+    for write, key in ((True, "tabulex_write_failed"), (False, "tabulex_failed")):
+        aula.error = TabulexError("Tabulex answered HTTP 500 for the children")
+        with pytest.raises(HomeAssistantError) as tabulex:
+            await _call(hass, "report_sick" if write else "probe_widgets", child if write else {"config_entry_id": entry_id})
+        assert (tabulex.value.translation_key, tabulex.value.translation_placeholders) == (key, {"error": "Tabulex answered HTTP 500 for the children"})
+    aula.error = None
     aula.routes = {}
     aula.error = ConnectionError("down")
     with pytest.raises(HomeAssistantError) as failed:

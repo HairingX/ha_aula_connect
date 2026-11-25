@@ -417,9 +417,6 @@
     "invalid_request": {
       "message": "Intet blev sendt til Aula: {reason}"
     },
-    "sick_route_not_supported": {
-      "message": "Barnet sygemeldes gennem {route}, som Aula Connect ikke kan endnu. Sygemeld det dér."
-    },
     "no_sick_route": {
       "message": "Aula giver ingen måde at sygemelde dette barn. Giv institutionen besked på anden vis."
     },
@@ -431,6 +428,15 @@
     },
     "homework_only_ticked": {
       "message": "Lektier kommer fra ugeplanen: de kan kun krydses af, og kun derhjemme."
+    },
+    "sick_report_final": {
+      "message": "Barnet er meldt syg gennem {route}, der ikke kan tage en sygemelding tilbage. Giv institutionen besked på anden vis."
+    },
+    "tabulex_failed": {
+      "message": "Tabulex kunne ikke læses: {error}"
+    },
+    "tabulex_write_failed": {
+      "message": "Tabulex bekræftede det ikke, og har måske gjort det; se efter i Tabulex, før du prøver igen: {error}"
     }
   },
   "issues": {

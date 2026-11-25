@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import Any
 
 from aula_connect import Anomaly
-from aula_connect.api.aula_errors import NoSickReportRouteError, SickReportRouteNotSupportedError
+from aula_connect.api.aula_errors import NoSickReportRouteError, SickReportFinalError
 from aula_connect.widget_probe import WidgetProbeReport
 from aula_connect.api.models.module import (
     AULA_NOTIFICATION_TYPES,
@@ -114,20 +114,20 @@ class FakeAula:
         self._call("get_sick_report_route", write=False)
         return self.routes.get(child.id, AulaSickReportRoute.AULA)
 
-    async def report_sick(self, child: AulaChildProfile) -> None:
+    async def report_sick(self, child: AulaChildProfile) -> AulaSickReportRoute:
         self._call("report_sick", child.id)
-        self._refuse_route(child)
+        return self._route(child)
 
     async def undo_sick(self, child: AulaChildProfile) -> None:
         self._call("undo_sick", child.id)
-        self._refuse_route(child)
+        if self._route(child) is AulaSickReportRoute.TABULEX:
+            raise SickReportFinalError("IST Tabulex")
 
-    def _refuse_route(self, child: AulaChildProfile) -> None:
+    def _route(self, child: AulaChildProfile) -> AulaSickReportRoute:
         route = self.routes.get(child.id, AulaSickReportRoute.AULA)
-        if route is AulaSickReportRoute.TABULEX:
-            raise SickReportRouteNotSupportedError("IST Tabulex")
         if route is AulaSickReportRoute.NONE:
             raise NoSickReportRouteError("none")
+        return route
 
     async def get_vacations(self, children: list[AulaChildProfile]) -> list[AulaVacation]:
         self._call("get_vacations", write=False)

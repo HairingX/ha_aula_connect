@@ -417,9 +417,6 @@
     "invalid_request": {
       "message": "Nothing was sent to Aula: {reason}"
     },
-    "sick_route_not_supported": {
-      "message": "The child is reported sick through {route}, which Aula Connect cannot do yet. Report it there."
-    },
     "no_sick_route": {
       "message": "Aula offers no way to report this child sick. Tell the institution another way."
     },
@@ -431,6 +428,15 @@
     },
     "homework_only_ticked": {
       "message": "Homework comes from the weekly plan: it can only be ticked, and only at home."
+    },
+    "sick_report_final": {
+      "message": "The child is reported sick through {route}, which takes no report back. Tell the institution another way."
+    },
+    "tabulex_failed": {
+      "message": "Tabulex could not be read: {error}"
+    },
+    "tabulex_write_failed": {
+      "message": "Tabulex did not confirm it, and may or may not have done it; look in Tabulex before trying again: {error}"
     }
   },
   "issues": {

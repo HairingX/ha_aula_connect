@@ -14,8 +14,9 @@ from typing import Any, cast
 from aula_connect.api.aula_errors import (
     AulaCredentialError,
     NoSickReportRouteError,
-    SickReportRouteNotSupportedError,
+    SickReportFinalError,
 )
+from aula_connect.tabulex import TabulexError
 from aula_connect.api.models.module import (
     AulaChildProfile,
     AulaMessageThread,
@@ -93,16 +94,22 @@ async def _aula[T](hass: HomeAssistant, entry: AulaConfigEntry, call: Callable[[
 
     Raises:
         InvalidError: The library refused it before sending anything.
-        NotSupportedError: The child is reported sick another way.
-        AulaError: Aula refused it or could not be reached; a login is asked for where Aula
-            refused it.
+        NotSupportedError: Aula offers no way to report the child sick, or its report cannot be
+            taken back.
+        AulaError: Aula or Tabulex refused it or could not be reached; a login is asked for
+            where Aula refused it.
     """
     try:
         return await call()
-    except SickReportRouteNotSupportedError as err:
+    except SickReportFinalError as err:
         raise NotSupportedError(
-            "sick_route_not_supported", f"The child is reported sick through {err.route}, which Aula Connect cannot do yet", {"route": err.route}
+            "sick_report_final", f"The child is reported sick through {err.route}, which takes no report back", {"route": err.route}
         ) from None
+    except TabulexError as err:
+        text = error_text(err)
+        if write:
+            raise AulaError("tabulex_write_failed", f"Tabulex did not confirm it, and may or may not have done it: {text}", {"error": text}) from None
+        raise AulaError("tabulex_failed", f"Tabulex could not be read: {text}", {"error": text}) from None
     except NoSickReportRouteError:
         raise NotSupportedError("no_sick_route", "Aula offers no way to report the child sick") from None
     except AulaCredentialError:
@@ -152,10 +159,10 @@ def today(entry: AulaConfigEntry, child: AulaChildProfile) -> dict[str, Any]:
 async def report_sick(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> str:
     """Report the child sick today, the way Aula offers; the way it was reported."""
     runtime = entry.runtime_data
-    await _aula(hass, entry, lambda: runtime.client.report_sick(child), write=True)
+    route = await _aula(hass, entry, lambda: runtime.client.report_sick(child), write=True)
     runtime.memory.note_sick(child.id, dt_util.now().date())
     await runtime.data_coordinator.async_request_refresh()
-    return AulaSickReportRoute.AULA.value
+    return route.value
 
 
 async def undo_sick(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> str:
