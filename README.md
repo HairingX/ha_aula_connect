@@ -409,6 +409,6 @@ response_variable: answer
 
 ## Origin and licence
 
-The integration comes from [HairingX/aula](https://github.com/HairingX/aula), a fork of
-[scaarup/aula](https://github.com/scaarup/aula), and is licensed as it is: GNU GPL v3.0 or later
-(`LICENSE`).
+The integration comes from [HairingX/aula](https://github.com/HairingX/aula), itself changed from
+an earlier Home Assistant integration for Aula under the GNU GPL, and is licensed as it is: GNU
+GPL v3.0 or later (`LICENSE`); it has been changed since.
