@@ -44,6 +44,9 @@ from .redact import error_text
 MAX_DAYS = 21
 """The most days one subscription covers."""
 
+MAX_HOURS_DAYS = 62
+"""The most days the opening hours are asked for at once."""
+
 type Days = tuple[date, date]
 """A first day and the day after the last."""
 
@@ -76,6 +79,8 @@ def async_register(hass: HomeAssistant) -> None:
     _async_register_command(hass, ws_threads)
     _async_register_command(hass, ws_reply)
     _async_register_command(hass, ws_vacations)
+    _async_register_command(hass, ws_posts)
+    _async_register_command(hass, ws_opening_hours)
     _async_register_command(hass, ws_add_vacation)
     _async_register_command(hass, ws_delete_vacation)
     _async_register_command(hass, ws_vacation_requests)
@@ -120,6 +125,8 @@ CHECK_SICK_SCHEMA = _child_schema("aula_connect/sick/check")
 THREADS_SCHEMA = _child_schema("aula_connect/threads")
 REPLY_SCHEMA = _child_schema("aula_connect/message/reply", thread_id=int, text=str)
 VACATIONS_SCHEMA = _child_schema("aula_connect/vacations")
+POSTS_SCHEMA: VolDictType = {probatio.Required("type"): "aula_connect/posts", probatio.Required("entry_id"): str}
+OPENING_HOURS_SCHEMA = _child_schema("aula_connect/opening_hours", start=cv.date, end=cv.date)
 ADD_VACATION_SCHEMA: VolDictType = {
     probatio.Required("type"): "aula_connect/vacation/add",
     probatio.Required("entry_id"): str,
@@ -256,6 +263,33 @@ async def ws_reply(hass: HomeAssistant, connection: ActiveConnection, msg: dict[
         entry, child = _entry_and_child(hass, msg)
         await family_actions.reply(hass, entry, child, msg["thread_id"], msg["text"])
         return {}
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(POSTS_SCHEMA)
+@_async_response
+async def ws_posts(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Answer with the newest posts of the entry's news feed."""
+
+    async def work() -> dict[str, Any]:
+        return await family_actions.posts(hass, family_actions.loaded_entry(hass, msg["entry_id"]))
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(OPENING_HOURS_SCHEMA)
+@_async_response
+async def ws_opening_hours(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Answer with the days the child's institution is closed, and its hours from `start` to `end`."""
+
+    async def work() -> dict[str, Any]:
+        entry, child = _entry_and_child(hass, msg)
+        start, end = msg["start"], msg["end"]
+        if end < start or (end - start).days > MAX_HOURS_DAYS:
+            reason = f"the period must run forward and be at most {MAX_HOURS_DAYS} days"
+            raise InvalidError("invalid_request", f"Not read: {reason}", {"reason": reason})
+        return await family_actions.opening_hours(hass, entry, child, start, end)
 
     await _respond(connection, msg, work)
 

@@ -131,7 +131,8 @@ Assistant's:
 
 ## The card's API
 
-A dashboard card shows each child's weeks through three websocket commands. They only read: they
+A dashboard card shows each child's weeks, the news feed and the institutions' hours through
+these websocket commands. They only read: they
 mark nothing read and write nothing to Aula. Any user may call them, as a dashboard's viewers
 need not be administrators; they send no token, no MitID user ID and no UNI-login.
 
@@ -151,6 +152,15 @@ need not be administrators; they send no token, no MitID user ID and no UNI-logi
   private or deleted. An entry, child or event not found is `not_found`; an event Aula cannot be
   read for is `home_assistant_error`, with no token in its message. It is read when it is asked
   for, not polled.
+- `aula_connect/posts` takes an entry and answers with the newest 20 posts of its news feed:
+  each one's title, text as Aula's HTML, when it was written, whether it is important and from
+  when to when, its author and institution, the groups it is shared with, how many comments it
+  has, what is attached with links Aula lets expire, and whether it is `new` - written after the
+  guardian last saw the posts in Aula, which is answered as `last_seen`. It is read when it is
+  asked for, not polled; nothing is marked seen.
+- `aula_connect/opening_hours` takes an entry, a child and a period of at most 62 days, and
+  answers with the days the child's institution is closed, by name, and its hours day by day,
+  a day it is closed among them. A period that runs backward or is longer is `invalid_format`.
 
 The days are chosen as the child's calendars choose them: lessons and events as the child's
 events calendar (a meeting without the child left out, a booked meeting at its booked time),

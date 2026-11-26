@@ -14,6 +14,7 @@ from aula_connect.api.models.module import (
     AulaBirthdayEvent,
     AulaCalendarEvent,
     AulaChildProfile,
+    AulaClosedDay,
     AulaDailyOverview,
     AulaEasyiqWeeklyPlan,
     AulaEventDetail,
@@ -21,6 +22,8 @@ from aula_connect.api.models.module import (
     AulaInstitutionProfile,
     AulaLoginData,
     AulaMessageThread,
+    AulaOpeningDay,
+    AulaPosts,
     AulaProfile,
     AulaProfilePicture,
     AulaSickReportCheck,
@@ -79,6 +82,9 @@ class FakeAula:
         self.vacation_requests: list[AulaVacationRequest] = []
         self.vacation_request_details: dict[int, AulaVacationRequestDetail] = {}
         self.vacations: list[AulaVacation] = []
+        self.posts = AulaPosts([], None, False)
+        self.closed_days: list[AulaClosedDay] = []
+        self.opening_days: list[AulaOpeningDay] = []
         self.routes: dict[int, AulaSickReportRoute] = {}
         self.threads: list[AulaMessageThread] = []
         self.picture: AulaProfilePicture | None = None
@@ -139,6 +145,18 @@ class FakeAula:
         if route is AulaSickReportRoute.NONE:
             raise NoSickReportRouteError("none")
         return route
+
+    async def get_posts(self, profiles: list[AulaProfile], limit: int = 20) -> AulaPosts:
+        self._call("get_posts", write=False)
+        return self.posts
+
+    async def get_closed_days(self, children: list[AulaChildProfile]) -> list[AulaClosedDay]:
+        self._call("get_closed_days", write=False)
+        return list(self.closed_days)
+
+    async def get_opening_hours(self, children: list[AulaChildProfile], start: date, end: date) -> list[AulaOpeningDay]:
+        self._call("get_opening_hours", write=False)
+        return [day for day in self.opening_days if start <= day.day <= end]
 
     async def get_vacations(self, children: list[AulaChildProfile]) -> list[AulaVacation]:
         self._call("get_vacations", write=False)

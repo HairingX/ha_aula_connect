@@ -22,6 +22,7 @@ from aula_connect.tabulex import TabulexError
 from aula_connect.api.models.module import (
     AulaChildProfile,
     AulaMessageThread,
+    AulaPosts,
     AulaPresenceStatus,
     AulaSickReportRoute,
     AulaVacationDay,
@@ -45,6 +46,9 @@ from .redact import error_text
 
 
 _LOGGER = logging.getLogger(__name__)
+
+POSTS = 20
+"""How many of the news feed's newest posts are read."""
 
 class FamilyActionError(Exception):
     """An action that could not be done, with the translation that tells why.
@@ -276,6 +280,66 @@ async def reply(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildPro
     await _aula(hass, entry, lambda: runtime.client.reply(thread_id, text), write=True)
     runtime.memory.note_wrote(child.id, thread_id, dt_util.now())
     runtime.data_coordinator.note_own_reply(thread_id)
+
+
+async def posts(hass: HomeAssistant, entry: AulaConfigEntry) -> dict[str, Any]:
+    """The newest posts of the entry's news feed, each saying whether it is new to the guardian."""
+    client = entry.runtime_data.client
+
+    async def read() -> AulaPosts:
+        return await client.get_posts((await client.login()).profiles, POSTS)
+
+    found = await _aula(hass, entry, read, write=False)
+    seen = found.last_seen
+    return {
+        "last_seen": seen.isoformat() if seen else None,
+        "posts": [
+            {
+                "id": post.id,
+                "title": post.title,
+                "html": post.html,
+                "time": post.timestamp.isoformat(),
+                "new": seen is not None and post.timestamp > seen,
+                "important": post.is_important,
+                "important_from": post.important_from.isoformat() if post.important_from else None,
+                "important_to": post.important_to.isoformat() if post.important_to else None,
+                "author": post.author,
+                "institution": post.institution,
+                "groups": post.groups,
+                "comments": post.comment_count,
+                "attachments": [
+                    {"name": attachment.name, "url": attachment.url, "thumbnail": attachment.thumbnail_url, "media": attachment.is_media}
+                    for attachment in post.attachments
+                ],
+            }
+            for post in found.posts
+        ],
+    }
+
+
+async def opening_hours(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile, start: date, end: date) -> dict[str, Any]:
+    """The days the child's institution is closed, by name, and its hours from `start` to `end`."""
+    client = entry.runtime_data.client
+    closed = await _aula(hass, entry, lambda: client.get_closed_days([child]), write=False)
+    days = await _aula(hass, entry, lambda: client.get_opening_hours([child], start, end), write=False)
+    code = child.institution_code
+    return {
+        "closed_days": [
+            {"name": day.name, "start": day.start_date.isoformat(), "end": day.end_date.isoformat()}
+            for day in closed
+            if day.institution_code == code
+        ],
+        "days": [
+            {
+                "date": day.day.isoformat(),
+                "closed": day.closed,
+                "open": day.open_time.strftime("%H:%M") if day.open_time else None,
+                "close": day.close_time.strftime("%H:%M") if day.close_time else None,
+            }
+            for day in days
+            if day.institution_code == code
+        ],
+    }
 
 
 async def vacations(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile) -> dict[str, Any]:

@@ -18,39 +18,53 @@ read:
             - calendar.getDailyAggregatedEvents
             - calendar.getDailyEventCountForGroup
             - calendar.getEventById
+            - calendar.getEventsByGroupHomeChildPairs
             - calendar.geteventsbygroupid
             - calendar.getEventsByProfileIdsAndResourceIds
-            - calendar.getEventsForInstitutions
             - calendar.getEventTypes
+            - calendar.getFutureVacationRequests
             - calendar.getImportantDates
+            - calendar.getTimeSlotResponse
+            - calendarFeed.getEventTypesRelevantForPortalRole
+            - CalendarFeed.getFeedConfigurations
+            - CalendarFeed.getPolicyAnswer
+            - CentralConfiguration.getDataPolicy
+            - centralConfiguration.getLoginImportantInformation
+            - CentralConfiguration.getOpenDataPolicy
             - comments.getComments
             - commonFiles.getCommonFiles
+            - commonFiles.getPersonalDataPolicies
             - consents.getConsentResponses
             - gallery.getAlbums
             - gallery.getMedia
             - gallery.getMediaById
-            - gallery.getMediaByInstitutionProfileId
             - groups.getGroupById
             - groups.getGroupsByContext
+            - groups.getMemberships
             - groups.getMembershipsLight
-            - messaging.getAutoReply
             - messaging.getCommonInboxes
             - messaging.getFolders
+            - messaging.getOtpInboxesForLoggedInProfile
             - Notifications.getNotificationSettingsForActiveProfile
             - notifications.getNotificationsForActiveProfile
             - posts.getAllPosts
             - posts.getById
-            - presence.getActivityOverview
+            - presence.getClosedDays
             - presence.getDailyOverview
+            - presence.getGeneralOpeningHours
+            - presence.getOpeningHoursByInstitutionCodes
+            - presence.getOverlappingPresenceTemplates
             - presence.getPickupResponsibles
             - presence.getPresenceConfigurationByChildIds
-            - presence.getPresenceRegistrationDetail
-            - presence.getPresenceRegistrations
             - presence.getPresenceStates
             - presence.getPresenceTemplates
+            - presence.getSpecificOpeningHourOverview
+            - presence.getTemplateForDate
+            - presence.getVacationAnnouncementsByChildren
+            - presence.getVacationRegistrationResponse
             - presence.getVacationRegistrationsByChildren
             - profiles.getContactlist
-            - profiles.getContactParents
+            - profiles.getProfileByProfileCtx
             - profiles.getProfileContext
             - profiles.getProfileMasterData
             - profiles.getProfilesByLogin

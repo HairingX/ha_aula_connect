@@ -12,7 +12,12 @@ import pytest
 from aula_connect.api.aula_errors import AulaCredentialError
 from aula_connect.api.models.aula_message_thread_models import AulaThreadRecipient
 from aula_connect.api.models.module import (
+    AulaClosedDay,
     AulaDailyOverview,
+    AulaOpeningDay,
+    AulaPost,
+    AulaPostAttachment,
+    AulaPosts,
     AulaSickReportRoute,
     AulaVacation,
     AulaVacationDay,
@@ -603,3 +608,55 @@ async def test_the_diagnostics_tell_what_reporting_each_child_sick_would_do_as_y
         aula.error = TabulexError("Tabulex answered HTTP 500 for the children")
         diagnostics = await async_get_config_entry_diagnostics(hass, entry)
         assert diagnostics["sick_report_checks"] == [{"error": "sick_report_unprepared"}]
+
+
+async def test_the_news_feed_s_newest_posts_say_which_are_new_to_the_guardian(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
+) -> None:
+    file = AulaPostAttachment("seddel.pdf", "https://files.example.org/seddel.pdf", None, False)
+    aula.posts = AulaPosts(
+        [
+            AulaPost(2, "Juleklip", "<p>Fredag</p>", at(27, 8), None, None, None, True, date(2026, 12, 27), None, "Kontoret", "School", ["3A"], [file], 1),
+            AulaPost(1, "Kor", "<p>Kom og syng</p>", at(20, 8), None, None, None, False, None, None, None, None, [], [], 0),
+        ],
+        at(25, 8),
+        False,
+    )
+    await set_up(hass, freezer)
+    answer = await _result(client, {"type": "aula_connect/posts", "entry_id": _entry_id(hass)})
+    assert answer["last_seen"] == at(25, 8).isoformat()
+    assert [(post["id"], post["new"], post["important"], post["important_from"]) for post in answer["posts"]] == [
+        (2, True, True, "2026-12-27"),
+        (1, False, False, None),
+    ]
+    assert answer["posts"][0]["attachments"] == [{"name": "seddel.pdf", "url": "https://files.example.org/seddel.pdf", "thumbnail": None, "media": False}]
+    assert (answer["posts"][0]["author"], answer["posts"][0]["groups"], answer["posts"][0]["comments"]) == ("Kontoret", ["3A"], 1)
+    aula.posts = AulaPosts(aula.posts.posts[1:], None, False)
+    answer = await _result(client, {"type": "aula_connect/posts", "entry_id": _entry_id(hass)})
+    assert answer["last_seen"] is None and [post["new"] for post in answer["posts"]] == [False]
+    assert aula.writes == []
+
+
+async def test_the_closed_days_and_the_hours_of_the_child_s_institution_are_read_for_a_period(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
+) -> None:
+    aula.closed_days = [
+        AulaClosedDay("S1", "Juleferie", date(2026, 12, 21), date(2027, 1, 1)),
+        AulaClosedDay("OTHER", "Andet", date(2026, 12, 21), date(2026, 12, 21)),
+    ]
+    aula.opening_days = [
+        AulaOpeningDay("S1", date(2026, 12, 28), "general_opening_hours", time(6, 30), time(17)),
+        AulaOpeningDay("S1", date(2026, 12, 29), "closed_day", None, None),
+        AulaOpeningDay("OTHER", date(2026, 12, 28), "general_opening_hours", time(7), time(16)),
+    ]
+    await set_up(hass, freezer)
+    answer = await _result(client, _child(hass, "opening_hours", start="2026-12-28", end="2027-01-03"))
+    assert answer == {
+        "closed_days": [{"name": "Juleferie", "start": "2026-12-21", "end": "2027-01-01"}],
+        "days": [
+            {"date": "2026-12-28", "closed": False, "open": "06:30", "close": "17:00"},
+            {"date": "2026-12-29", "closed": True, "open": None, "close": None},
+        ],
+    }
+    for start, end in (("2027-01-03", "2026-12-28"), ("2026-12-28", "2027-03-31")):
+        assert (await _error(client, _child(hass, "opening_hours", start=start, end=end)))["code"] == "invalid_format"
