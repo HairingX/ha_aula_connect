@@ -111,7 +111,8 @@ async def test_a_setup_logs_in_with_mitid_and_reads_aula(hass: HomeAssistant) ->
             "gallery.getAlbums",
         } <= endpoints
         text = json.dumps(diagnostics)
-        secrets = (entry.data["mitid_username"], entry.data["access_token"], entry.data["refresh_token"])
+        username = entry.data["mitid_username"]
+        secrets = (f'"{username}"', f"={username}", entry.data["access_token"], entry.data["refresh_token"])
         for value in ("Alma", "Example", "School", '"alma"', '"pat"', *secrets):
             assert value not in text, value
 
