@@ -98,9 +98,18 @@ async def test_a_setup_logs_in_with_mitid_and_reads_aula(hass: HomeAssistant) ->
 
         diagnostics: Any = await async_get_config_entry_diagnostics(hass, entry)
         aula = diagnostics["aula"]
-        assert aula["not_read"] == [] and aula["aula_api_version"] == SimulatedAulaApi.VERSION
+        assert aula["aula_api_version"] == SimulatedAulaApi.VERSION
+        assert [line for line in aula["not_read"] if ": not asked, as " not in line] == []
+        assert "search.findGroups: not asked, as it searches for a text" in aula["not_read"]
         endpoints = {exchange["endpoint"] for exchange in aula["exchanges"]}
-        assert {"profiles.getProfilesByLogin", "presence.getDailyOverview", "/aulaapi/relatedweekplan/all"} <= endpoints
+        assert {
+            "profiles.getProfilesByLogin",
+            "presence.getDailyOverview",
+            "/aulaapi/relatedweekplan/all",
+            "posts.getAllPosts",
+            "posts.getById",
+            "gallery.getAlbums",
+        } <= endpoints
         text = json.dumps(diagnostics)
         secrets = (entry.data["mitid_username"], entry.data["access_token"], entry.data["refresh_token"])
         for value in ("Alma", "Example", "School", '"alma"', '"pat"', *secrets):
