@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import replace
 from datetime import date, datetime
 from typing import Any
 
@@ -83,6 +84,8 @@ class FakeAula:
         self.vacation_request_details: dict[int, AulaVacationRequestDetail] = {}
         self.vacations: list[AulaVacation] = []
         self.posts = AulaPosts([], None, False)
+        self.post_children: dict[int, list[int]] = {}
+        """The children each post is for, by its id; a post not named is for every child."""
         self.closed_days: list[AulaClosedDay] = []
         self.opening_days: list[AulaOpeningDay] = []
         self.routes: dict[int, AulaSickReportRoute] = {}
@@ -146,9 +149,11 @@ class FakeAula:
             raise NoSickReportRouteError("none")
         return route
 
-    async def get_posts(self, profiles: list[AulaProfile], limit: int = 20) -> AulaPosts:
+    async def get_posts(self, profiles: list[AulaProfile], limit: int = 20, children: list[AulaChildProfile] | None = None) -> AulaPosts:
         self._call("get_posts", write=False)
-        return self.posts
+        ids = {child.id for child in children} if children is not None else None
+        posts = [post for post in self.posts.posts if ids is None or not ids.isdisjoint(self.post_children.get(post.id, ids))]
+        return replace(self.posts, posts=posts)
 
     async def get_closed_days(self, children: list[AulaChildProfile]) -> list[AulaClosedDay]:
         self._call("get_closed_days", write=False)

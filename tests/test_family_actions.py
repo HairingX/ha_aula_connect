@@ -637,6 +637,28 @@ async def test_the_news_feed_s_newest_posts_say_which_are_new_to_the_guardian(
     assert aula.writes == []
 
 
+async def test_each_post_names_the_children_whose_feed_holds_it_and_comes_once(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
+) -> None:
+    bo = replace(CHILD, first_name="Bo", id=13, name="Bo Example", profile_id=102, user_id="bo")
+    aula.parent = replace(aula.parent, children=[CHILD, bo])
+    aula.posts = AulaPosts(
+        [
+            AulaPost(3, "Til Bo", "", at(27, 8), None, None, None, False, None, None, None, None, [], [], 0),
+            AulaPost(2, "Til alle", "", at(26, 8), None, None, None, False, None, None, None, None, [], [], 0),
+            AulaPost(1, "Til Alma", "", at(20, 8), None, None, None, False, None, None, None, None, [], [], 0),
+        ],
+        at(25, 8),
+        False,
+    )
+    aula.post_children = {3: [13], 1: [CHILD.id]}
+    await set_up(hass, freezer)
+    aula.reads.clear()
+    answer = await _result(client, {"type": "aula_connect/posts", "entry_id": _entry_id(hass)})
+    assert [(post["id"], post["children"]) for post in answer["posts"]] == [(3, [13]), (2, [CHILD.id, 13]), (1, [CHILD.id])]
+    assert aula.reads.count("get_posts") == 2
+
+
 async def test_the_closed_days_and_the_hours_of_the_child_s_institution_are_read_for_a_period(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
 ) -> None:
