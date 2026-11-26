@@ -36,7 +36,7 @@ read:
             - messaging.getAutoReply
             - messaging.getCommonInboxes
             - messaging.getFolders
-            - notifications.getNotificationSettingsForActiveProfile
+            - Notifications.getNotificationSettingsForActiveProfile
             - notifications.getNotificationsForActiveProfile
             - posts.getAllPosts
             - posts.getById
