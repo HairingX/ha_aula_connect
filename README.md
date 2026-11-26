@@ -257,8 +257,8 @@ entities:
 - What is sent to Aula is limited to the actions below. A new message cannot be started, only a
   reply in a thread there is; pick-up times, check-in and check-out cannot be registered.
 - A child reported sick through IST's Tabulex cannot be reported well again from Home
-  Assistant: Tabulex takes no report back. It is found in Tabulex by its first name, and by its
-  last name where several share it.
+  Assistant: Tabulex takes no report back. It is found in Tabulex by its whole name, else its
+  first name, and only at the institution Aula has it at; elsewhere it is not reported.
 - Whether the family wrote to the teachers yesterday is known only of replies sent through Home
   Assistant, and a school day there is any weekday.
 - Photos are not in Home Assistant's media browser yet.
