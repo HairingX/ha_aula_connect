@@ -1,4 +1,4 @@
-"""Each child's homework from its weekly plan, as a to-do list ticked at home only."""
+"""What each child's weekly plan marks as important, as a to-do list ticked at home only."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .aula_calendar_coordinator import WEEKLY_PLANS, AulaCalendarCoordinator
 from .aula_data import AulaConfigEntry
-from .const import DOMAIN
+from .const import DOMAIN, IMPORTANT
 from .entity import async_add_child_entities, child_device_info, child_unique_id
 from .family import FamilyMemory
 
@@ -22,12 +22,12 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AulaConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    """Add each child's homework, where the institution has weekly plans."""
+    """Add each child's list of what is important, where the institution has weekly plans."""
     runtime = entry.runtime_data
     if not runtime.data_coordinator.weekly_plans_supported():
         return
     async_add_child_entities(
-        entry, async_add_entities, lambda child: [AulaHomeworkList(runtime.calendar_coordinator, runtime.memory, child)]
+        entry, async_add_entities, lambda child: [AulaImportantList(runtime.calendar_coordinator, runtime.memory, child)]
     )
 
 
@@ -41,8 +41,8 @@ def _summary(subject: str, text: str) -> str:
     return f"[{subject}] {line}" if subject else line
 
 
-class AulaHomeworkList(TodoListEntity):
-    """The tasks of a child's weekly plan, each due on its day, keyed by the task's id.
+class AulaImportantList(TodoListEntity):
+    """What a child's weekly plan marks as important (its tasks), each due on its day, keyed by its id.
 
     Ticking one is remembered in Home Assistant only; Aula is never told. A task is neither added
     nor removed here, as the weekly plan is the teachers'.
@@ -50,14 +50,14 @@ class AulaHomeworkList(TodoListEntity):
 
     _attr_has_entity_name = True
     _attr_should_poll = False
-    _attr_translation_key = "homework"
+    _attr_translation_key = "important"
     _attr_supported_features = TodoListEntityFeature.UPDATE_TODO_ITEM
 
     def __init__(self, coordinator: AulaCalendarCoordinator, memory: FamilyMemory, child: AulaChildProfile) -> None:
         self.coordinator = coordinator
         self._memory = memory
         self._child = child
-        self._attr_unique_id = child_unique_id(coordinator, "homework", child)
+        self._attr_unique_id = child_unique_id(coordinator, IMPORTANT, child)
         self._attr_device_info = child_device_info(coordinator, child)
         self._attr_todo_items = []
         self._due: dict[str, date] = {}
@@ -113,9 +113,9 @@ class AulaHomeworkList(TodoListEntity):
         """
         found = next((known for known in self._attr_todo_items or [] if known.uid == item.uid), None)
         if found is None:
-            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="homework_not_found")
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="important_not_found")
         if (item.summary, item.due, item.description) != (found.summary, found.due, found.description):
-            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="homework_only_ticked")
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="important_only_ticked")
         uid = found.uid or ""
         self._memory.tick(self._child.id, uid, self._due[uid], item.status == TodoItemStatus.COMPLETED)
         self._update()

@@ -26,8 +26,8 @@ into Home Assistant devices and entities. How and why it is built as it is: `doc
   thread. Probing the services Aula's widgets log in to is an administrator's action, and only reads: it
   never reads an address whose name tells of a change.
 - What it remembers of a family - the days a child was sick, the thread written in and the days
-  written, the homework ticked - is in a private Store per entry, kept 60 days and removed with
-  the entry. Ticking homework is never told to Aula.
+  written, what is important ticked - is in a private Store per entry, kept 60 days and removed
+  with the entry. A tick is never told to Aula.
 - The websocket commands are the contract with `HairingX/ha_aula_connect_card`: a change to one is
   agreed with the card first.
 - The library developed alongside it is `aula_connect`, listed in `pyproject.toml` for test

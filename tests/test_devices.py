@@ -21,7 +21,7 @@ from custom_components.aula_connect import async_remove_config_entry_device
 from custom_components.aula_connect.aula_data import AulaConfigEntry
 from custom_components.aula_connect.const import DOMAIN
 
-from .conftest import INSTALLED
+from .conftest import MIGRATED
 from .fake_aula import CHILD, PARENT, FakeAula
 from .test_calendars import set_up
 from .test_init import DATA
@@ -95,7 +95,7 @@ async def test_an_installation_keeps_every_entity_id_and_unique_id_on_the_childs
     await set_up(hass, freezer)
     registry = er.async_get(hass)
     child_device = _device(hass, CHILD)
-    for entity_id, unique_id in INSTALLED.items():
+    for entity_id, unique_id in MIGRATED.items():
         entity = registry.async_get(entity_id)
         assert entity is not None and entity.unique_id == unique_id, entity_id
         on_child = unique_id.endswith("_Alma_School")
@@ -124,7 +124,7 @@ CHILD_KEYS = {
         "sensor.{}_school_end",
         "sensor.{}_school_start",
         "sensor.{}_status",
-        "todo.{}_homework",
+        "todo.{}_important",
     ],
     "da": [
         "binary_sensor.{}_ferieanmodning",
@@ -141,7 +141,7 @@ CHILD_KEYS = {
         "sensor.{}_status",
         "sensor.{}_tilstede",
         "sensor.{}_tilstede_varighed",
-        "todo.{}_lektier",
+        "todo.{}_vigtigt",
     ],
 }
 """A new installation's entity ids of a child's device, by language, its device's part in place of `{}`."""

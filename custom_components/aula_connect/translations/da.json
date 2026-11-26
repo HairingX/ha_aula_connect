@@ -325,8 +325,8 @@
       }
     },
     "todo": {
-      "homework": {
-        "name": "Lektier"
+      "important": {
+        "name": "Vigtigt"
       }
     },
     "event": {
@@ -426,11 +426,11 @@
     "write_failed": {
       "message": "Aula bekræftede det ikke, og har måske gjort det, måske ikke; se efter i Aula, før du prøver igen: {error}"
     },
-    "homework_not_found": {
-      "message": "Lektien er ikke på listen."
+    "important_not_found": {
+      "message": "Punktet er ikke på listen."
     },
-    "homework_only_ticked": {
-      "message": "Lektier kommer fra ugeplanen: de kan kun krydses af, og kun derhjemme."
+    "important_only_ticked": {
+      "message": "Det vigtige kommer fra ugeplanen: det kan kun krydses af, og kun derhjemme."
     },
     "sick_report_final": {
       "message": "Sygemeldingen kan ikke fortrydes herfra."

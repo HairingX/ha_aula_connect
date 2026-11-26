@@ -73,7 +73,7 @@ class AulaCustomConfigFlow(ConfigFlow, domain=DOMAIN):
     """Set up an Aula login, logging in through MitID."""
 
     VERSION = 2
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     @staticmethod
     @callback

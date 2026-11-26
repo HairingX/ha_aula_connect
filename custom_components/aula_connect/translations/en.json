@@ -325,8 +325,8 @@
       }
     },
     "todo": {
-      "homework": {
-        "name": "Homework"
+      "important": {
+        "name": "Important"
       }
     },
     "event": {
@@ -426,11 +426,11 @@
     "write_failed": {
       "message": "Aula did not confirm it, and may or may not have done it; look in Aula before trying again: {error}"
     },
-    "homework_not_found": {
-      "message": "The homework is not on the list."
+    "important_not_found": {
+      "message": "The task is not on the list."
     },
-    "homework_only_ticked": {
-      "message": "Homework comes from the weekly plan: it can only be ticked, and only at home."
+    "important_only_ticked": {
+      "message": "What is important comes from the weekly plan: it can only be ticked, and only at home."
     },
     "sick_report_final": {
       "message": "This sick report cannot be taken back from here."

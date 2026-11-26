@@ -15,6 +15,11 @@ CONF_MITID_USERNAME = "mitid_username"
 CONF_AUTH_METHOD = "auth_method"
 AUTH_METHOD_APP = "APP"
 CONF_ENTITY_PREFIX = "entity_prefix"
+
+IMPORTANT = "important"
+"""The key of a child's list of what its weekly plan marks as important."""
+WAS_HOMEWORK = {"homework": "important", "lektier": "vigtigt"}
+"""The words for that list in an entity id before it was named so, each with its word now."""
 """The name the entry was set up under, which its entities' unique ids start with."""
 
 CONF_ALLOW_SICK_REPORTS = "allow_sick_reports"

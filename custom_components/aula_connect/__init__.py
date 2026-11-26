@@ -9,9 +9,10 @@ from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.typing import UNDEFINED, ConfigType
 import logging
 
 from aula_connect import AnomalyKind
@@ -31,6 +32,8 @@ from .const import (
     CONF_MITID_USERNAME,
     CONF_ENTITY_PREFIX,
     DOMAIN,
+    IMPORTANT,
+    WAS_HOMEWORK,
     account_id,
     anomaly_issue_id,
 )
@@ -161,7 +164,12 @@ async def async_remove_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> Non
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bool:
-    """Make the entry unique per MitID account, keeping its entities' unique ids."""
+    """Bring an entry from before up to date.
+
+    It becomes unique per MitID account, keeping its entities' unique ids; then each child's list
+    of homework becomes its list of what is important, its unique id and the word for it in its
+    entity id renamed, where that entity id is free.
+    """
     if entry.version != 2:
         return False
     if entry.minor_version < 2:
@@ -178,4 +186,34 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AulaConfigEntry) -> bo
             if not taken:
                 unique_id = candidate
         hass.config_entries.async_update_entry(entry, data=data, unique_id=unique_id, minor_version=2)
+    if entry.minor_version < 3:
+        _rename_homework_lists(hass, entry)
+        hass.config_entries.async_update_entry(entry, minor_version=3)
     return True
+
+
+def _rename_homework_lists(hass: HomeAssistant, entry: AulaConfigEntry) -> None:
+    """Rename each child's list of homework of `entry` to its list of what is important.
+
+    Its unique id takes the new key, and its entity id the new word where that id is free. An
+    entity no entry holds is renamed too, as the entry takes it over by its unique id.
+    """
+    prefix = entry.data[CONF_ENTITY_PREFIX]
+    old = f"{prefix}_homework_"
+    registry = er.async_get(hass)
+    for entity in list(registry.entities.values()):
+        if (
+            entity.platform != DOMAIN
+            or entity.domain != Platform.TODO
+            or entity.config_entry_id not in (None, entry.entry_id)
+            or not entity.unique_id.startswith(old)
+        ):
+            continue
+        domain, object_id = entity.entity_id.split(".", 1)
+        entity_id = f"{domain}.{'_'.join(WAS_HOMEWORK.get(word, word) for word in object_id.split('_'))}"
+        free = not registry.async_is_registered(entity_id) and hass.states.async_available(entity_id)
+        registry.async_update_entity(
+            entity.entity_id,
+            new_unique_id=f"{prefix}_{IMPORTANT}_{entity.unique_id.removeprefix(old)}",
+            new_entity_id=entity_id if free else UNDEFINED,
+        )

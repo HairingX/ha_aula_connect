@@ -50,6 +50,12 @@ INSTALLED_SECOND = {
 }
 """The same, for a second login set up under the name `Aula 2`."""
 
+MIGRATED = {
+    entity_id.replace("_homework_", "_important_"): unique_id.replace("_homework_", "_important_")
+    for entity_id, unique_id in INSTALLED.items()
+}
+"""Every entity of INSTALLED once the entry is up to date: the list of homework renamed to what is important."""
+
 
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> Iterator[None]:

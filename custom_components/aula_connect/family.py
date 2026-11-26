@@ -1,5 +1,5 @@
 """What an entry remembers of a family between restarts: the days each child was sick, the thread
-the family writes to its teachers in, the days it wrote there, and the homework ticked at home."""
+the family writes to its teachers in, the days it wrote there, and what is important ticked at home."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 
 KEPT = timedelta(days=60)
-"""How long a sick day, a day written and a ticked homework are remembered."""
+"""How long a sick day, a day written and a tick are remembered."""
 
 SAVE_DELAY = 1.0
 """Seconds a change waits before it is written, so that several are written at once."""
@@ -33,7 +33,7 @@ class ChildMemory(TypedDict, total=False):
     wrote: list[str]
     thread: RememberedThread
     done: dict[str, str]
-    """The homework ticked, by task id, each with its due day."""
+    """What is important ticked, by task id, each with its due day."""
 
 
 def previous_school_day(day: date) -> date:
@@ -139,11 +139,11 @@ class FamilyMemory:
         return self._child(child_id).get("thread")
 
     def ticked(self, child_id: int) -> set[str]:
-        """The ids of the child's homework ticked at home."""
+        """The ids of the child's important tasks ticked at home."""
         return set(self._child(child_id).get("done", {}))
 
     def tick(self, child_id: int, task_id: str, due: date, done: bool) -> None:
-        """Tick the child's homework `task_id`, due on `due`, or take the tick back."""
+        """Tick the child's important task `task_id`, due on `due`, or take the tick back."""
         child = self._child(child_id)
         ticked = dict(child.get("done", {}))
         if done:

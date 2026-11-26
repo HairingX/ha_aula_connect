@@ -39,7 +39,7 @@ rules:
   entity-event-setup:
     status: done
     comment: >-
-      Calendars, the school day entities and the homework lists register with their coordinator
+      Calendars, the school day entities and the lists of what is important register with their coordinator
       in async_added_to_hass and unregister in async_will_remove_from_hass.
   entity-unique-id: done
   has-entity-name: done
@@ -119,7 +119,7 @@ rules:
   icon-translations:
     status: todo
     comment: >-
-      The child's picture, homework, school day, vacation request and event entities and the
+      The child's picture, important list, school day, vacation request and event entities and the
       actions take their icons from icons.json; the older sensors and binary sensors still set
       theirs in code through _attr_icon, as it follows their state.
   reconfiguration-flow: done

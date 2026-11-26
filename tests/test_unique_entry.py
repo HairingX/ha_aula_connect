@@ -70,7 +70,7 @@ async def test_an_entry_from_before_becomes_unique_per_account_and_keeps_its_ent
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
-    assert entry.minor_version == 2
+    assert entry.minor_version == 3
     assert entry.unique_id == account("parent")
     assert entry.data["entity_prefix"] == "Aula"
     entities = er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
@@ -161,3 +161,46 @@ async def test_logging_in_again_keeps_the_name_and_takes_the_new_tokens(
     assert entry.data["entity_prefix"] == "Aula"
     assert entry.data["access_token"] == "new-access"
     assert entry.unique_id == account("parent")
+
+
+@pytest.mark.fresh_install
+@pytest.mark.usefixtures("aula_without_children")
+async def test_an_entry_from_before_renames_each_list_of_homework_to_what_is_important(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=account("parent"), title="Aula", data={**DATA, "entity_prefix": "Aula"}, version=2, minor_version=2
+    )
+    other = MockConfigEntry(
+        domain=DOMAIN, unique_id=account("other"), title="Aula 2", data={**DATA, "entity_prefix": "Aula 2"}, version=2, minor_version=3
+    )
+    entry.add_to_hass(hass)
+    other.add_to_hass(hass)
+    registry = er.async_get(hass)
+
+    def installed(unique_id: str, object_id: str, config_entry: MockConfigEntry | None = entry) -> None:
+        registry.async_get_or_create("todo", DOMAIN, unique_id, suggested_object_id=object_id, config_entry=config_entry)
+
+    installed("Aula_homework_Alma_School", "aula_homework_alma_school")
+    installed("Aula_homework_Alma_Club", "alma_club_lektier")
+    installed("Aula_homework_Bo_School", "family_list")
+    installed("Aula_homework_Cy_School", "cy_school_homework")
+    installed("Aula_homework_Dan_School", "dan_school_homework", None)
+    registry.async_get_or_create("todo", "local_todo", "cy", suggested_object_id="cy_school_important")
+    installed("Aula 2_homework_Alma_School", "aula_2_homework_alma_school", other)
+    registry.async_get_or_create("sensor", DOMAIN, "Aula_homework_count", suggested_object_id="aula_homework_count", config_entry=entry)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.minor_version == 3
+
+    def unique_id_of(entity_id: str) -> str | None:
+        entity = registry.async_get(entity_id)
+        return None if entity is None else entity.unique_id
+
+    assert unique_id_of("todo.aula_important_alma_school") == "Aula_important_Alma_School"
+    assert unique_id_of("todo.alma_club_vigtigt") == "Aula_important_Alma_Club"
+    assert unique_id_of("todo.family_list") == "Aula_important_Bo_School"
+    assert unique_id_of("todo.cy_school_homework") == "Aula_important_Cy_School"
+    assert unique_id_of("todo.dan_school_important") == "Aula_important_Dan_School"
+    assert unique_id_of("todo.aula_2_homework_alma_school") == "Aula 2_homework_Alma_School"
+    assert unique_id_of("sensor.aula_homework_count") == "Aula_homework_count"

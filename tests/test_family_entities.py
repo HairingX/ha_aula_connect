@@ -1,4 +1,4 @@
-"""Tests of each child's school day, picture, homework and vacation requests, and of the events of
+"""Tests of each child's school day, picture, what is important and vacation requests, and of the events of
 new messages, photos and calendar events."""
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from pytest_homeassistant.common import async_fire_time_changed
 from pytest_homeassistant.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.aula_connect.const import DOMAIN
-from custom_components.aula_connect.todo import AulaHomeworkList
+from custom_components.aula_connect.todo import AulaImportantList
 
 from .fake_aula import CHILD, SCHOOL, FakeAula
 from .test_calendars import at, event, set_up
@@ -243,7 +243,7 @@ def _task(task_id: int, content: str, **fields: Any) -> AulaDailyPlanTask:
     return AulaDailyPlanTask(**values)
 
 
-def _homework() -> list[AulaWeeklyPlan]:
+def _important() -> list[AulaWeeklyPlan]:
     return [
         AulaWeeklyPlan(
             date(2026, 12, 28),
@@ -260,33 +260,33 @@ def _homework() -> list[AulaWeeklyPlan]:
 
 async def _items(hass: HomeAssistant) -> list[dict[str, Any]]:
     response: Any = await hass.services.async_call(
-        "todo", "get_items", {"entity_id": "todo.aula_homework_alma_school"}, blocking=True, return_response=True
+        "todo", "get_items", {"entity_id": "todo.aula_important_alma_school"}, blocking=True, return_response=True
     )
-    return response["todo.aula_homework_alma_school"]["items"]
+    return response["todo.aula_important_alma_school"]["items"]
 
 
-async def test_the_homework_is_the_weekly_plans_tasks_due_on_their_day(
+async def test_what_is_important_is_the_weekly_plans_tasks_due_on_their_day(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
-    aula.weekly_plans = _homework()
+    aula.weekly_plans = _important()
     await set_up(hass, freezer)
-    assert _state(hass, "todo.aula_homework_alma_school").state == "2"
+    assert _state(hass, "todo.aula_important_alma_school").state == "2"
     assert await _items(hass) == [
         {"uid": "1", "summary": "x" * 72 + "...", "status": "needs_action", "due": "2026-12-28", "description": "x" * 80},
         {"uid": "2", "summary": "[Dansk] Read page 4", "status": "needs_action", "due": "2026-12-29", "description": "Read page 4\nand page 5"},
     ]
 
 
-async def test_homework_ticked_is_remembered_at_home_only_and_only_ticked(
+async def test_what_is_important_ticked_is_remembered_at_home_only_and_only_ticked(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
-    aula.weekly_plans = _homework()
+    aula.weekly_plans = _important()
     await set_up(hass, freezer)
     await hass.services.async_call(
-        "todo", "update_item", {"entity_id": "todo.aula_homework_alma_school", "item": "2", "status": "completed"}, blocking=True
+        "todo", "update_item", {"entity_id": "todo.aula_important_alma_school", "item": "2", "status": "completed"}, blocking=True
     )
     assert [item["status"] for item in await _items(hass)] == ["needs_action", "completed"]
-    assert _state(hass, "todo.aula_homework_alma_school").state == "1"
+    assert _state(hass, "todo.aula_important_alma_school").state == "1"
     assert aula.writes == []
 
     [entry] = hass.config_entries.async_entries(DOMAIN)
@@ -295,37 +295,37 @@ async def test_homework_ticked_is_remembered_at_home_only_and_only_ticked(
     assert [item["status"] for item in await _items(hass)] == ["needs_action", "completed"]
 
     await hass.services.async_call(
-        "todo", "update_item", {"entity_id": "todo.aula_homework_alma_school", "item": "2", "status": "needs_action"}, blocking=True
+        "todo", "update_item", {"entity_id": "todo.aula_important_alma_school", "item": "2", "status": "needs_action"}, blocking=True
     )
     assert [item["status"] for item in await _items(hass)] == ["needs_action", "needs_action"]
 
     with pytest.raises(ServiceValidationError) as renamed:
         await hass.services.async_call(
-            "todo", "update_item", {"entity_id": "todo.aula_homework_alma_school", "item": "2", "rename": "Other"}, blocking=True
+            "todo", "update_item", {"entity_id": "todo.aula_important_alma_school", "item": "2", "rename": "Other"}, blocking=True
         )
-    assert renamed.value.translation_key == "homework_only_ticked"
+    assert renamed.value.translation_key == "important_only_ticked"
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call("todo", "add_item", {"entity_id": "todo.aula_homework_alma_school", "item": "More"}, blocking=True)
+        await hass.services.async_call("todo", "add_item", {"entity_id": "todo.aula_important_alma_school", "item": "More"}, blocking=True)
 
 
-async def test_homework_not_on_the_list_cannot_be_ticked(
+async def test_a_task_not_on_the_list_cannot_be_ticked(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
     await set_up(hass, freezer)
     platform = next(found for found in entity_platform.async_get_platforms(hass, DOMAIN) if found.domain == "todo")
-    homework = platform.entities["todo.aula_homework_alma_school"]
-    assert isinstance(homework, AulaHomeworkList)
+    important = platform.entities["todo.aula_important_alma_school"]
+    assert isinstance(important, AulaImportantList)
     with pytest.raises(ServiceValidationError) as missing:
-        await homework.async_update_todo_item(TodoItem(uid="9", status=TodoItemStatus.COMPLETED))
-    assert missing.value.translation_key == "homework_not_found"
+        await important.async_update_todo_item(TodoItem(uid="9", status=TodoItemStatus.COMPLETED))
+    assert missing.value.translation_key == "important_not_found"
 
 
-async def test_an_institution_without_weekly_plans_has_no_homework(
+async def test_an_institution_without_weekly_plans_has_no_list_of_what_is_important(
     hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory
 ) -> None:
     aula.widgets = set()
     await set_up(hass, freezer)
-    assert hass.states.get("todo.aula_homework_alma_school") is None
+    assert hass.states.get("todo.aula_important_alma_school") is None
 
 
 def message_thread(thread_id: int, latest: str, **fields: Any) -> AulaMessageThread:

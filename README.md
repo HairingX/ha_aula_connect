@@ -9,7 +9,7 @@ what Aula says about your children in Home Assistant:
 - whether there are unread messages, posts, calendar events, photos or presence requests, and
   an event for each new one;
 - calendars of the school's events, the weekly plans, the class's birthdays and the newsletters;
-- each child's picture, its homework as a to-do list, whether it has school today and
+- each child's picture, what its weekly plan marks as important as a to-do list, whether it has school today and
   tomorrow, when its school starts and ends, and the vacation requests waiting for an answer.
 
 On a user's explicit action - an action called, or a tap in the Aula Connect cards - it can also
@@ -23,7 +23,7 @@ Aula itself, the login and the API, is reached through the library
 
 - Get a notification on your phone when a child is checked out of after-school care.
 - See on a wall tablet who is at school and who is at home.
-- Show tomorrow's weekly plan and homework on the family dashboard in the evening.
+- Show tomorrow's weekly plan, and what is important for it, on the family dashboard in the evening.
 - Get told when a new message or post arrives in Aula, without the Aula app.
 
 ## Requirements
@@ -95,6 +95,9 @@ a child at an institution are on its device, and the login's own on the login's.
 In the entity ids below, `<child>` is the child's first name and `<institution>` the
 institution's name, as Aula has them; an installation set up before the children had devices
 keeps the entity ids it had, such as `sensor.aula_presence_alma_school`.
+Its list of homework is now each child's list of what is important: its word in the entity id
+becomes `important` (`vigtigt` for one named in Danish), such as
+`todo.aula_important_alma_school`, where no other entity has that id.
 
 To leave a child at an institution out - one it no longer attends, or one you do not want in
 Home Assistant - open **Settings > Devices & services > Aula Connect**, select the device, and
@@ -118,14 +121,14 @@ allowed once Aula no longer lists it.
 | `calendar.aula_<child>_<institution>_easyiq_weekly_plans` | The EasyIQ weekly plan. | |
 | `calendar.aula_<child>_<institution>_newsletter` | The MinUddannelse newsletters, one for each week, with their HTML as the description. | |
 | `image.aula_<child>_<institution>_picture` | The child's profile picture in Aula, read anew when it is shown, as Aula's link to it expires within the hour; the time it last changed. Aula's link is never an attribute. | `child_id` |
-| `todo.aula_<child>_<institution>_homework` | The weekly plan's tasks, each due on its day: the number not ticked. Ticking one is remembered in Home Assistant only, never told to Aula; a task cannot be added, renamed or removed, as the plan is the teachers'. | |
+| `todo.aula_<child>_<institution>_important` | What the weekly plan marks as important - its tasks: homework, things to bring, things to decide - each due on its day: the number not ticked. Ticking one is remembered in Home Assistant only, never told to Aula; a task cannot be added, renamed or removed, as the plan is the teachers'. | |
 | `binary_sensor.aula_<child>_<institution>_school_today` | On when the child has lessons today; off on a day without, and on a holiday. | `start`, `end` |
 | `binary_sensor.aula_<child>_<institution>_school_tomorrow` | The same for tomorrow. | `start`, `end` |
 | `sensor.aula_<child>_<institution>_school_start` | When the child's first lesson today starts; unknown on a day off. | |
 | `sensor.aula_<child>_<institution>_school_end` | When the child's last lesson today ends; unknown on a day off. | |
 | `binary_sensor.aula_<child>_<institution>_vacation_request` | On while the institution waits for an answer to a vacation request that can still be answered: `count` of them, and the first `deadline`. | `count`, `deadline` |
 
-The weekly plan and birthday calendars and the homework come with an institution that has
+The weekly plan and birthday calendars and the list of what is important come with an institution that has
 weekly plans in Aula, the EasyIQ calendar with one that has EasyIQ's weekly plans, and the
 newsletter calendar with one that has MinUddannelse's newsletters.
 
@@ -314,7 +317,7 @@ data:
 What a sick report needs to remember - the days each child was sick, as reported through Home
 Assistant or seen in the presence read every 5 minutes, the thread the family last wrote to the
 teachers in, and the days it wrote - is kept in Home Assistant's storage for 60 days, and
-deleted with the entry. So is the homework ticked.
+deleted with the entry. So is what is important ticked.
 
 ## Actions
 

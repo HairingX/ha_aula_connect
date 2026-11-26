@@ -25,8 +25,8 @@
       }
     },
     "todo": {
-      "homework": {
-        "default": "mdi:book-open-variant"
+      "important": {
+        "default": "mdi:flag-outline"
       }
     },
     "event": {
