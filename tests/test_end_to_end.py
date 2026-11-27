@@ -101,6 +101,7 @@ async def test_a_setup_logs_in_with_mitid_and_reads_aula(hass: HomeAssistant) ->
         assert aula["aula_api_version"] == SimulatedAulaApi.VERSION
         assert [line for line in aula["not_read"] if ": not asked, as " not in line] == []
         assert "search.findGroups: not asked, as it searches for a text" in aula["not_read"]
+        assert diagnostics["posts_seen"]["moved"] is False
         endpoints = {exchange["endpoint"] for exchange in aula["exchanges"]}
         assert {
             "profiles.getProfilesByLogin",
