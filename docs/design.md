@@ -61,9 +61,7 @@ The diagnostics read Aula once more through the library, which keeps the newest 
 request in memory and hands them out with every id, name, contact detail and link replaced by
 another of the same length, keyed by a secret kept in Home Assistant's storage: the same value
 gets the same replacement in every answer and every download, so that a download shows how
-Aula's answers hang together and what they hold now, without saying who anyone is. After that,
-they read the news feed's newest post twice, a moment apart, and keep when Aula said the posts
-were last seen each time: where the two differ, reading the feed moves it.
+Aula's answers hang together and what they hold now, without saying who anyone is.
 
 Neither a token nor the MitID user ID is logged or in the diagnostics. Aula takes the access token
 in the URL, and the HTTP client puts the URL in its errors, so every error text is redacted before

@@ -48,33 +48,13 @@ async def _check(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildPr
     return {key: check[key] for key in ("route", "child_found", "same_institution", "sick_today")}
 
 
-async def _posts_seen(entry: AulaConfigEntry) -> dict[str, Any]:
-    """Whether reading the news feed moves when Aula says the guardian last saw it: the newest post
-    read twice, a moment apart, and when Aula said they were last seen each time."""
-    client = entry.runtime_data.client
-    try:
-        profiles = (await client.login()).profiles
-        first_read_at = dt_util.utcnow()
-        first = await client.get_posts(profiles, 1)
-        second = await client.get_posts(profiles, 1)
-    except Exception as error:
-        return {"error": error_text(error)}
-    return {
-        "first_read_at": first_read_at.isoformat(),
-        "last_seen_before": first.last_seen.isoformat() if first.last_seen else None,
-        "last_seen_after": second.last_seen.isoformat() if second.last_seen else None,
-        "moved": first.last_seen != second.last_seen,
-    }
-
-
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: AulaConfigEntry) -> dict[str, Any]:
     """How the entry's reading of Aula goes, and everything Aula answers now, with who someone is
     replaced.
 
     The MitID user ID and the tokens are credentials, and are never included. Each read is made
-    again first, and the news feed twice more after, to tell whether reading it moves when Aula
-    says it was last seen; every id, name, contact detail and link in the answers is replaced by
-    another of its length, the same one each time. The report of the latest probe of the widgets' services,
+    again first; every id, name, contact detail and link in the answers is replaced by another of
+    its length, the same one each time. The report of the latest probe of the widgets' services,
     where an administrator made one, is added as it is.
     """
     runtime = entry.runtime_data
@@ -84,7 +64,6 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: AulaCon
     except Exception as error:
         failed = [error_text(error)]
     answers = runtime.client.responses(await pseudonym_key(hass))
-    posts_seen = await _posts_seen(entry)
     data_coordinator = runtime.data_coordinator
     calendar_coordinator = runtime.calendar_coordinator
     data = data_coordinator.data
@@ -118,7 +97,6 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: AulaCon
             for anomaly in runtime.client.anomalies()
         ],
         "aula": {"not_read": failed, **answers},
-        "posts_seen": posts_seen,
         "sick_report_checks": [await _check(hass, entry, child) for child in (data.children if data else [])],
         # The probe's report names steps, fields and cookies, never a value of one.
         "widget_probe": None if runtime.client.widget_probe is None else runtime.client.widget_probe.as_dict(),

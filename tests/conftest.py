@@ -7,7 +7,6 @@ from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
-from aula_connect.api.models.module import AulaPosts
 from homeassistant.helpers import entity_registry as er
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -105,8 +104,6 @@ def aula_without_children() -> Iterator[None]:
         aula_version=23,
         has_widget=MagicMock(return_value=False),
         read_everything=AsyncMock(return_value=[]),
-        login=AsyncMock(return_value=MagicMock(profiles=[])),
-        get_posts=AsyncMock(return_value=AulaPosts([], None, False)),
         anomalies=MagicMock(return_value=()),
         widget_probe=None,
         read=AsyncMock(return_value={"endpoint": "profiles.getProfileContext"}),

@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 from aula_connect import Anomaly, AnomalyKind
-from aula_connect.api.models.module import AulaPosts
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant.common import MockConfigEntry
 
@@ -117,37 +116,3 @@ async def test_the_diagnostics_replace_with_one_key_made_once_and_kept_private(
     [first], [second] = (call.args for call in client.responses.call_args_list)
     assert first == second and len(first) == 32
     assert hass_storage["aula_connect.pseudonym_key"]["data"] == {"key": first.hex()}
-
-
-@pytest.mark.usefixtures("aula_without_children")
-async def test_the_diagnostics_tell_whether_reading_the_news_feed_moves_when_it_was_last_seen(hass: HomeAssistant) -> None:
-    entry = MockConfigEntry(
-        domain=DOMAIN, unique_id="account", data={**DATA, "entity_prefix": "Aula"}, version=2, minor_version=2
-    )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    client: Any = entry.runtime_data.client
-    before = datetime(2026, 11, 25, 19, 54, tzinfo=timezone.utc)
-    after = datetime(2026, 11, 27, 9, 0, tzinfo=timezone.utc)
-    client.get_posts.side_effect = [AulaPosts([], before, False), AulaPosts([], after, False)]
-
-    diagnostics: Any = await async_get_config_entry_diagnostics(hass, entry)
-
-    seen = diagnostics["posts_seen"]
-    assert (seen["last_seen_before"], seen["last_seen_after"], seen["moved"]) == (before.isoformat(), after.isoformat(), True)
-    assert datetime.fromisoformat(seen["first_read_at"]).tzinfo is not None
-    assert [call.args[1] for call in client.get_posts.call_args_list] == [1, 1]
-    assert client.get_posts.await_count == 2 and client.read_everything.await_count == 1
-
-    client.get_posts.side_effect = [AulaPosts([], None, False), AulaPosts([], None, False)]
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-    assert {key: diagnostics["posts_seen"][key] for key in ("last_seen_before", "last_seen_after", "moved")} == {
-        "last_seen_before": None,
-        "last_seen_after": None,
-        "moved": False,
-    }
-
-    client.get_posts.side_effect = ConnectionError("url: /api?access_token=s3cr3t")
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-    assert diagnostics["posts_seen"] == {"error": "url: /api?access_token=REDACTED"}

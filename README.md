@@ -388,7 +388,7 @@ response_variable: answer
   Aula once more, from the start of this week and three weeks on, the birthdays for a year on,
   and hold what it answers - the messages of every thread too, except those marked sensitive,
   and every other method of Aula's that only reads, such as the posts, the gallery, the common
-  files and the closed days and opening hours, the first items of each list one by one - with each answer's headers and when
+  files and the presence registrations, the first items of each list one by one - with each answer's headers and when
   it came, and the newest failure of each request, an error such as a timeout among them, even
   where it later succeeded. The MitID user ID and every token are hidden wherever they stand. All
   the answers say is replaced, but how they are built: every word of every text, every id, code,
