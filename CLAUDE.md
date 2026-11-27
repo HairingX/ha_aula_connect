@@ -20,8 +20,8 @@ into Home Assistant devices and entities. How and why it is built as it is: `doc
 - It changes things in Aula only where the entry's options allow that kind of change - each off
   until a user turns it on - and only on a user's explicit action - an action called, or a websocket
   command the cards send after the user confirms: reporting a child sick and taking it back,
-  registering and deleting a vacation, answering a vacation request, and replying in a thread
-  about a child. Each is sent once, never from a coordinator's poll and never retried; where it
+  registering and deleting a vacation, answering a vacation request, replying in a thread
+  about a child, and marking a post seen. Each is sent once, never from a coordinator's poll and never retried; where it
   fails, the error says Aula may or may not have done it. Nothing is sent without an explicit
   thread. Probing the services Aula's widgets log in to is an administrator's action, and only reads: it
   never reads an address whose name tells of a change.

@@ -175,3 +175,12 @@ probe_widgets:
       selector:
         text:
           multiple: true
+mark_post_seen:
+  fields:
+    config_entry_id: *entry
+    post_id:
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box

@@ -22,6 +22,7 @@ from aula_connect.tabulex import TabulexError
 from aula_connect.api.models.module import (
     AulaChildProfile,
     AulaMessageThread,
+    AulaPostNotification,
     AulaPosts,
     AulaPresenceStatus,
     AulaSickReportRoute,
@@ -38,6 +39,7 @@ from .const import (
     CONF_ALLOW_MESSAGES,
     CONF_ALLOW_SICK_REPORTS,
     CONF_ALLOW_VACATION_REQUESTS,
+    CONF_ALLOW_MARK_SEEN,
     CONF_ALLOW_VACATIONS,
     DOMAIN,
 )
@@ -282,24 +284,33 @@ async def reply(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildPro
     runtime.data_coordinator.note_own_reply(thread_id)
 
 
+def _post_notifications(entry: AulaConfigEntry) -> list[AulaPostNotification]:
+    """The notifications of posts new to the guardian, as the entry read them last."""
+    data = entry.runtime_data.data_coordinator.data
+    return [note for note in (data.notifications if data else []) if isinstance(note, AulaPostNotification)]
+
+
 async def posts(hass: HomeAssistant, entry: AulaConfigEntry) -> dict[str, Any]:
-    """The newest posts of the entry's news feed, each saying whether it is new to the guardian."""
+    """The newest posts of the entry's news feed, each saying whether it is new to the guardian.
+
+    A post is new while Aula has a notification of it, as Aula counts it unread: reading the feed
+    leaves that as it is.
+    """
     client = entry.runtime_data.client
 
     async def read() -> AulaPosts:
         return await client.get_posts((await client.login()).profiles, POSTS)
 
     found = await _aula(hass, entry, read, write=False)
-    seen = found.last_seen
+    new = {note.post_id for note in _post_notifications(entry)}
     return {
-        "last_seen": seen.isoformat() if seen else None,
         "posts": [
             {
                 "id": post.id,
                 "title": post.title,
                 "html": post.html,
                 "time": post.timestamp.isoformat(),
-                "new": seen is not None and post.timestamp > seen,
+                "new": post.id in new,
                 "important": post.is_important,
                 "important_from": post.important_from.isoformat() if post.important_from else None,
                 "important_to": post.important_to.isoformat() if post.important_to else None,
@@ -316,6 +327,24 @@ async def posts(hass: HomeAssistant, entry: AulaConfigEntry) -> dict[str, Any]:
             for post in found.posts
         ],
     }
+
+
+async def mark_post_seen(hass: HomeAssistant, entry: AulaConfigEntry, post_id: int) -> dict[str, Any]:
+    """Tell Aula the guardian has seen the post, as opening it in Aula does, once.
+
+    Aula's notifications of the post are deleted, read anew first; where there are none, nothing
+    is sent. The entry reads its notifications again after.
+    """
+    _require(entry, CONF_ALLOW_MARK_SEEN)
+    client = entry.runtime_data.client
+    coordinator = entry.runtime_data.data_coordinator
+    children = coordinator.data.children if coordinator.data else []
+    notes = await _aula(hass, entry, lambda: client.get_notifications(children), write=False)
+    seen = [note for note in notes if isinstance(note, AulaPostNotification) and note.post_id == post_id]
+    if seen:
+        await _aula(hass, entry, lambda: client.delete_notifications(list(seen)), write=True)
+        await coordinator.async_request_refresh()
+    return {"marked": len(seen)}
 
 
 async def opening_hours(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildProfile, start: date, end: date) -> dict[str, Any]:

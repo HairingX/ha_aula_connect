@@ -71,6 +71,7 @@ button for it. Reading Aula is always on.
 | Register and delete vacations | Registering a vacation for the children, and deleting one. |
 | Answer vacation requests | Answering an institution's vacation request, day by day. |
 | Reply in threads | Replying in a thread about a child, to everyone in it. A new thread is never started. |
+| Mark news and pictures seen | Telling Aula a post has been seen, as opening it in Aula does, so that it is no longer new there. |
 
 The login is reloaded when the options change.
 
@@ -289,6 +290,7 @@ Assistant may call them, as with Home Assistant's other actions.
 | `aula_connect.delete_vacation` | Deletes a vacation registered for one of the children, where Aula lets it be changed. |
 | `aula_connect.answer_vacation_request` | Answers an institution's vacation request: for each weekday from today, whether the child comes, with entry and exit times where the request asks for them. |
 | `aula_connect.send_message` | Replies in one of the child's threads, to everyone in it, as plain text. Nothing is sent without a thread. |
+| `aula_connect.mark_post_seen` | Tells Aula the post `post_id` has been seen: Aula's notifications of it are deleted, as opening it in Aula does, and it is no longer new. Where Aula has none, nothing is sent. Responds with how many were marked. |
 
 Each takes `config_entry_id`, the entry of the guardian it is done as, and the child's id,
 `child_id`, which is the attribute `child_id` of the child's picture entity. Where the

@@ -32,6 +32,7 @@ SERVICE_DELETE_VACATION = "delete_vacation"
 SERVICE_ANSWER_VACATION_REQUEST = "answer_vacation_request"
 SERVICE_SEND_MESSAGE = "send_message"
 SERVICE_PROBE_WIDGETS = "probe_widgets"
+SERVICE_MARK_POST_SEEN = "mark_post_seen"
 
 READ_SCHEMA = probatio.Schema(
     {
@@ -59,6 +60,7 @@ ADD_VACATION_SCHEMA = _schema(
     }
 )
 DELETE_VACATION_SCHEMA = _schema({probatio.Required("vacation_id"): cv.positive_int})
+MARK_POST_SEEN_SCHEMA = _schema({probatio.Required("post_id"): cv.positive_int})
 ANSWER_VACATION_REQUEST_SCHEMA = _schema(
     {
         probatio.Required("child_id"): cv.positive_int,
@@ -189,6 +191,9 @@ def async_register_services(hass: HomeAssistant) -> None:
         await family_actions.answer_vacation_request(hass, entry, child, call.data["request_id"], days, call.data["comment"])
         return None
 
+    async def mark_post_seen(call: ServiceCall, entry: AulaConfigEntry) -> ServiceResponse:
+        return await family_actions.mark_post_seen(hass, entry, call.data["post_id"])
+
     async def send_message(call: ServiceCall, entry: AulaConfigEntry) -> ServiceResponse:
         child = family_actions.entry_child(entry, call.data["child_id"])
         await family_actions.reply(hass, entry, child, call.data["thread_id"], call.data["text"])
@@ -212,6 +217,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         DOMAIN, SERVICE_ANSWER_VACATION_REQUEST, family(answer_vacation_request), ANSWER_VACATION_REQUEST_SCHEMA, SupportsResponse.NONE
     )
     actions.async_register(DOMAIN, SERVICE_SEND_MESSAGE, family(send_message), SEND_MESSAGE_SCHEMA, SupportsResponse.NONE)
+    actions.async_register(DOMAIN, SERVICE_MARK_POST_SEEN, family(mark_post_seen), MARK_POST_SEEN_SCHEMA, SupportsResponse.OPTIONAL)
     actions.async_register(DOMAIN, SERVICE_PROBE_WIDGETS, probe_widgets_as_admin, PROBE_SCHEMA, SupportsResponse.ONLY)
 
 

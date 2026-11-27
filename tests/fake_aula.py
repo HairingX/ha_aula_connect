@@ -165,6 +165,10 @@ class FakeAula:
     async def add_vacation(self, children: list[AulaChildProfile], start: date, end: date, comment: str = "") -> None:
         self._call("add_vacation", [child.id for child in children], start, end, comment)
 
+    async def delete_notifications(self, notifications: list[AULA_NOTIFICATION_TYPES]) -> None:
+        self._call("delete_notifications", [note.notification_id for note in notifications])
+        self.notifications = [note for note in self.notifications if note not in notifications]
+
     async def delete_vacation(self, vacation_id: int) -> None:
         self._call("delete_vacation", vacation_id)
 

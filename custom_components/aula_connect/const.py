@@ -26,11 +26,13 @@ CONF_ALLOW_SICK_REPORTS = "allow_sick_reports"
 CONF_ALLOW_VACATIONS = "allow_vacations"
 CONF_ALLOW_VACATION_REQUESTS = "allow_vacation_requests"
 CONF_ALLOW_MESSAGES = "allow_messages"
+CONF_ALLOW_MARK_SEEN = "allow_mark_seen"
 ALLOWED_CHANGES = {
     CONF_ALLOW_SICK_REPORTS: "sick_reports",
     CONF_ALLOW_VACATIONS: "vacations",
     CONF_ALLOW_VACATION_REQUESTS: "vacation_requests",
     CONF_ALLOW_MESSAGES: "messages",
+    CONF_ALLOW_MARK_SEEN: "mark_seen",
 }
 """The options that each allow a kind of change in Aula, off until a user turns it on, by the name the cards know it by."""
 

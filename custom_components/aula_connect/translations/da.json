@@ -452,6 +452,9 @@
     },
     "sick_report_unprepared": {
       "message": "Barnet kan ikke meldes syg herfra. Meld syg i Aula."
+    },
+    "mark_seen_not_allowed": {
+      "message": "Markering af nyheder og billeder som set er slået fra i Aula Connects indstillinger."
     }
   },
   "issues": {
@@ -642,6 +645,20 @@
           "description": "Barnets id: attributten child_id på barnets billede."
         }
       }
+    },
+    "mark_post_seen": {
+      "name": "Markér opslag som set",
+      "description": "Fortæller Aula, at et opslag er set, så det ikke længere er nyt i Aula.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula-konto",
+          "description": "Aula Connect-posten for den forælder, det gøres som."
+        },
+        "post_id": {
+          "name": "Opslag",
+          "description": "Opslagets id, som kortet viser det."
+        }
+      }
     }
   },
   "options": {
@@ -653,13 +670,15 @@
           "allow_sick_reports": "Sygemelde",
           "allow_vacations": "Registrere og slette ferie",
           "allow_vacation_requests": "Svare på ferieanmodninger",
-          "allow_messages": "Svare i tråde"
+          "allow_messages": "Svare i tråde",
+          "allow_mark_seen": "Markere nyheder og billeder som set"
         },
         "data_description": {
           "allow_sick_reports": "Melde et barn sygt i dag, og tage det tilbage, hvor det kan lade sig gøre. Hos nogle institutioner kan en sygemelding ikke tages tilbage.",
           "allow_vacations": "Registrere ferie for børnene, og slette den.",
           "allow_vacation_requests": "Svare på en institutions ferieanmodning, dag for dag.",
-          "allow_messages": "Svare i en tråd om et barn, til alle i den. En ny tråd startes aldrig."
+          "allow_messages": "Svare i en tråd om et barn, til alle i den. En ny tråd startes aldrig.",
+          "allow_mark_seen": "Fortælle Aula, at et opslag eller et billede er set, som når det åbnes i Aula, så det ikke længere er nyt dér."
         }
       }
     }

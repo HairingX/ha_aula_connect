@@ -452,6 +452,9 @@
     },
     "sick_report_unprepared": {
       "message": "The child cannot be reported sick from here. Report sick in Aula."
+    },
+    "mark_seen_not_allowed": {
+      "message": "Marking news and pictures seen is turned off in Aula Connect's options."
     }
   },
   "issues": {
@@ -642,6 +645,20 @@
           "description": "The child's id: the attribute child_id of its picture entity."
         }
       }
+    },
+    "mark_post_seen": {
+      "name": "Mark post seen",
+      "description": "Tells Aula that a post has been seen, so that it is no longer new in Aula.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Aula account",
+          "description": "The Aula Connect entry of the guardian it is done as."
+        },
+        "post_id": {
+          "name": "Post",
+          "description": "The post's id, as the card lists it."
+        }
+      }
     }
   },
   "options": {
@@ -653,13 +670,15 @@
           "allow_sick_reports": "Report sick",
           "allow_vacations": "Register and delete vacations",
           "allow_vacation_requests": "Answer vacation requests",
-          "allow_messages": "Reply in threads"
+          "allow_messages": "Reply in threads",
+          "allow_mark_seen": "Mark news and pictures seen"
         },
         "data_description": {
           "allow_sick_reports": "Report a child sick today, and take it back where that can be done. At some institutions a sick report cannot be taken back.",
           "allow_vacations": "Register a vacation for the children, and delete one.",
           "allow_vacation_requests": "Answer an institution's vacation request, day by day.",
-          "allow_messages": "Reply in a thread about a child, to everyone in it. A new thread is never started."
+          "allow_messages": "Reply in a thread about a child, to everyone in it. A new thread is never started.",
+          "allow_mark_seen": "Tell Aula that a post or a picture has been seen, as opening it in Aula does, so that it is no longer new there."
         }
       }
     }

@@ -133,7 +133,7 @@ async def test_the_children_of_every_loaded_entry_are_listed(
     await client.send_json_auto_id({"type": "aula_connect/children"})
     result = await client.receive_json()
     alma = {"child_id": 11, "first_name": "Alma", "name": "Alma Example", "institution_name": "School", "guardian": "Pat Example"}
-    every = ["sick_reports", "vacations", "vacation_requests", "messages"]
+    every = ["sick_reports", "vacations", "vacation_requests", "messages", "mark_seen"]
     assert result["result"] == {
         "children": [
             {"entry_id": _entry_id(hass), **alma, "picture_entity": "image.aula_picture_alma_school", "allowed": every},

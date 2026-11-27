@@ -83,6 +83,7 @@ def async_register(hass: HomeAssistant) -> None:
     _async_register_command(hass, ws_opening_hours)
     _async_register_command(hass, ws_add_vacation)
     _async_register_command(hass, ws_delete_vacation)
+    _async_register_command(hass, ws_post_seen)
     _async_register_command(hass, ws_vacation_requests)
     _async_register_command(hass, ws_answer_vacation_request)
 
@@ -140,6 +141,11 @@ DELETE_VACATION_SCHEMA: VolDictType = {
     probatio.Required("type"): "aula_connect/vacation/delete",
     probatio.Required("entry_id"): str,
     probatio.Required("vacation_id"): int,
+}
+POST_SEEN_SCHEMA: VolDictType = {
+    probatio.Required("type"): "aula_connect/post/seen",
+    probatio.Required("entry_id"): str,
+    probatio.Required("post_id"): int,
 }
 VACATION_REQUESTS_SCHEMA = _child_schema("aula_connect/vacation_requests")
 DAY_SCHEMA: VolDictType = {
@@ -316,6 +322,18 @@ async def ws_add_vacation(hass: HomeAssistant, connection: ActiveConnection, msg
         children = [family_actions.entry_child(entry, child_id) for child_id in msg["child_ids"]]
         await family_actions.add_vacation(hass, entry, children, msg["start"], msg["end"], msg["comment"])
         return {}
+
+    await _respond(connection, msg, work)
+
+
+@_websocket_command(POST_SEEN_SCHEMA)
+@_async_response
+async def ws_post_seen(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]) -> None:
+    """Tell Aula a post of an entry's news feed has been seen."""
+
+    async def work() -> dict[str, Any]:
+        entry = family_actions.loaded_entry(hass, msg["entry_id"])
+        return await family_actions.mark_post_seen(hass, entry, msg["post_id"])
 
     await _respond(connection, msg, work)
 

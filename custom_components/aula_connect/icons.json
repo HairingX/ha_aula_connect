@@ -68,6 +68,9 @@
     },
     "probe_widgets": {
       "service": "mdi:magnify-scan"
+    },
+    "mark_post_seen": {
+      "service": "mdi:newspaper-check"
     }
   }
 }

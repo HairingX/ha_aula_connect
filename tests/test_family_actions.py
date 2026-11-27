@@ -17,6 +17,7 @@ from aula_connect.api.models.module import (
     AulaOpeningDay,
     AulaPost,
     AulaPostAttachment,
+    AulaPostNotification,
     AulaPosts,
     AulaSickReportRoute,
     AulaVacation,
@@ -622,9 +623,10 @@ async def test_the_news_feed_s_newest_posts_say_which_are_new_to_the_guardian(
         at(25, 8),
         False,
     )
+    aula.notifications = [_post_note(2)]
     await set_up(hass, freezer)
     answer = await _result(client, {"type": "aula_connect/posts", "entry_id": _entry_id(hass)})
-    assert answer["last_seen"] == at(25, 8).isoformat()
+    assert "last_seen" not in answer
     assert [(post["id"], post["new"], post["important"], post["important_from"]) for post in answer["posts"]] == [
         (2, True, True, "2026-12-27"),
         (1, False, False, None),
@@ -633,9 +635,57 @@ async def test_the_news_feed_s_newest_posts_say_which_are_new_to_the_guardian(
     assert (answer["posts"][0]["author"], answer["posts"][0]["groups"], answer["posts"][0]["comments"]) == ("Kontoret", ["3A"], 1)
     aula.posts = AulaPosts(aula.posts.posts[1:], None, False)
     answer = await _result(client, {"type": "aula_connect/posts", "entry_id": _entry_id(hass)})
-    assert answer["last_seen"] is None and [post["new"] for post in answer["posts"]] == [False]
+    assert [post["new"] for post in answer["posts"]] == [False]
     assert [post["children"] for post in answer["posts"]] == [[CHILD.id, 13]]
     assert aula.reads.count("get_posts") == 2
+    assert aula.writes == []
+
+
+def _post_note(post_id: int, notification_id: str | None = None) -> AulaPostNotification:
+    return AulaPostNotification(
+        notification_area="Posts",
+        notification_event_type="PostSharedWithMe",
+        notification_id=notification_id or f"PostSharedWithMe:{post_id}",
+        notification_type="Badge",
+        expires=at(31, 8),
+        triggered=at(27, 8),
+        institution_code="S1",
+        institution_profile_id=21,
+        title="",
+        post_id=post_id,
+    )
+
+
+async def test_a_post_marked_seen_has_its_notifications_deleted_in_aula_once_and_is_new_no_more(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
+) -> None:
+    aula.posts = AulaPosts([AulaPost(2, "Juleklip", "", at(27, 8), None, None, None, False, None, None, None, None, [], [], 0)], None, False)
+    aula.notifications = [_post_note(2), _post_note(2, "PostSharedWithMe:2:again"), _post_note(3)]
+    await set_up(hass, freezer)
+    seen = await _result(client, {"type": "aula_connect/post/seen", "entry_id": _entry_id(hass), "post_id": 2})
+    assert seen == {"marked": 2}
+    assert aula.writes == [("delete_notifications", (["PostSharedWithMe:2", "PostSharedWithMe:2:again"],))]
+    await hass.async_block_till_done()
+    answer = await _result(client, {"type": "aula_connect/posts", "entry_id": _entry_id(hass)})
+    assert [post["new"] for post in answer["posts"]] == [False]
+    again = await hass.services.async_call(
+        DOMAIN, "mark_post_seen", {"config_entry_id": _entry_id(hass), "post_id": 2}, blocking=True, return_response=True
+    )
+    assert again == {"marked": 0}
+    assert len(aula.writes) == 1
+
+
+async def test_marking_a_post_seen_is_refused_where_the_options_do_not_allow_it(
+    hass: HomeAssistant, aula: FakeAula, freezer: FrozenDateTimeFactory, client: MockHAClientWebSocket
+) -> None:
+    aula.notifications = [_post_note(2)]
+    await set_up(hass, freezer, options={})
+    with pytest.raises(ServiceValidationError) as refused:
+        await _call(hass, "mark_post_seen", {"config_entry_id": _entry_id(hass), "post_id": 2})
+    assert refused.value.translation_key == "mark_seen_not_allowed"
+    await client.send_json_auto_id({"type": "aula_connect/post/seen", "entry_id": _entry_id(hass), "post_id": 2})
+    answer = await client.receive_json()
+    assert (answer["success"], answer["error"]["code"]) == (False, "not_allowed")
     assert aula.writes == []
 
 

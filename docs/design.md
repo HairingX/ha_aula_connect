@@ -158,9 +158,14 @@ need not be administrators; they send no token, no MitID user ID and no UNI-logi
 - `aula_connect/posts` takes an entry and answers with the newest 20 posts of its news feed:
   each one's title, text as Aula's HTML, when it was written, whether it is important and from
   when to when, its author and institution, the groups it is shared with, how many comments it
-  has, what is attached with links Aula lets expire, the `children` Aula relates it to, and whether it is `new` - written after the
-  guardian last saw the posts in Aula, which is answered as `last_seen`. It is read when it is
-  asked for, not polled; nothing is marked seen.
+  has, what is attached with links Aula lets expire, the `children` Aula relates it to, and whether it is `new`: whether Aula has a notification of
+  it, as Aula counts a post unread. Reading the feed moves when Aula says the posts were last
+  seen, which Aula shows nowhere, and leaves the notifications as they are; it is read when it is
+  asked for, not polled.
+- `aula_connect/post/seen` takes an entry and a post's id and, where the options allow marking
+  seen, deletes Aula's notifications of the post, read anew first, as Aula's portal does when a
+  post is shown: it is no longer new, in Aula as on the cards. It answers with how many were
+  marked, and sends nothing where there are none.
 - `aula_connect/opening_hours` takes an entry, a child and a period of at most 62 days, and
   answers with the days the child's institution is closed, by name, and its hours day by day,
   a day it is closed among them. A period that runs backward or is longer is `invalid_format`.
