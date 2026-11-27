@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
+from aula_connect import read_marks
 from homeassistant.helpers import entity_registry as er
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -92,6 +93,13 @@ def installed_before(request: pytest.FixtureRequest) -> None:
     for entity_id, unique_id in {**INSTALLED, **INSTALLED_SECOND}.items():
         domain, object_id = entity_id.split(".")
         registry.async_get_or_create(domain, DOMAIN, unique_id, suggested_object_id=object_id)
+
+
+@pytest.fixture(autouse=True)
+def no_wait_to_read_marks_again() -> Iterator[None]:
+    """Read Aula's marks of what was seen again at once in the diagnostics, not seconds later."""
+    with patch.object(read_marks, "RECHECK_AFTER", timedelta(0)):
+        yield
 
 
 @pytest.fixture
