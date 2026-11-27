@@ -307,6 +307,7 @@ async def posts(hass: HomeAssistant, entry: AulaConfigEntry) -> dict[str, Any]:
                 "institution": post.institution,
                 "groups": post.groups,
                 "comments": post.comment_count,
+                "children": post.children,
                 "attachments": [
                     {"name": attachment.name, "url": attachment.url, "thumbnail": attachment.thumbnail_url, "media": attachment.is_media}
                     for attachment in post.attachments

@@ -617,7 +617,7 @@ async def test_the_news_feed_s_newest_posts_say_which_are_new_to_the_guardian(
     aula.posts = AulaPosts(
         [
             AulaPost(2, "Juleklip", "<p>Fredag</p>", at(27, 8), None, None, None, True, date(2026, 12, 27), None, "Kontoret", "School", ["3A"], [file], 1),
-            AulaPost(1, "Kor", "<p>Kom og syng</p>", at(20, 8), None, None, None, False, None, None, None, None, [], [], 0),
+            AulaPost(1, "Kor", "<p>Kom og syng</p>", at(20, 8), None, None, None, False, None, None, None, None, [], [], 0, [CHILD.id, 13]),
         ],
         at(25, 8),
         False,
@@ -634,6 +634,8 @@ async def test_the_news_feed_s_newest_posts_say_which_are_new_to_the_guardian(
     aula.posts = AulaPosts(aula.posts.posts[1:], None, False)
     answer = await _result(client, {"type": "aula_connect/posts", "entry_id": _entry_id(hass)})
     assert answer["last_seen"] is None and [post["new"] for post in answer["posts"]] == [False]
+    assert [post["children"] for post in answer["posts"]] == [[CHILD.id, 13]]
+    assert aula.reads.count("get_posts") == 2
     assert aula.writes == []
 
 

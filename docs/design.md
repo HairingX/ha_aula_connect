@@ -155,7 +155,7 @@ need not be administrators; they send no token, no MitID user ID and no UNI-logi
 - `aula_connect/posts` takes an entry and answers with the newest 20 posts of its news feed:
   each one's title, text as Aula's HTML, when it was written, whether it is important and from
   when to when, its author and institution, the groups it is shared with, how many comments it
-  has, what is attached with links Aula lets expire, and whether it is `new` - written after the
+  has, what is attached with links Aula lets expire, the `children` Aula relates it to, and whether it is `new` - written after the
   guardian last saw the posts in Aula, which is answered as `last_seen`. It is read when it is
   asked for, not polled; nothing is marked seen.
 - `aula_connect/opening_hours` takes an entry, a child and a period of at most 62 days, and
