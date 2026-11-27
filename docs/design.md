@@ -152,9 +152,8 @@ need not be administrators; they send no token, no MitID user ID and no UNI-logi
   private or deleted. An entry, child or event not found is `not_found`; an event Aula cannot be
   read for is `home_assistant_error`, with no token in its message. It is read when it is asked
   for, not polled.
-- `aula_connect/posts` takes an entry and answers with the newest 20 posts of its news feed for
-  each of its children, read as Aula's own filter of one child reads them, each post once with the
-  `children` whose feed holds it - a post to every guardian is in each: each one's title, text as Aula's HTML, when it was written, whether it is important and from
+- `aula_connect/posts` takes an entry and answers with the newest 20 posts of its news feed:
+  each one's title, text as Aula's HTML, when it was written, whether it is important and from
   when to when, its author and institution, the groups it is shared with, how many comments it
   has, what is attached with links Aula lets expire, and whether it is `new` - written after the
   guardian last saw the posts in Aula, which is answered as `last_seen`. It is read when it is

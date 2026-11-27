@@ -11,7 +11,6 @@ import logging
 
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import date, datetime, time, timedelta, timezone
-from functools import partial
 from typing import Any, cast
 
 from aula_connect.api.aula_errors import (
@@ -23,7 +22,6 @@ from aula_connect.tabulex import TabulexError
 from aula_connect.api.models.module import (
     AulaChildProfile,
     AulaMessageThread,
-    AulaPost,
     AulaPosts,
     AulaPresenceStatus,
     AulaSickReportRoute,
@@ -285,27 +283,14 @@ async def reply(hass: HomeAssistant, entry: AulaConfigEntry, child: AulaChildPro
 
 
 async def posts(hass: HomeAssistant, entry: AulaConfigEntry) -> dict[str, Any]:
-    """The newest posts of the entry's news feed, each saying whether it is new to the guardian.
-
-    Each post names the children it is for: those whose feed, as Aula filters it for one child,
-    holds it.
-    """
+    """The newest posts of the entry's news feed, each saying whether it is new to the guardian."""
     client = entry.runtime_data.client
-    children = entry.runtime_data.data_coordinator.data.children
 
-    async def read(child: AulaChildProfile) -> AulaPosts:
-        return await client.get_posts((await client.login()).profiles, POSTS, [child])
+    async def read() -> AulaPosts:
+        return await client.get_posts((await client.login()).profiles, POSTS)
 
-    found: dict[int, AulaPost] = {}
-    whom: dict[int, list[int]] = {}
-    seen = None
-    for child in children:
-        feed = await _aula(hass, entry, partial(read, child), write=False)
-        seen = feed.last_seen
-        for post in feed.posts:
-            found.setdefault(post.id, post)
-            whom.setdefault(post.id, []).append(child.id)
-    newest = sorted(found.values(), key=lambda post: post.timestamp, reverse=True)
+    found = await _aula(hass, entry, read, write=False)
+    seen = found.last_seen
     return {
         "last_seen": seen.isoformat() if seen else None,
         "posts": [
@@ -322,13 +307,12 @@ async def posts(hass: HomeAssistant, entry: AulaConfigEntry) -> dict[str, Any]:
                 "institution": post.institution,
                 "groups": post.groups,
                 "comments": post.comment_count,
-                "children": whom[post.id],
                 "attachments": [
                     {"name": attachment.name, "url": attachment.url, "thumbnail": attachment.thumbnail_url, "media": attachment.is_media}
                     for attachment in post.attachments
                 ],
             }
-            for post in newest
+            for post in found.posts
         ],
     }
 
